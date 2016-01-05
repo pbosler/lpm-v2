@@ -35,20 +35,20 @@ LPM provides a small library of fundamental modules that are used by the rest of
 Particles and Fields
 --------------------
 The primary computing objects used by LPM are the Lagrangian particles, defined in the particles module, and the fields, defined in the field module. 
-Particles provide the spatial discretization of a domain and have both physical and Lagrangian coordinates.  
-Fields are either scalar or vector fields defined on a set of particles; fields are used to store variables (e.g., vorticity, temperature, etc.) on a set of particles.  
+* Particles provide the spatial discretization of a domain and have both physical and Lagrangian coordinates.  
+* Fields are either scalar or vector fields defined on a set of particles; fields are used to store variables (e.g., vorticity, temperature, etc.) on a set of particles.  
 
 
 Mesh objects
 ------------
 While the dynamics and PDEs are solved by LPM in a ''meshfree'' context, we often find it helpful and efficient to maintain a mesh to organize our particles.   
 Topologically two-dimensional meshes (e.g., spheres and planes) are currently implemented using triangles and quadrilaterals.  
-The Edges module defines directed edges that connect an origin particle to a destination particle, and have a left face and a right face.
-The Faces module defines polyhedral faces that have an associated list of edges and vertices.  
-The Polymesh2d module collects particles, edges, and faces, into a single mesh object.   
+* The Edges module defines directed edges that connect an origin particle to a destination particle, and have a left face and a right face.
+* The Faces module defines polyhedral faces that have an associated list of edges and vertices.  
+* The Polymesh2d module collects particles, edges, and faces, into a single mesh object.   
 Meshes are initialized from a ''seed'' that is recursively divided until a desired spatial resolution is achieved.  
 
-Polymesh2d meshes may be adaptively refined using the Refinement module.  
+* Polymesh2d meshes may be adaptively refined using the Refinement module.  
 
 External libraries
 -------------------
