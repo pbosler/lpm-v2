@@ -65,3 +65,40 @@ A mesh is connected to its relevant variables by a PDE type, e.g., an SWEMesh or
 Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
 Examples are the 
 
+Drivers
+--------
+Finally, all of the above objects are assembled by a driver program that solves a specific problem.  
+Within the driver program all initial conditions must be defined.
+It is within these programs that the timestepping loop and remeshing procedures are called.
+See PlaneSWEGravityWaves.f90 or CollidingDipoles.f90 for examples.
+
+
+Build / Install
+================
+This latest version of LPM is written with support for KitWare's [CMake](http://www.cmake.org) cross-platform makefile generator, to aid
+portability and ease installation for new users.
+
+The environmental variables `CC`, `CXX`, and `FC` specify the compilers.  
+For example, using the bash shell, these variables are set with
+
+    export CC=mpicc
+    export CXX=mpicxx
+    export FC=mpifort
+    
+LPM is configured in the same shell by navigating to the lpm-v2 root directory and typing 
+    mkdir build
+    cd build
+    cmake ..
+This configures the build for the your compiler version and MPI.  Build the LPM software next by typing
+
+    make
+    
+then
+
+    make test
+    
+to run the unit tests.  To run an application driver, LPM executables may be run with the command
+
+    mpirun -np 6 <LPMfile>.exe
+
+This would execute the specified .exe file using 6 MPI processes.
