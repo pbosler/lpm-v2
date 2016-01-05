@@ -33,8 +33,9 @@ type STDIntVector
 		procedure, public :: print
 end type
 
-integer(kint), parameter :: DEFAULT_VEC_SIZE = 20
+integer(kint), parameter :: DEFAULT_VEC_SIZE = 20 !< default size of array
 
+!< @brief Interface to initialize a STDIntVector
 interface initialize
 	module procedure defaultInit
 	module procedure initFromArray
@@ -43,6 +44,9 @@ end interface
 
 contains
 
+!< @brief Initializes an empty STDIntVector.  Size and vector entries are zeroed.
+!> @param self Target to be initialized
+!> @param minSize minimum size of vector
 subroutine defaultInit(self, minSize)
 	class(STDIntVector), intent(out) :: self
 	integer(kint), intent(in), optional :: minSize
@@ -55,6 +59,9 @@ subroutine defaultInit(self, minSize)
 	self%N = 0
 end subroutine
 
+!< @brief Initializes an STDIntVector with the contents and size of an integer array.
+!> @param self Target to be initialized
+!> @param intArray integer array with source data
 subroutine initFromArray( self, intArray ) 
 	class(STDIntVector) :: self
 	integer(kint), intent(in) :: intArray(:)
@@ -70,6 +77,9 @@ subroutine initFromArray( self, intArray )
 	self%integers(size(intArray)+1:size(self%integers)) = 0	
 end subroutine
 
+!< @brief Initializes an STDIntVector by copying another STDIntVector
+!> @param self Target to be initialized
+!> @param other STDIntVector with source data
 subroutine initFromCopy( self, other ) 
 	class(STDIntVector), intent(out) :: self
 	class(STDIntVector), intent(in) :: other
@@ -78,23 +88,37 @@ subroutine initFromCopy( self, other )
 	self%integers = other%integers
 end subroutine
 
+!< @brief Assignment operator function 
+!> @todo Implement assignment operator
+!> 
+!> @param self Target to be overwritten with content of other
+!> @param other Source STDIntvector
 subroutine assignVectorFromCopy( self, other )
 	type(STDIntVector), intent(out) :: self
 	type(STDIntVector), intent(in) :: other
 	call initFromCopy(self, other)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a STDIntVector object.
+!> @param vec Target STDIntVector
 subroutine finalizeVector( vec )
 	type(STDIntVector), intent(inout) :: vec
 	if ( associated(vec%integers)) deallocate(vec%integers)
 end subroutine
 
+!> @brief Returns .TRUE. if a STDIntVector has no content.
+!> @param self Target STDIntVector
+!> @return .TRUE. if self is empty
 function empty( self ) result(tf)
 	logical(klog) :: tf
 	class(STDIntVector), intent(in) :: self
 	tf = ( self%N == 0 )
 end function
 
+!> @brief Returns the integer in the STDIntVector at the desired position
+!> @param self Source STDIntVector
+!> @param index Location of desired integer in STDIntVector's array
+!> @return The integer in the array at the index location
 function int(self, index) result(j)
 	integer(kint) :: j
 	class(STDIntVector), intent(in) :: self
@@ -107,6 +131,9 @@ function int(self, index) result(j)
 	endif
 end function
 
+!> @brief Adds a new integer to the end of a vector, resizes if necessary.
+!> @param self STDIntVector to increase in size
+!> @param int Integer to add to self
 subroutine pushBack(self, int)
 	class(STDIntVector), intent(inout) :: self
 	integer(kint), intent(in) :: int
@@ -117,6 +144,9 @@ subroutine pushBack(self, int)
 	self%N = self%N + 1
 end subroutine
 
+!> @brief Adds a new integer to the end of a vector, but only if that integer is not already listed somewhere in the vector.
+!> @param self Target STDIntVector
+!> @param int  Integer to add (if it is unique)
 subroutine pushBackUnique( self, int )
 	class(STDIntVector), intent(inout) :: self
 	integer(kint), intent(in) :: int
@@ -131,6 +161,10 @@ subroutine pushBackUnique( self, int )
 	if ( isNew ) call pushBack(self, int)
 end subroutine
 
+!> @brief Adds a new integer to a STDIntVector at a desired position; increases the size of the vector.
+!> @param self Target STDIntVector
+!> @param pos Position of new integer in array
+!> @param val Integer to add at new position
 subroutine insert( self, pos, val )
 	class(STDIntVector), intent(inout) :: self
 	integer(kint), intent(in) :: pos
@@ -161,6 +195,11 @@ subroutine insert( self, pos, val )
 	endif
 end subroutine
 
+!> @brief Replaces the value of an integer at a particular position in the array with a new value.  
+!> Does not change the size of the STDIntVector
+!> @param self Target STDIntVector
+!> @param pos Position of integer to replace
+!> @param val New integer to put into array
 subroutine replace( self, pos, val )
 	class(STDIntVector), intent(inout) :: self
 	integer(kint), intent(in) :: pos
@@ -173,6 +212,8 @@ subroutine replace( self, pos, val )
 	self%integers(pos) = val	
 end subroutine
 
+!> @brief Doubles the memory assigned to a STDIntVector.
+!> @param self Target STDIntVector
 subroutine doubleArraySpace( self )
 	class(STDIntVector), intent(inout) :: self
 	!
@@ -190,6 +231,9 @@ subroutine doubleArraySpace( self )
 	deallocate(tempArray)
 end subroutine
 
+!< @brief Prints the contents of a vector to the console.
+!> @param self Target STDIntVector
+!> @param name Name of vector
 subroutine print(self, name )
 	class(STDIntVector), intent(in) :: self
 	character(len=*), intent(in), optional :: name

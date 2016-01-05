@@ -6,14 +6,13 @@ module OutputWriterModule
 !> @author
 !> Peter Bosler, Department of Mathematics, University of Michigan
 !
-!> @defgroup OutputWriter Console output writer
-!> Provides an object-oriented interface for writing output to the console
-!
-!
 ! DESCRIPTION:
 !> @file
 !> Provides an object-oriented interface for writing output to the console
 !
+!> @defgroup OutputWriter OutputWriter module
+!> Provides an interface for writing output to the console
+!> @{
 !------------------------------------------------------------------------------
 use NumberKindsModule
 use STDIntVectorModule
@@ -48,23 +47,29 @@ integer(KINT), parameter :: TAB_SPACE = 4
 ! Interfaces
 !----------------
 !
+
+!> @brief Initializes and OutputWriter object
 interface New
 	module procedure NewPrivate
 end interface
 
+!> @brief Deletes and frees memory associated with an OutputWriter object
 interface Delete
 	module procedure DeletePrivate
 end interface
 
+!> @brief Starts an indented section
 interface StartSection
 	module procedure StartSectionWriter
 	module procedure StartBlankSectionWriter
 end interface
 
+!> @brief Ends an indented section
 interface EndSection
 	module procedure EndSectionWriter
 end interface
 
+!> @brief Writes various output to console
 interface Write
 	module procedure WriteString
 	module procedure WriteInteger
@@ -72,6 +77,7 @@ interface Write
 	module procedure WriteIntVector
 end interface
 
+!> @brief Writes various output to a .m file for later loading in Matlab
 interface WriteToMatlab
 	module procedure WriteArrayToMatlab
 	module procedure WriteMatrixToMatlab
@@ -85,6 +91,12 @@ contains
 !----------------
 !
 
+!> @brief Initializes a new OutputWriter object.
+!> @todo In later versions, fileunit and filename will allow an OutputWriter's output to be redirected to a file
+!>
+!> @param self Target writer to be initialized
+!> @param fileunit placeholder
+!> @param filename placeholder
 subroutine NewPrivate(self,fileUnit, fileName)
 	type(OutputWriter), intent(out) :: self
 	integer(kint), intent(in), optional :: fileUnit
@@ -116,7 +128,8 @@ subroutine NewPrivate(self,fileUnit, fileName)
 	endif
 end subroutine
 
-
+!> @brief Deletes and frees memory associated with an OutputWriter object
+!> @param self Target OutputWriter object
 subroutine DeletePrivate(self)
 	type(OutputWriter), intent(inout) :: self
 	if ( self%fileUnit /= STD_OUT .AND. self%fileUnit /= STD_ERR ) then
@@ -130,6 +143,10 @@ end subroutine
 !----------------
 !
 
+!> @brief Writes a key/value pair with appropriate indentation
+!> @param self Target OutputWriter object
+!> @param key identification key 
+!> @param str value associated with key
 subroutine WriteString(self,key,str)
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: key
@@ -144,7 +161,10 @@ subroutine WriteString(self,key,str)
 	endif
 end subroutine
 
-
+!> @brief Writes a key/value pair with appropriate indentation
+!> @param self Target OutputWriter object
+!> @param key identification key 
+!> @param val value associated with key
 subroutine WriteInteger(self,key,val)
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: key
@@ -154,6 +174,10 @@ subroutine WriteInteger(self,key,val)
 	write(self%fileUnit,form), trim(key),val
 end subroutine
 
+!> @brief Writes a key/value pair with appropriate indentation
+!> @param self Target OutputWriter object
+!> @param key identification key 
+!> @param val value associated with key
 subroutine WriteReal(self,key,val)
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: key
@@ -167,6 +191,10 @@ subroutine WriteReal(self,key,val)
 	write(self%fileUnit,form) trim(key), val
 end subroutine
 
+!> @brief Writes a key/value pair with appropriate indentation
+!> @param self Target OutputWriter object
+!> @param key identification key 
+!> @param val value associated with key
 subroutine WriteIntVector(self, key, val)
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: key
@@ -178,11 +206,18 @@ subroutine WriteIntVector(self, key, val)
 	write(self%fileUnit, form) trim(key), val%integers(1:val%N)
 end subroutine
 
+
+!> @brief Starts an indented section with no title
+!> @param self Target OutputWriter object
 subroutine StartBlankSectionWriter(self)
 	type(OutputWriter), intent(inout) :: self
 	self%indentLevel = self%indentLevel + 1
 end subroutine
 
+!> @brief Starts an indented section with a title and optional description
+!> @param self Target OutputWriter object
+!> @param sectionName Title or subtitle of indented section
+!> @param description Description of indented section
 subroutine StartSectionWriter(self,sectionName,description)
 	type(OutputWriter), intent(inout) :: self
 	character(len=*), intent(in) :: sectionName
@@ -197,7 +232,8 @@ subroutine StartSectionWriter(self,sectionName,description)
 	endif
 end subroutine
 
-
+!> @brief Ends an indented sectionName
+!> @param self Target OutputWriter object
 subroutine EndSectionWriter(self)
 	type(OutputWriter), intent(inout) :: self
 	if ( self%indentLevel == 0 ) then
@@ -207,6 +243,9 @@ subroutine EndSectionWriter(self)
 	endif
 end subroutine
 
+!> @brief Writes the header of a Legacy formatted .vtk ASCII file
+!> @param fileunit Integer unit of output .vtk file
+!> @param title for .vtk file
 subroutine WriteVTKFileHeader( fileunit, title )
 	integer(kint), intent(in) :: fileUnit
 	character(len=*), intent(in), optional :: title
@@ -220,14 +259,19 @@ subroutine WriteVTKFileHeader( fileunit, title )
 	write(fileunit,'(A)') "DATASET POLYDATA"
 end subroutine
 
+!> @brief Writes the section header for VTK Point Data in a legacy formatted .vtk file
+!> @param fileunit Integer unit of output .vtk file
+!> @param fileunit Integer number of points
 subroutine WriteVTKPointDataSectionHeader(fileunit, nPoints)
 	integer(kint), intent(in) :: fileunit
 	integer(kint), intent(in) :: nPoints
 	write(fileunit,'(A,I8)') "POINT_DATA ", nPoints
 end subroutine
 
-
-
+!> @brief Writes a vector (1-d array) of real numbers to a .m file for later reading by Matlab
+!> @param array Array to be written to a file
+!> @param fileunit Integer unit of output .m file
+!> @param name Name of array
 subroutine WriteArrayToMatlab( array, fileunit, name)
 	real(kreal), intent(in) :: array(:)
 	integer(kint), intent(in) :: fileunit
@@ -243,6 +287,10 @@ subroutine WriteArrayToMatlab( array, fileunit, name)
 	write(fileunit,'(F24.12,A)') array(n), "];"
 end subroutine
 
+!> @brief Writes a matrix (2-d array) of real numbers to a .m file for later reading by Matlab
+!> @param matrix Matrix to be written to a file
+!> @param fileunit Integer unit of output .m file
+!> @param name Name of array
 subroutine WriteMatrixToMatlab( matrix, fileunit, name )
 	real(kreal), intent(in) :: matrix(:,:)
 	integer(kint), intent(in) :: fileunit
@@ -265,6 +313,10 @@ subroutine WriteMatrixToMatlab( matrix, fileunit, name )
 	write(fileunit, '(F24.12,A)') matrix(m,n), "]; "
 end subroutine
 
+!> @brief Writes a matrix (2-d array) of integers to a .m file for later reading by Matlab
+!> @param matrix Matrix to be written to a file
+!> @param fileunit Integer unit of output .m file
+!> @param name Name of array
 subroutine WriteIntegerMatrixToMatlab( matrix, fileunit, name )
 	integer(kint), intent(in), dimension(:,:) :: matrix
 	integer(kint), intent(in) :: fileUnit
@@ -294,9 +346,11 @@ end subroutine
 !----------------
 !
 
+!> @brief This function returns a string with white space prepended to the intput formatString to provide appropriate indentation.
+!> @param Target OutputWriter object
+!> @param formatString Format intsructions for console output
 function FormatWithIndent(self,formatString)
-	! Returns a string suitable for formatting write statements, with an indent level appropriate to
-	! current state of OutputWriter::self
+	
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: formatString
 	character(len=len(formatString)+10) :: FormatWithIndent
@@ -307,5 +361,5 @@ function FormatWithIndent(self,formatString)
 	endif
 end function
 
-
+!> @}
 end module

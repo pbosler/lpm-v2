@@ -1,14 +1,18 @@
 module LoggerModule
 !------------------------------------------------------------------------------
-! Lagrangian Particle / Panel Method - Spherical Model
+! Lagrangian Particle Method
 !------------------------------------------------------------------------------
 !> @file
 !> A Logger object for writing output to console or to files
 !> @author
-!> Peter Bosler, Department of Mathematics, University of Michigan
+!> Peter Bosler, Sandia National Laboratories, Albuquerque, NM
 !
 !> @defgroup Logger Logger module
-!> A Logger object for writing output to console or to files
+!> A Logger object for writing output to console or to files. 
+!> 
+!> Handles display, formatting, and organization of console messages.
+!> All messages are presumed to have a key - value pair.  
+!> For example, the key may be the origin of the message in the code, and the value contains the message content.
 !> @{
 !
 !
@@ -33,15 +37,11 @@ public StartSection, EndSection
 !----------------
 !
 
-integer(kint), parameter :: DEBUG_LOGGING_LEVEL = 1, &
-							TRACE_LOGGING_LEVEL = 2, &
-							WARNING_LOGGING_LEVEL = 3, &
-							ERROR_LOGGING_LEVEL = 4
+integer(kint), parameter :: DEBUG_LOGGING_LEVEL = 1 !< Priority level for debugging-related messages
+integer(kint), parameter :: TRACE_LOGGING_LEVEL = 2 !< Priority level for trace-related messages and general remarks
+integer(kint), parameter :: WARNING_LOGGING_LEVEL = 3 !< Priority level for warning messages
+integer(kint), parameter :: ERROR_LOGGING_LEVEL = 4 !< Priority level for error messages
 
-!> @class Logger
-!> @brief Class handles display, formatting, and organization of console messages.
-!> All messages are presumed to have a key - value pair.  
-!> For example, the key may be the origin of the message in the code, and the value contains the message content.
 type Logger
 	integer(kint) :: level !< Messages with precedence below this level will be ignored.
 	type(OutputWriter) :: writer !< formatted output writer
@@ -90,6 +90,12 @@ contains
 !
 
 !> @brief Initializes a new Logger object, defines unit for chosen output.
+!> \todo In later versions, filename and fileunit will allow logging to a log file, rather than stdout
+!>
+!> @param self Object to be initialized
+!> @param level Base priority level of messages to be logged.  Messages with lower priority than this level will be ignored.
+!> @param fileunit placeholder
+!> @param filename placeholder
 subroutine NewPrivate(self,level,fileUnit,fileName)
 	type(Logger), intent(out) :: self
 	integer(kint), intent(in) :: level
@@ -111,7 +117,8 @@ subroutine NewPrivate(self,level,fileUnit,fileName)
 end subroutine
 
 
-!> @brief Placeholder for future development.
+!> @brief Deletes and frees memory associated with a Logger object
+!> @param self Target to be deleted
 subroutine DeletePrivate(self)
 	type(Logger), intent(inout) :: self
 	call Delete(self%writer)
@@ -125,7 +132,7 @@ end subroutine
 !
 
 !> @brief Logs a string key-value pair.
-!> @param self
+!> @param self Target Logger object
 !> @param msgLevel Priority level of this message.  
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
@@ -145,7 +152,7 @@ subroutine LogString(self,msgLevel,key,string)
 end subroutine
 
 !> @brief Logs a string/integer key-value pair.
-!> @param self
+!> @param self Target Logger object
 !> @param msgLevel Priority level of this message.  
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
@@ -160,6 +167,11 @@ subroutine LogInteger(self,msgLevel,key,val)
 	endif
 end subroutine
 
+!> @brief Logs a string/STDIntVector object
+!> @param self Target Logger object
+!> @param msgLevel Priority level of this message
+!> @param key identification key for this message
+!> @param val integer vector, message content
 subroutine LogIntVector(self, msgLevel, key, val )
 	type(Logger), intent(in) :: self
 	integer(kint), intent(in) :: msgLevel
@@ -172,7 +184,7 @@ subroutine LogIntVector(self, msgLevel, key, val )
 end subroutine
 
 !> @brief Logs a string/real key-value pair.
-!> @param self
+!> @param self Target Logger object
 !> @param msgLevel Priority level of this message.  
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
@@ -189,7 +201,7 @@ end subroutine
 
 !> @brief Starts an indented section for this logger object.
 !> Allows user to optionally provide a section title and section description.
-!> @param self
+!> @param self Target Logger object
 !> @param sectionName
 !> @param description
 subroutine StartSectionLogger(self,sectionName,description)
@@ -210,7 +222,7 @@ end subroutine
 
 
 !> @brief Ends an indented section for this logger object.
-!> @param self
+!> @param self Target Logger object
 subroutine EndSectionLogger(self)
 	type(Logger), intent(inout) :: self
 	call EndSection(self%writer)

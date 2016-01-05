@@ -74,7 +74,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief Great-circle distance between two points in the plane
+!> @brief Great-circle distance between two points on the sphere
 !
 !> @ingroup SphereGeom
 !
@@ -104,21 +104,19 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief Great-circle distance between two points in the plane
+!> @brief Great-circle distance between two points on the sphere
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xA double precision real  
-!> @param[in] yA double precision real 
-!> @param[in] zA
-!> @param[in] xB
-!> @param[in] yB
-!> @param[in] zB
-!> @return Distance double precision real, great-circle distance between xyzA and xyzB
+!> @param xA 
+!> @param yA 
+!> @param zA
+!> @param xB
+!> @param yB
+!> @param zB
+!> @return Distance great-circle distance between (xA, yA, zA) and (xB, yB, zB)
 !------------------------------------------------------------------------------
 pure function SphereDistanceComponents(xA, yA, zA, xB, yB, zB)
-! Finds the great circle distance between two points (xyzA and xyzB) on the sphere
-! Units of length
 	real(kreal), intent(in) :: xA, yA, zA
 	real(kreal), intent(in) :: xB, yB, zB
 	real(kreal) :: SphereDistanceComponents
@@ -137,7 +135,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief central angle between two points in the plane
+!> @brief Central angle between two points on the sphere
 !
 !> @ingroup SphereGeom
 !
@@ -167,7 +165,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief central angle between two points in the plane
+!> @brief central angle between two points on the sphere
 !
 !> @ingroup SphereGeom
 !
@@ -199,7 +197,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief central angle between two points in the plane
+!> @brief Constructs the latitudinal unit vector at a point on the sphere
 !
 !> @ingroup SphereGeom
 !
@@ -224,7 +222,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief central angle between two points in the plane
+!> @brief Constructs the Longitudinal unit vector at a point on the sphere
 !
 !> @ingroup SphereGeom
 !
@@ -421,7 +419,9 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xyz double precision real size(3); vector on the sphere in Cartesian coordinates
+!> @param[in] x
+!> @param[in] y
+!> @param[in] z
 !> @return Longitude of xyz
 !------------------------------------------------------------------------------
 pure function LongitudeComponents(x,y,z)
@@ -436,8 +436,9 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xyz double precision real size(3); vector on the sphere in Cartesian coordinates
-!> @return Longitude of xyz
+!> @param[in] x
+!> @param[in] y 
+!> @return Longitude
 !------------------------------------------------------------------------------
 pure function LongitudeComponents2(x,y)
 	real(kreal), intent(in) :: x, y
@@ -467,7 +468,9 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xyz double precision real size(3); vector on the sphere in Cartesian coordinates
+!> @param[in] x 
+!> @param[in] y 
+!> @param[in] z 
 !> @return Latitude of xyz
 !------------------------------------------------------------------------------
 pure function LatitudeComponents(x,y,z)
@@ -485,7 +488,6 @@ end function
 !> @param[in] y double precision real
 !> @param[in] x double precision real
 !> @return atan(y/x) in range 0 to 2*pi
-!------------------------------------------------------------------------------
 pure function atan4(y,x)
 	!This function computes the inverse tangent (like atan2) but outputs angles in the range
 	! 0 to 2 pi (rather than -pi to pi).
@@ -523,6 +525,9 @@ pure function atan4(y,x)
 	endif
 end function
 
+!> @brief Constructs the projection matrix for a vector tangent to the sphere at location xyz.
+!> @param xyz
+!> @return @f$ P = I - x x^T $@f
 pure function SphereProjection( xyz )
 	real(kreal) :: SphereProjection(3,3)
 	real(kreal), intent(in) :: xyz(3)

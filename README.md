@@ -30,7 +30,9 @@ LPM provides a small library of fundamental modules that are used by the rest of
 * The NumberKinds module defines constants used by the rest of the code, including variable kind definitions and physical constants.
 * The OutputWriter class defines methods for formatting output either for the console or ASCII files.  
 * The Logger class provides objects and methods for outputting to the console various types of messages from the rest of the LPM code in a parallel computing environment.  
-* The SphereGeometry and PlaneGeometry modules define geometric formulas for distance and areas.  
+* The SphereGeometry and PlaneGeometry modules define geometric formulas for distance and areas. 
+* The MPISetup module provides a type and methods for distribution other objects across MPI ranks. 
+* The STDIntVector module provides a data type that mimics the `C++ std::vector<int>` class to dynamically allocate and resize integer arrays of rank 1
 
 Particles and Fields
 --------------------
