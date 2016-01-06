@@ -10,7 +10,7 @@ module OutputWriterModule
 !> @file
 !> Provides an object-oriented interface for writing output to the console
 !
-!> @defgroup OutputWriter OutputWriter module
+!> @defgroup OutputWriter OutputWriter
 !> Provides an interface for writing output to the console
 !> @{
 !------------------------------------------------------------------------------

@@ -7,13 +7,23 @@ module ParticlesModule
 !> @author
 !> Peter Bosler, Sandia National Laboratories, Center for Computing Research
 !
-!> @defgroup Particles Particles module
+!> @defgroup Particles Particles
 !> @brief Provides a vectorized data structure that defines the particles for LPM spatial discretization.
 !>
-!> Particles are combined with the fieldmodule::field data structure to define scalar and vector fields over a spatial domain.
+!> Particles are combined with the @ref Field data structure to define scalar and vector fields over a spatial domain.
 !> Particles may be combined with a mesh object (e.g., PolyMesh2d) or an unstructured data object (e.g., a quadtree)
 !> to facilitate interpolation, differentiation, quadrature, etc.
 !>
+!> The particles data structures is a "structure of arrays," so that all information about a particle i is located at
+!> index i in the relevant arrays.  
+!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`. 
+!> Its Lagrangian coordinates are given by `aParticles%%x0(i)`, `aParticles%%y0(i)`, etc.
+!>
+!> Particles that contribute to a midpoint quadrature rule are called "active," and this status is recorded in the `isActive` array.
+!> Active particles have nonzero area (2d) or volume (3d).
+!> Particles that do not contribute to the midpoint rule (i.e., vertex particles) are considered "passive."
+!> Passive particles have zero area or volume.
+!> 
 !> @{
 !
 !------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ module STDIntVectorModule
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
-!> @defgroup STDIntVector STDIntVector module
+!> @defgroup STDIntVector STDIntVector
 !> @brief Mimics the dynamically allocated C++ `std::vector<int>` object.  
 !> Provides array-style access to its elements, and resizes if necessary.  
 !> @{

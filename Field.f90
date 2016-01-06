@@ -3,19 +3,24 @@ module FieldModule
 ! Lagrangian Particle Method (LPM) version 1.5
 !------------------------------------------------------------------------------
 !> @file
-!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of a Particles object from the  particlesmodule.
+!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of a Particles object.
 !> @author
 !> Peter Bosler, Sandia National Laboratories Center for Computing Research
 !
-!> @defgroup Field Field module
+!> @defgroup Field Field
 !> @brief Provides a vectorized data structure for scalar and vector fields defined on particlesmodule::particles objects.
 !> Allows users to set a name and units, if applicable, for each field.
-!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of a Particles object from the ::particlesmodule.
+!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of @ref Particles.
 !> 
 !> May be scalar or vector data.
-!>
-!> Field objects have a 1-to-1 correspondence with a particlesmodule::particles object, so that the data associated with 
+!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with 
 !> the particle whose index is i are in the field object also at index i. 
+!>
+!> The field data structures is a "structure of arrays," so that all information about a scalar of vector field at
+!> particle i is located at index i in the field arrays.  
+!> For example, the value of a scalar carried by particle i is `aField%%scalar(i)`. 
+!> Vector field components must be accessed individually using `aField%%xComp(i)`, `aField%%yComp(i)`, etc.
+!>
 !>
 !> @{
 !

@@ -1,4 +1,13 @@
 module PlanarIncompressibleSolverModule
+!> @file PlaneIncompressibleSolver.f90
+!> Data structure for integrating a planar incompressible flow forward in time using a fourth-order Runge-Kutta method.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup PlanarIncompressibleSolver PlanarIncompressibleSolver
+!> Data structure for integrating a planar incompressible flow forward in time using a fourth-order Runge-Kutta method.
+!> 
+!> @{
 
 use NumberKindsModule
 use OutputWriterModule
@@ -26,24 +35,24 @@ public PlaneSolver, New, Delete
 public Timestep
 
 type PlaneSolver
-	real(kreal), allocatable, dimension(:) :: xStart 
-	real(kreal), allocatable, dimension(:) :: yStart
-	real(kreal), allocatable, dimension(:) :: u
-	real(kreal), allocatable, dimension(:) :: v
-	real(kreal), allocatable, dimension(:) :: vort
-	real(kreal), allocatable, dimension(:) :: area
-	logical(klog), allocatable, dimension(:) :: mask
+	real(kreal), allocatable, dimension(:) :: xStart !< starting x-coordinate of each particle
+	real(kreal), allocatable, dimension(:) :: yStart !< starting y-coordinate of each particle
+	real(kreal), allocatable, dimension(:) :: u !< x-component of velocity for each particle
+	real(kreal), allocatable, dimension(:) :: v !< y-component of velocity for each particle
+	real(kreal), allocatable, dimension(:) :: vort !< vorticity carried by each particle
+	real(kreal), allocatable, dimension(:) :: area !< area represented by each particle (passive particles represent zero area)
+	logical(klog), allocatable, dimension(:) :: mask !< mask(i) is .TRUE. if particle i is active
 	
-	real(kreal), allocatable, dimension(:) :: xIn 
-	real(kreal), allocatable, dimension(:) :: xStage1 
-	real(kreal), allocatable, dimension(:) :: xStage2 
-	real(kreal), allocatable, dimension(:) :: xStage3 
-	real(kreal), allocatable, dimension(:) :: xStage4 
-	real(kreal), allocatable, dimension(:) :: yIn 
-	real(kreal), allocatable, dimension(:) :: yStage1 
-	real(kreal), allocatable, dimension(:) :: yStage2 
-	real(kreal), allocatable, dimension(:) :: yStage3 
-	real(kreal), allocatable, dimension(:) :: yStage4 
+	real(kreal), allocatable, dimension(:) :: xIn !< x-coordinate input to RK4
+	real(kreal), allocatable, dimension(:) :: xStage1 !< x-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable, dimension(:) :: xStage2 !< x-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable, dimension(:) :: xStage3 !< x-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable, dimension(:) :: xStage4 !< x-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable, dimension(:) :: yIn !< y-coordinate input to RK4
+	real(kreal), allocatable, dimension(:) :: yStage1 !< y-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable, dimension(:) :: yStage2 !< y-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable, dimension(:) :: yStage3 !< y-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable, dimension(:) :: yStage4 !< y-coordinates of each particle at RK4 stage 4
 	
 	contains
 		final :: deletePrivate
@@ -84,6 +93,13 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory for a new solver.  Unlike a mesh, which maintains extra space in memory for possible adaptive
+!> refinement, solvers only allocate memory based on the current number of particles. Hence, a new solver needs to be 
+!> created every time a mesh is refined.
+!> 
+!> @param[out] self Target solver
+!> @param[in] plane @ref PlanarIncompressible mesh
 subroutine newPrivate( self, plane )
 	type(PlaneSolver), intent(out) :: self
 	type(PlaneMeshIncompressible), intent(in) :: plane
@@ -122,6 +138,8 @@ subroutine newPrivate( self, plane )
 	self%mask = plane%mesh%particles%isActive(nParticles)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a PlanarIncompressible solver.
+!> @param[inout] self solver
 subroutine deletePrivate( self ) 
 	type(PlaneSolver), intent(inout) :: self
 	
@@ -146,6 +164,10 @@ subroutine deletePrivate( self )
 	endif
 end subroutine
 
+!> @brief Advances a PlanarIncompressible mesh forward in time by one timestep using 4th order Runge-Kutta.
+!> @param[inout] self PlanarIncompressible solver
+!> @param[inout] plane PlanarIncompressible mesh
+!> @param[in] dt timestep increment
 subroutine timestepPrivate( self, plane, dt ) 
 	type(PlaneSolver), intent(inout) :: self
 	type(PlaneMeshIncompressible), intent(inout) :: plane
@@ -244,6 +266,18 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Computes velocity based on the given vorticity of all point vortices (particles) using the Biot-Savart integral.
+!> Integral is computed in parallel as a direct summation.
+!>
+!> @param[out] u x-component of velocity at each particle
+!> @param[out] v y-component of velocity at each particle
+!> @param[in] x x-coordinate of each particle
+!> @param[in] y y-coordinate of each particle
+!> @param[in] vortIn vorticity carried by each particle
+!> @param[in] areaIn area carried by each particle
+!> @param[in] activeMask .TRUE. for active particles, .FALSE. for passive particles
+!> @param[in] mpiParticles @ref MPISetup object to distribute integral over MPI processes
 subroutine planarIncompressibleVelocity( u, v, x, y, vortIn, areaIn, activeMask, mpiParticles )
 	real(kreal), dimension(:), intent(out) :: u
 	real(kreal), dimension(:), intent(out) :: v
@@ -284,6 +318,11 @@ subroutine planarIncompressibleVelocity( u, v, x, y, vortIn, areaIn, activeMask,
 	enddo
 end subroutine
 
+!> @brief Initializes a logger for the PlanarIncompressible solver module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -296,4 +335,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

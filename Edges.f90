@@ -4,11 +4,22 @@ module EdgesModule
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
-!> @defgroup Edges Edges module
+!> @defgroup Edges Edges
 !> @brief Edges of polyhedral meshes connect to vertices and faces.
 !>
-!> Edges know the indices (to ::particlesmodule) of their origin and destination, and the indices (to ::facesmodule)
-!> of their left face and right face.
+!> Edges know the indices of their origin and destination particles (in a @ref Particles object), and the indices 
+!> of their left face and right face (in a @ref Faces object).
+!> 
+!> The edges data structures is a "structure of arrays," so that all information about edge i is located at index i in the 
+!> relevant array.  
+!> For example, the index to the particle at the origin of edge i is `anEdges%%orig(i)` , and its destination particle is
+!> `anEdges%%dest(i)`. 
+!> An edge's left and right faces are accessed similarly, `anEdges%%leftFace(i)` gives the index of the face (in a @ref Faces object)
+!> to the left of edge i.
+!>
+!> In addition the edges are organized into a binary tree, defined by the `hasChildren`, `children`, and `parent` arrays,
+!> to facilitate faster searching through the data structure.
+!> 
 !> @{
 use NumberKindsModule
 use LoggerModule

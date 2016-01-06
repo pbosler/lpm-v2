@@ -1,5 +1,29 @@
 module PlanarIncompressibleModule
-
+!> @file PlanarIncompressible.f90
+!> Data structure for solving the fluid equations for two-dimensional (planar) inviscid, incompressible flow.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
+!>
+!> @defgroup PlanarIcompressible PlanarIncompressible
+!> @brief Data structure for solving the fluid equations for two-dimensional (in the plane) inviscid, incompressible flow.
+!> 
+!> Inviscid planar incompressible flow may be characterized completely by the flow's vorticity and stream function.
+!> This module provides a data structure for discretizing the flow using a collection of point vortices.
+!> Each point vortex carries vorticity and is advected by the velocity induced by all other vortices.   
+!>
+!> The spatial domain is discretized in space and time by a @ref PolyMesh2d object.
+!> Associated @ref Field objects for vorticity, velocity, and the stream function are provided, as well as a set 
+!> of optional @ref Field objects for passive tracers carried by the flow.  
+!> 
+!> Currently, only free boundary conditions are supported.  
+!> The flow is integrated in time using a @ref PlanarIncompressibleSolver object.
+!> 
+!> The data structure is designed to use a replicated data algorithm (via the @ref MPISetup module) for efficiency in 
+!> parallel computing environments.
+!> 
+!> Output routines suitable for reading/dispaly with [Paraview](www.paraview.org) are provided. 
+!> 
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -31,13 +55,13 @@ public MaxCirculationPerFace
 public SetAbsoluteTolerances
 
 type PlaneMeshIncompressible
-	type(PolyMesh2d) :: mesh
-	type(Field) :: vorticity
-	type(Field) :: streamFn
-	type(Field) :: velocity
-	type(Field), dimension(:), allocatable :: tracers
-	type(MPISetup) :: mpiParticles
-	logical(klog) :: useAMR = .FALSE.
+	type(PolyMesh2d) :: mesh !< @ref PolyMesh2d for spatial discretization
+	type(Field) :: vorticity !< scalar @ref Field
+	type(Field) :: streamFn !< scalar @ref Field
+	type(Field) :: velocity !< vector @ref Field
+	type(Field), dimension(:), allocatable :: tracers  !< allocatable array of scalar and vector @ref Field objects
+	type(MPISetup) :: mpiParticles !< @ref MPISetup to distribute all particles over the available MPI ranks
+	logical(klog) :: useAMR = .FALSE. !< .TRUE. if mesh will be adaptively refined
 	
 	contains
 		final :: deletePrivate
@@ -86,6 +110,16 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory and initializes a PlanarIncompressible mesh with accompanying @ref Field objects for physical variables.  
+!> Tracers must be added separately, if desired.
+!> 
+!> @param[out] self PlanarIncompressible mesh
+!> @param[in] initNest initial recursion level for @ref PolyMesh2d 
+!> @param[in] maxNest maximum recursion level for @ref PolyMesh2d
+!> @param[in] meshSeed mesh seed integer as defined by @ref NumberKinds
+!> @param[in] amrLimit maximum number of refinements beyond initNest allowed
+!> @param[in] meshRadius maximum spatial extent of mesh from origin
 subroutine newPrivate( self, initNest, maxNest, meshSeed, amrLimit, meshRadius )
 	type(PlaneMeshIncompressible), intent(out) :: self
 	integer(kint), intent(in) :: initNest
@@ -106,6 +140,8 @@ subroutine newPrivate( self, initNest, maxNest, meshSeed, amrLimit, meshRadius )
 	call New(self%mpiParticles, self%mesh%particles%N, numProcs )
 end subroutine
 
+!> @brief Deletes and frees memory associated with a PlanarIncompressible mesh
+!> @param self Planar Incompressible mesh
 subroutine deletePrivate(self)
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	!
@@ -124,6 +160,9 @@ subroutine deletePrivate(self)
 	endif
 end subroutine
 
+!> @brief Performs a deep copy of one PlanarIncompressible mesh into another.  Both objects must have already been allocated.
+!> @param[out] self Target PlanarIncompressible mesh
+!> @param[in] other Source PlanarIncompressible mesh
 subroutine copyPrivate( self, other )
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	type(PlaneMeshIncompressible), intent(in) :: other
@@ -142,6 +181,10 @@ subroutine copyPrivate( self, other )
 	endif
 end subroutine
 
+!> @brief Adds memory for passive tracers to a PlanarIncompressible mesh.
+!> @param[inout] self PlanarIncompressible mesh
+!> @param[in] nTracers number of tracers to add
+!> @param[in] tracerDims array of values (either 1 or 2) corresponding to the dimensions of each tracer.  Scalar tracers will have dimension 1, vector tracers will have dimension 2.
 subroutine AddTracers(self, nTracers, tracerDims)
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	integer(kint), intent(in) :: nTracers
@@ -161,6 +204,9 @@ subroutine AddTracers(self, nTracers, tracerDims)
 	enddo
 end subroutine	
 
+!> @brief Output basic information about a PlanarIncompressible mesh to a @ref Logger
+!> @param[in] self PlanarIncompressible mesh
+!> @param[inout] aLog @ref Logger
 subroutine logStatsPrivate(self, alog)
 	type(PlaneMeshIncompressible), intent(in) :: self
 	type(Logger), intent(inout) :: aLog
@@ -173,6 +219,10 @@ subroutine logStatsPrivate(self, alog)
 	call EndSection(aLog)
 end subroutine
 
+!> @brief Sets absolute tolerances for AMR criteria based on an initially uniform mesh with corresponding vorticity distribution.
+!> @param[in] self PlanarIncompressible mesh
+!> @param[inout] circTol On input, relative tolerance (between 0 and 1).  On output, absolute tolerance for circulation magnitude about a face.
+!> @param[inout] lagVarTol On input, relative tolerance (between 0 and 1).  On output, absolute tolerance for Lagrangian variation magnitude on each face.
 subroutine SetAbsoluteTolerances( self, circTol, lagVarTol )
 	type(PlaneMeshIncompressible), intent(in) :: self
 	real(kreal), intent(inout) :: circTol
@@ -182,6 +232,9 @@ subroutine SetAbsoluteTolerances( self, circTol, lagVarTol )
 	lagVarTol = lagVarTol * MaxLagrangianVariationPerFace(self%mesh)
 end subroutine
 
+!> @brief Writes a PlanarIncompressible mesh to a legacy formatted .vtk file, including all @ref Field data for variables and tracers.
+!> @param[in] self PlanarIncompressible mesh
+!> @param[in] filename Name of output file
 subroutine OutputToVTK(self, filename)
 	type(PlaneMeshIncompressible), intent(in) :: self
 	character(len=*), intent(in) :: filename
@@ -219,6 +272,10 @@ subroutine OutputToVTK(self, filename)
 	close(WRITE_UNIT_1)
 end subroutine
 
+!> @brief Defines an initial vorticity distribution on a PlanarIncompressible mesh.
+!> 
+!> @param[inout] self PlanarIncompressible mesh
+!> @param[in] vortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf2DSpace
 subroutine SetInitialVorticityOnMesh( self, vortFn )
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	procedure(scalarFnOf2DSpace) :: vortFn
@@ -231,6 +288,10 @@ subroutine SetInitialVorticityOnMesh( self, vortFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial velocity distribution on a PlanarIncompressible mesh.
+!> 
+!> @param[inout] self PlanarIncompressible mesh
+!> @param[in] velFn Velocity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf2DSpace
 subroutine setVelocityFromFunction( self, velFn )
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	procedure(vectorFnOf2DSpace) :: velFn
@@ -246,6 +307,11 @@ subroutine setVelocityFromFunction( self, velFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial scalar tracer distribution on a PlanarIncompressible mesh.
+!> 
+!> @param[inout] self PlanarIncompressible mesh
+!> @param[in] tracerID index of tracer in `PlanarIncompressiblMesh%%tracers(:)`
+!> @param[in] tracerFn Tracer distribution function.  Must have same interface as numberkindsmodule::scalarFnOf2DSpace
 subroutine SetScalarTracerOnMesh( self, tracerID, tracerFn )
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	integer(kint), intent(in) :: tracerID
@@ -259,6 +325,11 @@ subroutine SetScalarTracerOnMesh( self, tracerID, tracerFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial scalar tracer distribution on a PlanarIncompressible mesh.
+!> 
+!> @param[inout] self PlanarIncompressible mesh
+!> @param[in] tracerID index of tracer in `PlanarIncompressiblMesh%%tracers(:)`
+!> @param[in] tracerFn Tracer distribution function.  Must have same interface as numberkindsmodule::vectorFnOf2DSpace
 subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn)
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	integer(kint), intent(in) :: tracerID
@@ -275,6 +346,9 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn)
 	enddo
 end subroutine
 
+!> @brief Computes the total kinetic engery (a conserved integral) on a PlanarIncompressible mesh.
+!> @param[in] self PlanarIncompressible mesh
+!> @return totalKE total kinetic energy
 function TotalKE( self )
 	real(kreal) :: TotalKE
 	type(PlaneMeshIncompressible), intent(in) :: self
@@ -292,6 +366,9 @@ function TotalKE( self )
 	TotalKE = 0.5_kreal * TotalKE
 end function
 
+!> @brief Computes the total enstrophy (a conserved integral) on a PlanarIncompressible mesh.
+!> @param[in] self PlanarIncompressible mesh
+!> @return totalEnstrophy
 function TotalEnstrophy(self)
 	real(kreal) :: TotalEnstrophy
 	type(PlaneMeshIncompressible), intent(in) :: self
@@ -307,6 +384,9 @@ function TotalEnstrophy(self)
 	TotalEnstrophy = 0.5_kreal * TotalEnstrophy
 end function
 
+!> @brief Computes the maximum circulation magnitude about each face and returns the maximum value for the whole mesh.
+!> @param[in] self PlanarIncompressible mesh
+!> @return MaximumCirculation magnitude
 function MaxCirculationPerFace(self)
 	real(kreal) :: MaxCirculationPerFace
 	type(PlaneMeshIncompressible), intent(in) :: self
@@ -325,6 +405,8 @@ function MaxCirculationPerFace(self)
 	enddo
 end function
 
+!> @brief Defines the velocity distribution on a PlanarIncompressible mesh using the Biot-Savart integral.
+!> @param[inout] self PlanarIncompressible mesh
 subroutine setVelocityFromVorticity( self )
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	!
@@ -367,6 +449,8 @@ subroutine setVelocityFromVorticity( self )
 	enddo
 end subroutine
 
+!> @brief Defines the stream function on a PlanarIncompressible mesh using the Green's function integral.
+!> @param[inout] self PlanarIncompressible mesh
 subroutine SetStreamFunctionOnMesh(self)
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	!
@@ -409,6 +493,11 @@ end subroutine
 ! private methods
 !----------------
 !
+!> @brief Initializes a logger for the PlanarIncompressible module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -421,4 +510,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

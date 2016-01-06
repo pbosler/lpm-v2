@@ -7,7 +7,7 @@ module MPISetupModule
 !> @author
 !> Peter Bosler, Sandia National Laboratories, Albuquerque, NM
 !
-!> @defgroup MPISetup MPISetup Module
+!> @defgroup MPISetup MPISetup
 !> @brief A class for handling parallelization via MPI for distributed memory architectures.
 !> 
 !> The current implementation uses the 'replicated data algorithm' and simply divides the number of items by the number of processors and distributes indices accordingly.

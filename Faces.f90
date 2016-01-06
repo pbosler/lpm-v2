@@ -4,8 +4,20 @@ module FacesModule
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
-!> @defgroup Faces Faces module
-!> @brief Faces of polyhedral meshes connect to vertices and edges.
+!> @defgroup Faces Faces
+!> @brief Faces of polyhedral meshes have centers and vertices via the @ref Particles and edges via the @ref Edges.
+!> 
+!> The faces data structures is a "structure of arrays," so that all information about face i is located at index i in the 
+!> relevant array.  
+!> For example, the index to the particle at the center of face i `aFaces%%centerParticle(i)` 
+!> and the vertices of face i can be accessed by `aFaces%%vertices(:,i)`. 
+!> 
+!> The faces data structure maintains arrays of pointers (integer indices) into @ref Particles and @ref Edges objects
+!> to avoid reproducing the data contained by those structures. 
+!> 
+!> In addition the faces are organized into a quadtree, defined by the `hasChildren`, `children`, and `parent` arrays,
+!> to facilitate faster searching through the data structure.
+!> 
 !> @{
 use NumberKindsModule
 use STDIntVectorModule
@@ -36,16 +48,16 @@ public CountParents
 ! > Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
 !>
 type Faces
-	integer(kint), allocatable :: centerParticle(:) 
-	integer(kint), allocatable :: vertices(:,:) 
-	integer(kint), allocatable :: edges(:,:) 
-	logical(klog), allocatable :: hasChildren(:) 
-	integer(kint), allocatable :: children(:,:) 
-	integer(kint), allocatable :: parent(:) 
-	integer(kint) :: faceKind
-	integer(kint) :: N
-	integer(kint) :: N_Active
-	integer(kint) :: N_Max
+	integer(kint), allocatable :: centerParticle(:) !< indices to faces' center particles in a particlesmodule::particles object
+	integer(kint), allocatable :: vertices(:,:)  !< indices to faces' vertex particles in a particlesmodule::particles object
+	integer(kint), allocatable :: edges(:,:) !< indices to faces' edges in an edgesmodule::edges object
+	logical(klog), allocatable :: hasChildren(:) !< hasChildren(i) is .TRUE. if face i has been divided
+	integer(kint), allocatable :: children(:,:) !< indices to child faces in a faces object
+	integer(kint), allocatable :: parent(:) !< indices to parent faces in a faces object
+	integer(kint) :: faceKind !< identifies type of face (e.g., triangular, quadrilateral, etc.)
+	integer(kint) :: N !< Number of faces currently in use
+	integer(kint) :: N_Active !< Number of undivided faces; these define the spatial discretization
+	integer(kint) :: N_Max !< Maximum number of faces allowed in memory
 	
 	contains
 		final :: deletePrivate
@@ -88,69 +100,12 @@ character(len=MAX_STRING_LENGTH) :: logstring
 
 contains
 
-subroutine PrintDebugPrivate( self )
-	type(Faces), intent(in) :: self
-	integer(kint) :: i, j
-	print *, " Faces DEBUG info : " 
-	print *, "faces.N  = ", self%N
-	print *, "faces.N_Max = ", self%N_Max
-	print *, "faces.N_Active = ", self%N_Active
-	print *, "faces.faceKind = ", self%faceKind
-	print *, "n divided faces = ", count(self%hasChildren)
-	print *, "faces.centerParticle = "
-	do i = 1, self%N_Max
-		print *, self%centerParticle(i)
-	enddo
-	print *, " faces.vertices = "
-	do i = 1, self%N_Max
-		do j = 1, size(self%vertices,1)
-			write(6,'(I6)',advance='NO') self%vertices(j,i)
-		enddo
-		print *, " "
-	enddo
-	print *, " "
-	print *, "faces.edges = "
-	do i = 1, self%N_Max
-		do j = 1, size(self%edges,1)
-			write(6,'(I6)',advance='NO') self%edges(j,i)
-		enddo
-		print *, " "
-	enddo
-	print *, " "
-	print *, "faces tree = "
-	do i = 1, self%N_Max
-		if ( self%hasChildren(i) ) then
-			write(6,'(A,4X)',advance ='NO') 'T'
-		else
-			write(6,'(A,4X)',advance='NO' ) 'F'
-		endif
-		do j = 1, 4
-			write(6, '(I6)', advance='NO') self%children(j,i)
-		enddo
-		print *, self%parent(i) 
-	enddo	
-
-end subroutine
-
-subroutine LogStatsPrivate(self, aLog)
-	type(Faces), intent(in) :: self
-	type(Logger), intent(inout) :: aLog 
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, " Faces stats : ")
-	call StartSection(aLog)
-	call LogMessage(alog, TRACE_LOGGING_LEVEL, "faces.N = ", self%N)
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faces.N_Max = ", self%N_Max )
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faces.N_Active = ", self%N_Active)
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n divided faces = ", count(self%hasChildren))
-	if ( self%faceKind == TRI_PANEL ) then
-		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "TRI_PANEL")
-	elseif ( self%faceKind == QUAD_PANEL ) then
-		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "QUAD_PANEL")
-	else
-		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "invalid faceKind.")
-	endif
-	call EndSection(aLog)
-end subroutine
-
+!> @brief Allocates memory for a new faces object.  New arrays are set to zero, and must be initialized separately.
+!> @todo Move faceKind constants from ::numberkindsmodule to ::facesmodule? 
+!>
+!> @param self Target faces object
+!> @param faceKind Face kind identifier (e.g., triangular, quadrilateral, etc.), as definded in NumberKindsModule
+!> @param nMax Max amount of memory to allocate
 subroutine newPrivate( self, faceKind, nMax )
 	type(Faces), intent(out) :: self
 	integer(kint), intent(in) :: faceKind
@@ -192,6 +147,8 @@ subroutine newPrivate( self, faceKind, nMax )
 	self%faceKind = faceKind
 end subroutine
 
+!> @brief Deletes and frees memory associated with a faces object
+!> @param self Target faces object
 subroutine deletePrivate(self)
 	type(Faces), intent(inout) :: self
 	if ( allocated(self%vertices)) deallocate(self%vertices)
@@ -202,6 +159,10 @@ subroutine deletePrivate(self)
 	if ( allocated(self%parent)) deallocate(self%parent)
 end subroutine
 
+!> @brief Performs a deep copy of one faces object into another.  
+!> Both objects must have been allocated correctly before calling this subroutine.
+!> @param dest Target faces object
+!> @param source Source faces object
 subroutine copyPrivate( dest, source )
 	type(Faces), intent(inout) :: dest
 	type(Faces), intent(in) :: source
@@ -228,6 +189,79 @@ subroutine copyPrivate( dest, source )
 	enddo
 end subroutine
 
+!> @brief Prints detailed information about the contents of a faces object to the console.
+!> Used for debugging.
+!> @param self Target faces object
+subroutine PrintDebugPrivate( self )
+	type(Faces), intent(in) :: self
+	integer(kint) :: i, j
+	print *, " Faces DEBUG info : " 
+	print *, "faces.N  = ", self%N
+	print *, "faces.N_Max = ", self%N_Max
+	print *, "faces.N_Active = ", self%N_Active
+	print *, "faces.faceKind = ", self%faceKind
+	print *, "n divided faces = ", count(self%hasChildren)
+	print *, "faces.centerParticle = "
+	do i = 1, self%N_Max
+		print *, self%centerParticle(i)
+	enddo
+	print *, " faces.vertices = "
+	do i = 1, self%N_Max
+		do j = 1, size(self%vertices,1)
+			write(6,'(I6)',advance='NO') self%vertices(j,i)
+		enddo
+		print *, " "
+	enddo
+	print *, " "
+	print *, "faces.edges = "
+	do i = 1, self%N_Max
+		do j = 1, size(self%edges,1)
+			write(6,'(I6)',advance='NO') self%edges(j,i)
+		enddo
+		print *, " "
+	enddo
+	print *, " "
+	print *, "faces tree = "
+	do i = 1, self%N_Max
+		if ( self%hasChildren(i) ) then
+			write(6,'(A,4X)',advance ='NO') 'T'
+		else
+			write(6,'(A,4X)',advance='NO' ) 'F'
+		endif
+		do j = 1, 4
+			write(6, '(I6)', advance='NO') self%children(j,i)
+		enddo
+		print *, self%parent(i) 
+	enddo	
+end subroutine
+
+!> @brief Writes basic info about a faces object to a specified loggermodule::Logger
+!> @param self Target faces object
+!> @param aLog Logger object to handle output
+subroutine LogStatsPrivate(self, aLog)
+	type(Faces), intent(in) :: self
+	type(Logger), intent(inout) :: aLog 
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, " Faces stats : ")
+	call StartSection(aLog)
+	call LogMessage(alog, TRACE_LOGGING_LEVEL, "faces.N = ", self%N)
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faces.N_Max = ", self%N_Max )
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faces.N_Active = ", self%N_Active)
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n divided faces = ", count(self%hasChildren))
+	if ( self%faceKind == TRI_PANEL ) then
+		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "TRI_PANEL")
+	elseif ( self%faceKind == QUAD_PANEL ) then
+		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "QUAD_PANEL")
+	else
+		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", "invalid faceKind.")
+	endif
+	call EndSection(aLog)
+end subroutine
+
+!> @brief Returns the physical coordinates of a face's center particle
+!> @param self Target faces object
+!> @param faceIndex Index to target face
+!> @param aParticles particlesmodule::particles object associated with this set of faces
+!> @return Coordinate vector of face's center particle's position
 function FaceCenterPhysCoord( self, faceIndex, aparticles)
 	real(kreal) :: FaceCenterPhysCoord(3)
 	type(Faces), intent(in) :: self
@@ -243,6 +277,11 @@ function FaceCenterPhysCoord( self, faceIndex, aparticles)
 	endif
 end function
 
+!> @brief Returns the Lagrangian coordinates of a face's center particle
+!> @param self Target faces object
+!> @param faceIndex Index to target face
+!> @param aParticles particlesmodule::particles object associated with this set of faces
+!> @return Coordinate vector of face's center particle's Lagrangian coordinate
 function FaceCenterLagCoord( self, faceIndex, aparticles)
 	real(kreal) :: FaceCenterLagCoord(3)
 	type(Faces), intent(in) :: self
@@ -258,6 +297,10 @@ function FaceCenterLagCoord( self, faceIndex, aparticles)
 	endif
 end function
 
+!> @brief Counts the number of levels in the faces quadtree above a particular face
+!> @param self Target Faces object
+!> @param index Target face
+!> @return Number of levels in quadtree above face(i)(
 function countParentFaces( self, index )
 	integer(kint) :: countParentFaces
 	type(Faces), intent(in) :: self
@@ -276,6 +319,13 @@ function countParentFaces( self, index )
 	enddo
 end function 
 
+!> @brief Counts the number of shared edges between two faces
+!> Outputs an error of this number is > 1.
+!> @param self Target faces object
+!> @param face1 index to a face
+!> @param face2 index to another face
+!> @return SharedEdge = 0 if faces do not have a common edge, SharedEdge = 1 if faces have a common edge, 
+!> SharedEdges > 1 is an error, probably with the mesh seed file.
 function SharedEdge( self, face1, face2 )
 	integer(kint) :: SharedEdge
 	type(Faces), intent(in) :: self
@@ -299,6 +349,10 @@ function SharedEdge( self, face1, face2 )
 	endif
 end function
 
+!> @brief Returns the index to a vertex particle opposite to an edge in a triangular face.
+!> @param self Target faces object
+!> @param faceIndex target face
+!> @param edgeIndex index to an edge from an edgesmodule::edges object
 function ParticleOppositeTriEdge( self, faceIndex, edgeIndex )
 	integer(kint) :: ParticleOppositeTriEdge
 	type(Faces), intent(in) :: self
@@ -326,6 +380,11 @@ function ParticleOppositeTriEdge( self, faceIndex, edgeIndex )
 	endif		
 end function
 
+!> @brief Outputs connectivity data to a legacy format .vtk ASCII file.
+!> Note: This subroutine must be called in the correct order, after outputwritermodule::writevtkfileheader 
+!> and particlesmodule::writevtkpoints.
+!> @param self Target faces object
+!> @param fileunit Integer unit associated with .vtk file
 subroutine WriteFacesToVTKPolygons( self, fileunit )
 	type(Faces), intent(in) :: self
 	integer(kint), intent(in) :: fileunit
@@ -350,6 +409,12 @@ subroutine WriteFacesToVTKPolygons( self, fileunit )
 	enddo
 end subroutine
 
+!> @brief Outputs face areas data to a legacy format .vtk ASCII file.
+!> Note: This subroutine must be called in the correct order, after all vtk point data has been written
+!> by calls to fieldmodule::writefieldtovtkpointdata and before any other calls to fieldmodule::writefieldtovtkcelldata
+!> @param self Target faces object
+!> @param aParticles Particles object associated with this set of faces
+!> @param fileunit Integer unit associated with .vtk file
 subroutine WriteFaceAreaToVTKCellData(self, aParticles, fileunit )
 	type(Faces), intent(in) :: self
 	type(Particles), intent(in) :: aParticles
@@ -376,6 +441,9 @@ subroutine WriteFaceAreaToVTKCellData(self, aParticles, fileunit )
 	enddo		
 end subroutine
 
+!> @brief Outputs data associated with a faces object, including all connectivity information, to a Matlab-readable .m file.
+!> @param self Target faces object
+!> @param fileunit Integer unit associated with a .m file
 subroutine WriteFacesToMatlab( self, fileunit )
 	type(Faces), intent(in) :: self
 	integer(kint), intent(in) :: fileunit
@@ -449,7 +517,15 @@ subroutine WriteFacesToMatlab( self, fileunit )
 	write(fileunit,*) self%centerParticle(self%N), "]; "
 end subroutine
 
-
+!> @brief This is a primary subroutine used by any quadrilateral mesh (spherical or planar).
+!> It divides a quadrilateral face into 4 children, adding a 4 leaves to the faces quadtree.
+!> It creates new particles and new edges.  
+!> It replaces divided edges with their appropriate children.
+!> 
+!> @param[inout] self Target faces object
+!> @param[in] faceIndex index of face to be divided
+!> @param[inout] aParticles Particles object associated with this set of faces.  
+!> @param[inout] anEdges Edges object associated with this set of faces
 subroutine DivideQuadFace( self, faceIndex, aParticles, anEdges )
 	type(Faces), intent(inout) :: self
 	integer(kint), intent(in) :: faceIndex
@@ -612,6 +688,16 @@ subroutine DivideQuadFace( self, faceIndex, aParticles, anEdges )
 	self%N_Active = self%N_Active + 3
 end subroutine
 
+
+!> @brief This is a primary subroutine used by any triangular mesh (spherical or planar).
+!> It divides a triangular face into 4 children, adding a 4 leaves to the faces quadtree.
+!> It creates new particles and new edges.  
+!> It replaces divided edges with their appropriate children.
+!> 
+!> @param[inout] self Target faces object
+!> @param[in] faceIndex index of face to be divided
+!> @param[inout] aParticles Particles object associated with this set of faces.  
+!> @param[inout] anEdges Edges object associated with this set of faces
 subroutine DivideTriFace( self, faceIndex, aParticles, anEdges )
 	type(Faces), intent(inout) :: self
 	integer(kint), intent(in) :: faceIndex
@@ -771,6 +857,12 @@ subroutine DivideTriFace( self, faceIndex, aParticles, anEdges )
 	self%N_Active = self%N_Active + 3	
 end subroutine
 
+
+!> @brief Computes the area of a polyhedral face
+!> @param self Target faces object
+!> @param index Index of face whose area is needed
+!> @param aParticles Particles object  associated with this set of faces
+!> @param anEdges Edges object associated with this set of faces
 function FaceArea( self, index, aParticles, anEdges )
 	real(kreal) :: FaceArea
 	type(Faces), intent(in) :: self
@@ -790,6 +882,12 @@ function FaceArea( self, index, aParticles, anEdges )
 	enddo
 end function
 
+!> @brief Inserts a new face into the faces data structure.
+!> Increases faces.N by 1. 
+!> @param self Target faces object
+!> @param centerParticle index to a the new face's center particle in a particlesmodule::particles object
+!> @param vertIndices indices to the new face's vertices in a particlesmodule::particles object
+!> @param edgeIndices indices to the new face's edges in an edgesmodule::edges object.
 subroutine InsertFace( self, centerParticle, vertIndices, edgeIndices )
 	type(Faces), intent(inout) :: self
 	integer(kint), intent(in) :: centerParticle
@@ -810,6 +908,12 @@ subroutine InsertFace( self, centerParticle, vertIndices, edgeIndices )
 	self%N = self%N + 1
 end subroutine
 
+!> @brief Determines the area of a quadrilateral face.  Assumes the face has exactly 4 edges 
+!> (Does not account for adjacent face's having different levels of refinement).
+!> 
+!> @param self Target faces object
+!> @param index Index to face whose area is needed
+!> @param aParticles Particles object associated with this set of faces
 function QuadFaceArea( self, index, aParticles )
 	real(kreal) :: QuadFaceArea
 	type(Faces), intent(in) :: self
@@ -837,6 +941,12 @@ function QuadFaceArea( self, index, aParticles )
 	endif
 end function
 
+!> @brief Determines the area of a triangular face.  Assumes the face has exactly 3 edges 
+!> (Does not account for adjacent face's having different levels of refinement).
+!> 
+!> @param self Target faces object
+!> @param index Index to face whose area is needed
+!> @param aParticles Particles object associated with this set of faces
 function TriFaceArea( self, index, aParticles )
 	real(kreal) :: TriFaceArea
 	type(Faces), intent(in) :: self
@@ -864,6 +974,11 @@ function TriFaceArea( self, index, aParticles )
 	endif
 end function
 
+!> @brief Computes the centroid (in physical space) of a face based on its vertices.
+!> @param self[in] Target faces object
+!> @param index[in] Index of face whose centroid is needed
+!> @param aParticles[in] Particles object associated with this set of faces
+!> @return Position vector of face centroid
 function FaceCentroid(self, index, aParticles )
 	real(kreal) :: FaceCentroid(3)
 	type(Faces), intent(in) :: self
@@ -895,7 +1010,17 @@ function FaceCentroid(self, index, aParticles )
 	endif
 end function
 
+!
+!----------------
+! Private methods
+!----------------
+!
 
+!> @brief Initializes a logger for the Faces module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param[out] aLog Target Logger object
+!> @param[in] rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 ! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog

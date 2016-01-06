@@ -13,6 +13,8 @@ module LoggerModule
 !> Handles display, formatting, and organization of console messages.
 !> All messages are presumed to have a key - value pair.  
 !> For example, the key may be the origin of the message in the code, and the value contains the message content.
+!> @todo Move initLogger routines from each module to this module.
+!>
 !> @{
 !
 !

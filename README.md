@@ -19,7 +19,7 @@ Design / Use
 =========
 
 The code is organized in an object-oriented style using modern Fortran. 
-Hence, there is a class, or Fortran derived data type, that corresponds to every task that the code completes.
+Hence, there is a class (or Fortran derived data type) that corresponds to every task that the code completes.
 Generally, each data type has its own module file.
 A C++ implementation is in development.
 
@@ -64,8 +64,11 @@ PDE types and Solver objects
 --------------
 PDEs are solved using a ''method of lines'' discretization. 
 A mesh is connected to its relevant variables by a PDE type, e.g., an SWEMesh or a BVEMesh object.
+These objects combine a PolyMesh2d for the spatial discretization with the various Fields (e.g., vorticity, temperature) 
+appropriate to the chosen PDE.
+
 Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
-Examples are the 
+
 
 Drivers
 --------
@@ -101,8 +104,15 @@ then
 
     make test
     
-to run the unit tests.  To run an application driver, LPM executables may be run with the command
+to run the unit tests.  
 
-    mpirun -np 6 <LPMfile>.exe
+Running applications
+====================
 
-This would execute the specified .exe file using 6 MPI processes.
+LPM uses Fortran's handy namelist utility to specify run-time input to programs.
+
+To run an application driver, LPM executables may be run with the command
+
+    mpirun -np 6 <LPMfile>.exe  <namelist file>
+
+This would execute the specified .exe file using 6 MPI processes and the input variables defined in the specified namelist file.

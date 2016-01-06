@@ -19,7 +19,7 @@ module NumberKindsModule
 !------------------------------------------------------------------------------
 	implicit none
 	public
-!> @defgroup NumberKinds NumberKinds module
+!> @defgroup NumberKinds NumberKinds
 !> Sets global numerical constants for use by all LPPM modules and executables.
 !> @{
 	integer, parameter :: KREAL = kind(0.d0)   !< compiler generated kind for double precision reals @ingroup TypeConstants
