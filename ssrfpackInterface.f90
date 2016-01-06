@@ -1,5 +1,20 @@
 module SSRFPACKInterfaceModule
-
+!> @file ssrfpackInterface.f90
+!> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!> 
+!> @defgroup SsrfpackInterface  ssrfpackInterface
+!> @brief Interface and workspace for interpolation of LPM data in spherical domains using the STRIPACK and SSRFPACK libraries.
+!> 
+!> STRIPACK produces a Delaunay triangulation of scattered data points on the surface of a unit sphere. @n
+!> SSRFPACK performs interpolation on that triangulation using a linear combination of cubic Hermite splines with 
+!> exponential tension factors.  
+!> Derivatives for the Hermite interpolating polynomials are estimated using a least-squares projection onto local quadratic polynomials.
+!> 
+!> For more information, see
+!> 1. R. Renka, Algorithm 772: STRIPACK: Delaunay triangulation and Voronoi diagram on the surface of a sphere, _ACM TOMS_ 23, 1997. (stripack.f)
+!> 2. R. Renka, Algorithm 773: SSRFPACK: Interpolation scattered data on the surface of a sphere with a surface under tension, _ACM TOMS_ 23, 1997. (ssrfpack.f)
+!> 
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -30,9 +45,9 @@ public InterpolateScalarToUnifLatLonGrid, InterpolateVectorToUnifLatLonGrid
 public SetSigmaFlag
 
 type DelaunayTriangulation
-	integer(kint), dimension(:), allocatable :: list 
-	integer(kint), dimension(:), allocatable :: lptr 
-	integer(kint), dimension(:), allocatable :: lend 
+	integer(kint), dimension(:), allocatable :: list !< Stripack data structure, see stripack.f for more details
+	integer(kint), dimension(:), allocatable :: lptr !< Stripack data structure, see stripack.f for more details
+	integer(kint), dimension(:), allocatable :: lend !< Stripack data structure, see stripack.f for more details
 	
 	contains
 	
@@ -40,12 +55,12 @@ type DelaunayTriangulation
 end type
 
 type SSRFPACKInterface
-	real(kreal), dimension(:,:), allocatable :: grad1 
-	real(kreal), dimension(:,:), allocatable :: grad2 
-	real(kreal), dimension(:,:), allocatable :: grad3 
-	real(kreal), dimension(:), allocatable :: sigma1 
-	real(kreal), dimension(:), allocatable :: sigma2 
-	real(kreal), dimension(:), allocatable :: sigma3 
+	real(kreal), dimension(:,:), allocatable :: grad1 !< Storage for estimated gradient vectors
+	real(kreal), dimension(:,:), allocatable :: grad2 !< Storage for estimated gradient vectors
+	real(kreal), dimension(:,:), allocatable :: grad3 !< Storage for estimated gradient vectors
+	real(kreal), dimension(:), allocatable :: sigma1 !< Storage for smoothing factors
+	real(kreal), dimension(:), allocatable :: sigma2 !< Storage for smoothing factors
+	real(kreal), dimension(:), allocatable :: sigma3 !< Storage for smoothing factors
 	
 	contains
 	
@@ -90,6 +105,12 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory for an SsrfpackInterface object.
+!> 
+!> @param[out] self Target SSRFPACKInterface
+!> @param[inout] aMesh @ref PolyMesh2d spherical mesh
+!> @param[in] nDim Dimension of data to be interpolated
 subroutine newPrivate(self, aMesh, nDim )
 	type(SSRFPACKInterface), intent(out) :: self
 	type(PolyMesh2d), intent(inout) :: aMesh
@@ -115,6 +136,10 @@ subroutine newPrivate(self, aMesh, nDim )
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" newSSRFPACKInterface : ", "returning.")
 end subroutine
 
+!> @brief Allocates memory for STRIPACK's Delaunay triangulation data structure, constructs Delaunay triangulation.
+!> 
+!> @param[out] self Target Delaunay triangulation of all particles (both centers and vertices)
+!> @param[in] aMesh @ref PolyMesh2d spherical mesh
 subroutine newDelTri(self, aMesh)
 	type(DelaunayTriangulation), intent(out) :: self
 	type(PolyMesh2d), intent(inout) :: aMesh
@@ -130,6 +155,8 @@ subroutine newDelTri(self, aMesh)
 	call BuildDelaunayTriangulation(self, aMesh)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a Delaunay triangulation
+!> @param[inout] self Target Del. tri.
 subroutine deleteDelTri(self)
 	type(DelaunayTriangulation), intent(inout) :: self
 	if ( allocated(self%list)) then
@@ -139,6 +166,8 @@ subroutine deleteDelTri(self)
 	endif
 end subroutine
 
+!> @brief Deletes and frees memory associated with an SSRFPACKInterface object.
+!> @param[inout] Target SSRFPACKInterface
 subroutine deletePrivate( self )
 	type(SSRFPACKInterface), intent(inout) :: self
 	if ( allocated(self%grad1) ) then
@@ -153,8 +182,15 @@ subroutine deletePrivate( self )
 	endif
 end subroutine
 
-
-
+!> @brief Sets up an SSRFPACKInterface object for interpolation.  
+!>
+!> * Estimates scalar gradients of a scalar field, or scalar gradients of each component of a vector field
+!> * Computes optimal smoothing factors, see ssrfpack.f for more detail
+!> 
+!> @param[inout] self target SSRFPACKInterface, on output, target is ready to interpolate data
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] vectorField vector @ref Field associated with aMesh
 subroutine SetVectorSourceData(self, aMesh, delTri, vectorField)
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -182,6 +218,15 @@ subroutine SetVectorSourceData(self, aMesh, delTri, vectorField)
 	endif
 end subroutine
 
+!> @brief Sets up an SSRFPACKInterface object for interpolation.  
+!>
+!> * Estimates scalar gradients of a scalar field, or scalar gradients of each component of a vector field
+!> * Computes optimal smoothing factors, see ssrfpack.f for more detail
+!> 
+!> @param[inout] self target SSRFPACKInterface, on output, target is ready to interpolate data
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] scalarField scalar @ref Field associated with aMesh
 subroutine SetScalarSourceData(self, aMesh, delTri, scalarField)
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -204,6 +249,14 @@ subroutine SetScalarSourceData(self, aMesh, delTri, scalarField)
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" SetScalarSourceData : ", "returning.")
 end subroutine
 
+!> @brief Sets up an SSRFPACKInterface object for interpolation of the Lagrangian parameter.  
+!>
+!> * Estimates scalar gradients of each component of the Lagrangian coordinate vector at each particle
+!> * Computes optimal smoothing factors, see ssrfpack.f for more detail
+!> 
+!> @param[inout] self target SSRFPACKInterface, on output, target is ready to interpolate data
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] delTri Delaunay triangulation
 subroutine SetSourceLagrangianParameter( self, aMesh, delTri )
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -230,6 +283,18 @@ subroutine SetSourceLagrangianParameter( self, aMesh, delTri )
 	endif
 end subroutine
 
+!> @brief Performs interpolation of a scalar field at a single point.
+!>
+!> * Locates (lat, lon) in Delaunay triangulation
+!> * Computes interpolated value using cubic Hermite polynomial on triangle containing (lat,lon) 
+!>
+!> @param[in] lon Longitude of interpolation output 
+!> @param[in] lat Latitude of interpolation output
+!> @param[in] self SSRFPACKInterface ready for interpolation (a SetSource* subroutine has already been called)
+!> @param[in] aMesh @ref PolyMesh2d spherical mesh
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] scalarField source data
+!> @return interpolated scalar value
 function InterpolateScalar( lon, lat, self, aMesh, delTri, scalarField)
 	real(kreal) :: InterpolateScalar
 	type(SSRFPACKInterface), intent(in) :: self
@@ -244,6 +309,7 @@ function InterpolateScalar( lon, lat, self, aMesh, delTri, scalarField)
 			 	 scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, SIGMA_FLAG, self%sigma1, GRAD_FLAG, &
 			 	 self%grad1, startTriangle, InterpolateScalar, errCode)
 end function
+
 
 subroutine InterpolateScalarToUnifLatLonGrid( self, aMesh, delTri, scalarField, lons, lats, interpOut)
 	type(SSRFPACKInterface), intent(inout) :: self
@@ -414,4 +480,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module
