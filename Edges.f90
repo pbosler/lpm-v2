@@ -1,12 +1,14 @@
 module EdgesModule
 !> @file Edges.f90
 !> Provides a primitive data structure and methods for creating edges of polyhedral meshes.
-!> 
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
 !> @defgroup Edges Edges module
 !> @brief Edges of polyhedral meshes connect to vertices and faces.
+!>
+!> Edges know the indices (to ::particlesmodule) of their origin and destination, and the indices (to ::facesmodule)
+!> of their left face and right face.
 !> @{
 use NumberKindsModule
 use LoggerModule
@@ -32,20 +34,20 @@ public LogStats, PrintDebugInfo
 public WriteEdgesToMatlab
 public CountParents
 
-!> @class Edges
-!> @brief Edges know the indices (to Particles) of their origin and destination, and the indices (to Faces)
-!> of their left face and right face.
+! > @class Edges
+! > @brief Edges know the indices (to Particles) of their origin and destination, and the indices (to Faces)
+! > of their left face and right face.
 type Edges
-	integer(kint), allocatable :: orig(:) 
-	integer(kint), allocatable :: dest(:) 
-	integer(kint), allocatable :: rightFace(:) 
-	integer(kint), allocatable :: leftFace(:) 
-	integer(kint), allocatable :: child1(:) 
-	integer(kint), allocatable :: child2(:) 
-	logical(klog), allocatable :: hasChildren(:) 
-	integer(kint), allocatable :: parent(:) 
-	integer(kint) :: N = 0
-	integer(kint) :: N_Max = 0
+	integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles 
+	integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles 
+	integer(kint), allocatable :: rightFace(:) !< Integer array containing indices of facesmodule::faces
+	integer(kint), allocatable :: leftFace(:) !< Integer array containing indices of facesmodule::faces
+	integer(kint), allocatable :: child1(:) !< Integer array containing indices to child edges with same origin vertex as parent
+	integer(kint), allocatable :: child2(:) !< Integer array containing indices to child edges with same destination vertex as parent
+	logical(klog), allocatable :: hasChildren(:) !< hasChildren(i) is .TRUE. if edge i has been divided
+	integer(kint), allocatable :: parent(:) !< Null for root edges.  Integer pointers into edges for divided edges
+	integer(kint) :: N = 0 !< Number of edges currently in use
+	integer(kint) :: N_Max = 0 !< Max number of edges allowed in memory
 	
 	contains
 		final :: deletePrivate
@@ -86,61 +88,14 @@ character(len=28), save :: logKey = 'Edges'
 integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 
 contains
-
-subroutine WriteEdgesToMatlab( self, fileunit )
-	type(Edges), intent(in) :: self
-	integer(kint), intent(in) :: fileunit
-	!
-	integer(kint) :: i
-	write(fileunit,*) "edgeVerts = [ ", self%orig(1), ", ", self%dest(1), "; ..."
-	do i = 2, self%N-1
-		write(fileunit, * ) self%orig(i), ", ", self%dest(i), "; ..."
-	enddo
-	write(fileunit, *) self%orig(self%N), ", ", self%dest(self%N), "]; "
-	write(fileunit,'(A)',advance='NO') "edgeHasChildren = ["
-	do i = 1, self%N - 1
-		if ( self%hasChildren(i) ) then
-			write(fileunit,*) 1, ", ..."
-		else
-			write(fileunit,*) 0, ", ..."
-		endif
-	enddo
-	if ( self%hasChildren(self%N)) then
-		write(fileunit,'(I4)', advance='NO') 1
-	else
-		write(fileunit,'(I4)', advance='NO') 0
-	endif
-	write(fileunit,'(A)') "];"
-end subroutine
-
-subroutine PrintDebugPrivate( self ) 
-	type(Edges), intent(in) :: self
-	integer(kint) :: i
-	print *, "Edges DEBUG info : "
-	print *, "edges.N = ", self%N
-	print *, "edges.N_Max = ", self%N_Max
-	print *, "edge records : "
-	do i = 1, self%N_Max
-		print *, self%orig(i), self%dest(i), self%leftFace(i), self%rightFace(i)
-	enddo
-	print *, "edge tree : "
-	do i = 1, self%N_Max
-		print *, self%hasChildren(i), self%child1(i), self%child2(i), self%parent(i)
-	enddo
-end subroutine
-
-subroutine LogStatsPrivate( self, aLog )
-	type(Edges), intent(in) :: self
-	type(Logger), intent(inout) :: aLog
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, " Edges Stats : ")
-	call StartSection(aLog)
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "edges.N = ", self%N )
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "edges.N_Max = ", self%N_Max)
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n divided edges = ", count(self%hasChildren) )
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n leaf edges = ", self%N - count(self%hasChildren))
-	call EndSection(aLog)
-end subroutine
-
+!
+!----------------
+! Public methods
+!----------------
+!
+!> @brief Allocates memory for a new edges object.  All values are zeroed and must be initialized separately.
+!> @param self Target edge object
+!> @param nMax max number of edges allowed in memory
 subroutine NewPrivate(self, nMax )
 	type(Edges), intent(out) :: self
 	integer(kint), intent(in) :: nMax
@@ -173,6 +128,8 @@ subroutine NewPrivate(self, nMax )
 	self%parent = 0
 end subroutine
 
+!> @brief Deletes and frees memory associated with an edges object
+!> @param self Target edge object
 subroutine deletePrivate(self)
 	type(Edges), intent(inout) :: self
 	if ( allocated(self%orig)) deallocate(self%orig)
@@ -185,6 +142,9 @@ subroutine deletePrivate(self)
 	if ( allocated(self%parent)) deallocate(self%parent)
 end subroutine
 
+!> @brief Performs a deep copy of one edges object into another.  They must have been allocated the same to avoid memory errors.
+!> @param self Target edge object
+!> @param other Source edge object
 subroutine copyPrivate( self, other )
 	type(Edges), intent(inout) :: self
 	type(Edges), intent(in) :: other
@@ -209,6 +169,28 @@ subroutine copyPrivate( self, other )
 	self%N = other%N
 end subroutine
 
+!> @brief Log summarizing statistics about an edges object
+!> @param self Target edge object
+!> @param aLog Target loggermodule::logger object for output
+subroutine LogStatsPrivate( self, aLog )
+	type(Edges), intent(in) :: self
+	type(Logger), intent(inout) :: aLog
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, " Edges Stats : ")
+	call StartSection(aLog)
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "edges.N = ", self%N )
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "edges.N_Max = ", self%N_Max)
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n divided edges = ", count(self%hasChildren) )
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "n leaf edges = ", self%N - count(self%hasChildren))
+	call EndSection(aLog)
+end subroutine
+
+!> @brief Inserts an edge to the end of an edges object.  Increase edges.N by one.
+!> @param self Target edge object
+!> @param aParticles particlesmdoule::particles object associated with this set of edges
+!> @param origIndex index to origin particle
+!> @param destIndex index to destination particle
+!> @param leftFace index to left face of new edge in faces object
+!> @param rightFace index to right face of new edge in faces object
 subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFace )
 	type(Edges), intent(inout) :: self
 	type(Particles), intent(inout) :: aParticles
@@ -233,6 +215,9 @@ subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFa
 	self%N = n + 1
 end subroutine
 
+!> @brief Counts the number of levels in the edges binary tree above the edge at index
+!> @param self Target edge object
+!> @param index index of target edge
 function countParentEdges( self, index )
 	integer(kint) :: countParentEdges
 	type(Edges), intent(in) :: self
@@ -251,6 +236,10 @@ function countParentEdges( self, index )
 	enddo
 end function 
 
+!> @brief Computes the maximum edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return Maximum edge length
 function MaxEdgeLength( self, aParticles )
 	real(kreal) :: MaxEdgeLength
 	type(Edges), intent(in) :: self
@@ -268,6 +257,11 @@ function MaxEdgeLength( self, aParticles )
 	enddo
 end function
 
+!> @brief Computes the length of the edge at edgeIndex
+!> @param self Target edge object
+!> @param edgeIndex location of edge whose length is needed
+!> @param aParticles particles object associated with this set of edges
+!> @return Length of edge
 function EdgeLength(self, edgeIndex, aParticles )
 	real(kreal) :: EdgeLength
 	integer(kint), intent(in) :: edgeIndex
@@ -285,7 +279,10 @@ function EdgeLength(self, edgeIndex, aParticles )
 	endif
 end function
 
-
+!> @brief Computes the minimum edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return Minimum edge length
 function MinEdgeLength( self, aParticles)
 	real(kreal) :: MinEdgeLength
 	type(Edges), intent(in) :: self
@@ -303,6 +300,10 @@ function MinEdgeLength( self, aParticles)
 	enddo
 end function
 
+!> @brief Computes the average edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return average edge length
 function AvgEdgeLength(self, aParticles)
 	real(kreal) :: AvgEdgeLength
 	type(Edges), intent(in) :: self
@@ -321,6 +322,60 @@ function AvgEdgeLength(self, aParticles)
 	AvgEdgeLength = sum / real(nLeaves, kreal)
 end function
 
+!> @brief Writes the edges data structure to a .m file for later reading by Matlab.  For debugging.
+!> @param self Target edge object
+!> @param fileunit integer unit of .m file
+subroutine WriteEdgesToMatlab( self, fileunit )
+	type(Edges), intent(in) :: self
+	integer(kint), intent(in) :: fileunit
+	!
+	integer(kint) :: i
+	write(fileunit,*) "edgeVerts = [ ", self%orig(1), ", ", self%dest(1), "; ..."
+	do i = 2, self%N-1
+		write(fileunit, * ) self%orig(i), ", ", self%dest(i), "; ..."
+	enddo
+	write(fileunit, *) self%orig(self%N), ", ", self%dest(self%N), "]; "
+	write(fileunit,'(A)',advance='NO') "edgeHasChildren = ["
+	do i = 1, self%N - 1
+		if ( self%hasChildren(i) ) then
+			write(fileunit,*) 1, ", ..."
+		else
+			write(fileunit,*) 0, ", ..."
+		endif
+	enddo
+	if ( self%hasChildren(self%N)) then
+		write(fileunit,'(I4)', advance='NO') 1
+	else
+		write(fileunit,'(I4)', advance='NO') 0
+	endif
+	write(fileunit,'(A)') "];"
+end subroutine
+
+!> @brief Writes edges object values to the console.  For debugging.
+!> @param self Target edge object
+subroutine PrintDebugPrivate( self ) 
+	type(Edges), intent(in) :: self
+	integer(kint) :: i
+	print *, "Edges DEBUG info : "
+	print *, "edges.N = ", self%N
+	print *, "edges.N_Max = ", self%N_Max
+	print *, "edge records : "
+	do i = 1, self%N_Max
+		print *, self%orig(i), self%dest(i), self%leftFace(i), self%rightFace(i)
+	enddo
+	print *, "edge tree : "
+	do i = 1, self%N_Max
+		print *, self%hasChildren(i), self%child1(i), self%child2(i), self%parent(i)
+	enddo
+end subroutine
+
+!> @brief Records the index of an incident edge at its origin and destination particles.  
+!> Enables dual mesh functionality.
+!> @todo This doesn't work.
+!>
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 subroutine RecordIncidentEdgeAtParticles( self, edgeIndex, aParticles )
 	type(Edges), intent(in) :: self
 	integer(kint), intent(in) :: edgeIndex
@@ -373,6 +428,14 @@ subroutine RecordIncidentEdgeAtParticles( self, edgeIndex, aParticles )
 	endif
 end subroutine
 
+!> @brief Determines the angle relative to the positive x-direction (for planar geometry) or the angle relative to the 
+!> first edge listed at the origin particle (for spherical geometry).  
+!> Used for dual-mesh functionality.
+!> @todo This doesn't work.
+!> 
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 function edgeAngleAtOrig( self, edgeIndex, aParticles )
 	real(kreal) :: edgeAngleAtOrig
 	type(Edges), intent(in) :: self
@@ -413,6 +476,14 @@ function edgeAngleAtOrig( self, edgeIndex, aParticles )
 	endif
 end function
 
+!> @brief Determines the angle of edge at edgeIndex relative to the positive x-direction (for planar geometry) or the angle relative to the 
+!> first edge listed at the destination particle (for spherical geometry).  
+!> Used for dual-mesh functionality.
+!> @todo This doesn't work.
+!> 
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 function edgeAngleAtDest( self, edgeIndex, aParticles )
 	real(kreal) :: edgeAngleAtDest
 	type(Edges), intent(in) :: self
@@ -454,6 +525,10 @@ function edgeAngleAtDest( self, edgeIndex, aParticles )
 	endif
 end function
 
+!> @brief Returns a vector pointing from an edge's origin particle to its destination particle
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 function edgeVector( self,  edgeIndex, aParticles )
 	real(kreal), dimension(3) :: edgeVector
 	type(Edges), intent(in) :: self
@@ -468,6 +543,10 @@ function edgeVector( self,  edgeIndex, aParticles )
 	endif
 end function
 
+!> @brief Divides a parent edge, creating two child edges with the same orientation.
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 subroutine DivideEdge( self, edgeIndex, aParticles )
 	type(Edges), intent(inout) :: self
 	integer(kint), intent(in) :: edgeIndex
@@ -520,6 +599,10 @@ subroutine DivideEdge( self, edgeIndex, aParticles )
 	self%N = self%N + 2
 end subroutine
 
+!> @brief Replaces an edge recorded at its incident particles with the appropriate child edge index.
+!> @param self Target edge object
+!> @param parentIndex index of edge that was divided
+!> @param aParticles particles object associated with this set of edges
 subroutine replaceIncidentEdgeWithChild( self, parentIndex, aParticles )
 	type(Edges), intent(in) :: self
 	integer(kint), intent(in) :: parentIndex
@@ -564,6 +647,13 @@ subroutine replaceIncidentEdgeWithChild( self, parentIndex, aParticles )
 	aParticles%incidentEdges( pEdgeIndex, self%dest(parentIndex)) = self%child2(parentIndex)
 end subroutine
 
+!> @brief Returns .TRUE. if an edge has positive orientation relative to the selected face
+!> @todo This function should output an error if edgeIndex is not a member of faces.edges(:)
+!>
+!> @param anEdges Target edge object
+!> @param faceIndex Integer index to a face in a facesmodule::faces object
+!> @param edgeIndex Integer index to an edge
+!> @return .TRUE. if edge has positive orientation relative to the chosen face
 function positiveEdge( anEdges, faceIndex, edgeIndex )
 	logical(klog) :: positiveEdge
 	type(Edges), intent(in) :: anEdges
@@ -573,6 +663,9 @@ function positiveEdge( anEdges, faceIndex, edgeIndex )
 	positiveEdge = ( faceIndex == anEdges%leftFace(edgeIndex))
 end function
 
+!> @brief Returns .TRUE. if an edge is on the boundary of a mesh (does not apply to spherical meshes, which have no boundaries)
+!> @param anEdges Target edge object
+!> @param edgeIndex target edge
 function onBoundary( anEdges, edgeIndex )
 	logical(klog) :: onBoundary
 	type(Edges), intent(in) :: anEdges
@@ -580,6 +673,11 @@ function onBoundary( anEdges, edgeIndex )
 	onBoundary = ( anEdges%leftFace(edgeIndex) < 1 .OR. anEdges%rightFace(edgeIndex) < 1 )
 end function
 
+!> @brief Builds a STDIntVector containing the indices of all of an edge's children.
+!>
+!> @param anEdges Target edge object
+!> @param parentIndex edge whose children are needed
+!> @param leafEdges On output, the indices of parentEdge's children
 subroutine GetLeafEdgesFromParent( anEdges, parentIndex, leafEdges )
 	type(Edges), intent(in) :: anEdges
 	integer(kint), intent(in) :: parentIndex
@@ -610,6 +708,15 @@ subroutine GetLeafEdgesFromParent( anEdges, parentIndex, leafEdges )
 	enddo
 end subroutine
 
+!> @brief Computes the area represented by the triangles connecting the vertices of an edge's child particles and the center particle 
+!> of their common face.  Used for adaptively refined meshes.
+!>
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @param index to the particle at the center of the edge's face
+!> @param leafEdges indices of the child edges associated with a face whose neighbors may be more refined than itself
+!> @param nLeaves number of leafEdges
+!> @return Area represented by one side of a polyhedral face
 function AreaFromLeafEdges( self, aParticles, centerParticle, leafEdges, nLeaves )
 	real(kreal) :: AreaFromLeafEdges
 	type(Edges), intent(in) :: self
@@ -641,6 +748,18 @@ function AreaFromLeafEdges( self, aParticles, centerParticle, leafEdges, nLeaves
 	endif
 end function
 
+
+!
+!----------------
+! Private methods
+!----------------
+!
+
+!> @brief Initializes a logger for the Edges module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 ! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog

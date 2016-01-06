@@ -1,7 +1,6 @@
 module FacesModule
 !> @file Faces.f90
 !> Provides a primitive data structure and methods for creating faces of polyhedral meshes.
-!> 
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
@@ -30,11 +29,11 @@ public LogStats, PrintDebugInfo
 public SharedEdge, ParticleOppositeTriEdge
 public CountParents
 
-!> @class Faces
-!> @brief Designed to accomodate quadrilateral and triangular faces.  
-!> Each faces knows the indices (to a Particles object) of its vertices and center and the indices (to an Edges object)
-!> of its edges.  
-!> Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
+! > @class Faces
+! > @brief Designed to accomodate quadrilateral and triangular faces.  
+! > Each faces knows the indices (to a Particles object) of its vertices and center and the indices (to an Edges object)
+! > of its edges.  
+! > Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
 !>
 type Faces
 	integer(kint), allocatable :: centerParticle(:) 

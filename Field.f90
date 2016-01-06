@@ -3,14 +3,14 @@ module FieldModule
 ! Lagrangian Particle Method (LPM) version 1.5
 !------------------------------------------------------------------------------
 !> @file
-!> Provides the primitive Particles data structure that defines the spatial discretization of LPM.
-!
+!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of a Particles object from the  particlesmodule.
 !> @author
 !> Peter Bosler, Sandia National Laboratories Center for Computing Research
 !
 !> @defgroup Field Field module
-!> @brief Provides a vectorized Field data structure for scalar and vector fields defined on particlesmodule::particles objects.
+!> @brief Provides a vectorized data structure for scalar and vector fields defined on particlesmodule::particles objects.
 !> Allows users to set a name and units, if applicable, for each field.
+!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of a Particles object from the ::particlesmodule.
 !> 
 !> May be scalar or vector data.
 !>
@@ -39,12 +39,12 @@ public MultiplyFieldByScalar
 public ScalarAverage
 !public SetFieldToScalarFunction, SetFieldToVectorFunction
 
-!> @class Field
-!> @brief Vectorized class for physical data defined on a particles' spatial discretization of a domain.
-!> May be scalar or vector data.
-!>
-!> Field objects have a 1-to-1 correspondence with a particlesmodule::particles object, so that the data associated with 
-!> the particle whose index is i are in the field object also at index i. 
+! > @class Field
+! > @brief Vectorized class for physical data defined on a particles' spatial discretization of a domain.
+! > May be scalar or vector data.
+! >
+! > Field objects have a 1-to-1 correspondence with a particlesmodule::particles object, so that the data associated with 
+! > the particle whose index is i are in the field object also at index i. 
 type Field
 	real(kreal), allocatable :: scalar(:) 
 	real(kreal), allocatable :: xComp(:) 
@@ -91,7 +91,7 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 contains
 
 !> @brief Allocates memory and initializes to zero a Field object.
-!> @param self
+!> @param self Target field object
 !> @param nDim number of components in this Field object (not the spatial domain of its accompanying particle set)
 !> @param name e.g., vorticity or potential
 !> @param units physical units, if applicable
@@ -138,8 +138,8 @@ subroutine newPrivate(self, nDim, nMax, name, units )
 	endif
 end subroutine
 
-!> Deallocates memory assigned by newprivate.
-!> @param self
+!> @brief Deallocates memory assigned by newprivate.
+!> @param self Target field object.
 subroutine deletePrivate(self)
 	type(Field), intent(inout) :: self
 	if ( allocated(self%scalar) ) deallocate(self%scalar)
@@ -148,6 +148,9 @@ subroutine deletePrivate(self)
 	if ( allocated(self%zComp) ) deallocate(self%zComp)
 end subroutine
 
+!> @brief Performs a deep copy of one field object into another.
+!> @param self Target field object
+!> @param other Source field object
 subroutine copyPrivate( self, other )
 	type(Field), intent(inout) :: self
 	type(Field), intent(in) :: other
@@ -180,8 +183,8 @@ subroutine copyPrivate( self, other )
 end subroutine
 
 !> @brief Inserts a scalar value to a preallocated Field object.
-!> @param self
-!> @param val
+!> @param self Target field object
+!> @param val 
 subroutine InsertScalarToField(self, val)
 	type(Field), intent(inout) :: self
 	real(kreal), intent(in) :: val
@@ -198,7 +201,7 @@ subroutine InsertScalarToField(self, val)
 end subroutine
 
 !> @brief Inserts a vector value to a preallocated Field object.
-!> @param self
+!> @param self Target field object
 !> @param vecval
 subroutine InsertVectorToField( self, vecVal )
 	type(Field), intent(inout) :: self
@@ -222,23 +225,21 @@ subroutine InsertVectorToField( self, vecVal )
 	self%N = self%N + 1
 end subroutine
 
-function ScalarAverage(self, aParticles )
-	real(kreal) :: ScalarAverage
+
+!> @brief Finds the area-average of a scalar.
+!> @param self Target field object
+!> @param aParticles particlesmodule::particles object associated with this field
+!> @return @f$ \frac{1}{A} \int f(x)\, dA $ @f
+function ScalarAreaAverage(self, aParticles )
+	real(kreal) :: ScalarAreaAverage
 	type(Field), intent(in) :: self
 	type(Particles), intent(in) :: aParticles
 	ScalarAverage = sum( self%scalar(1:self%N) * aParticles%area(1:self%N), MASK=aParticles%isActive(1:self%N)) / &
 					TotalArea(aParticles)
 end function
 
-!> @brief Initialize a logger for this module and processor
-subroutine InitLogger(aLog,rank)
-	type(Logger), intent(out) :: aLog
-	integer(kint), intent(in) :: rank
-	write(logKey,'(A,A,I0.3,A)') trim(logKey),'_',rank,' : '
-	call New(aLog,logLevel)
-	logInit = .TRUE.
-end subroutine
-
+!> @brief Zeroes all values in a field object.
+!> @param self Target field object
 subroutine SetFieldToZero( self )
 	type(Field), intent(inout) :: self
 
@@ -254,6 +255,9 @@ subroutine SetFieldToZero( self )
 	endif
 end subroutine
 
+!> @brief Multiplies all values in a field by a scalar
+!> @param self Target field object
+!> @param multiplier
 subroutine MultiplyFieldByScalar(self, multiplier)
 	type(Field), intent(inout) :: self
 	real(kreal), intent(in) :: multiplier
@@ -446,6 +450,26 @@ subroutine WriteFieldToMatlab( self, fileunit )
 			enddo							 
 			write(fileunit,*) self%xComp(self%N), ", ", self%yComp(self%N), ", ", self%zComp(self%N), "];"
 	end select	
+end subroutine
+
+!
+!----------------
+! Private methods
+!----------------
+!
+
+
+!> @brief Initializes a logger for the Field module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
+subroutine InitLogger(aLog,rank)
+	type(Logger), intent(out) :: aLog
+	integer(kint), intent(in) :: rank
+	write(logKey,'(A,A,I0.3,A)') trim(logKey),'_',rank,' : '
+	call New(aLog,logLevel)
+	logInit = .TRUE.
 end subroutine
 
 !> @}

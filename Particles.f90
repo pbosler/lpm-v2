@@ -4,13 +4,13 @@ module ParticlesModule
 !------------------------------------------------------------------------------
 !> @file
 !> Provides the primitive Particles data structure that defines the spatial discretization of LPM.
-!
 !> @author
-!> Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> Peter Bosler, Sandia National Laboratories, Center for Computing Research
 !
 !> @defgroup Particles Particles module
-!> @brief Provides a vectorized Particles data structure that defines the particles for LPM spatial discretization.
-!> Particles are combined with the Field data structure to define scalar and vector fields over a spatial domain.
+!> @brief Provides a vectorized data structure that defines the particles for LPM spatial discretization.
+!>
+!> Particles are combined with the fieldmodule::field data structure to define scalar and vector fields over a spatial domain.
 !> Particles may be combined with a mesh object (e.g., PolyMesh2d) or an unstructured data object (e.g., a quadtree)
 !> to facilitate interpolation, differentiation, quadrature, etc.
 !>
@@ -40,10 +40,10 @@ public ResetLagrangianParameter
 !----------------
 !
 
-!> @class Particles
-!> @brief Class used to define a spatial discretization that may move in physical space.  
-!> This class should be extended for use in specific PDE applications with the inclusion of ::field objects. 
-!>
+! > @class Particles
+! > @brief Class used to define a spatial discretization that may move in physical space.  
+! > This class should be extended for use in specific PDE applications with the inclusion of ::field objects. 
+! >
 type Particles
 	real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
@@ -94,7 +94,7 @@ interface Copy
 	module procedure copyPrivate
 end interface
 
-!> @brief Outputs statistics about a Particles object to the console via a ::logger object.
+!> @brief Outputs statistics about a Particles object to the console via a loggermodule::logger object.
 interface LogStats
 	module procedure LogStatsPrivate
 end interface
@@ -107,9 +107,14 @@ end interface
 contains
 !
 !----------------
-! Standard methods : Constructor / Destructor, Copy
+! Public Methods
 !----------------
 !
+
+!> @brief Allocates memory for  a new particles object.  All values are zeroed and must be initialized separately.
+!> @param self Target Particles object
+!> @param nMax Number of maximum particles required
+!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in numberkindsmodule 
 subroutine NewPrivate( self, nMax, geomKind )
 	type(Particles), intent(out) :: self
 	integer(kint), intent(in) :: nMax
@@ -166,6 +171,8 @@ subroutine NewPrivate( self, nMax, geomKind )
 	self%incidentAngles = 0.0_kreal
 end subroutine
 
+!> @brief Deletes and frees memory associated with a particles object
+!> @param self Target Particles object
 subroutine DeletePrivate(self)
 	type(Particles), intent(inout) :: self
 	if ( allocated(self%x)) deallocate(self%x)
@@ -186,6 +193,9 @@ subroutine DeletePrivate(self)
 	self%geomKind = 0
 end subroutine
 
+!> @brief Performs a deep copy of one particles object into another
+!> @param self Target Particles object
+!> @param other Source Particles object
 subroutine copyPrivate(self, other )
 	type(Particles), intent(inout) :: self
 	type(Particles), intent(in) :: other
@@ -263,6 +273,8 @@ subroutine copyPrivate(self, other )
 	self%N = other%N
 end subroutine
 
+!> @brief Prints a large amount of information to the console.  Used for debugging.
+!> @param self Target Particles object
 subroutine PrintDebugPrivate( self ) 
 	type(Particles), intent(in) :: self
 	integer(kint) :: i, j
@@ -679,8 +691,19 @@ subroutine WriteParticlesToMatlab( self, fileunit )
 	endif
 end subroutine
 
+!
+!----------------
+! Private methods
+!----------------
+!
+
+
+!> @brief Initializes a logger for the Particles module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
-! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
 	write(logKey,'(A,A,I0.3,A)') trim(logKey),'_',rank,' : '
