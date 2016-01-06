@@ -55,7 +55,7 @@ Meshes are initialized from a ''seed'' that is recursively divided until a desir
 External libraries
 -------------------
 LPM code requires scattered data interpolation or approximation algorithms to perform its remesh/remap step.   
-For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, ACM TOM, 1978) are used.
+For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, ACM TOMS, 1978) are used.
 For spherical applications, the cubic Hermite polynomials with exponential tension factors of the STRIPACK/SSRFPACK libraries (Renka, ACM TOMS, 1997) are used.  
 
 Other methods for scattered data approximation are under development.  
@@ -79,6 +79,8 @@ Build / Install
 ================
 This latest version of LPM is written with support for KitWare's [CMake](http://www.cmake.org) cross-platform makefile generator, to aid
 portability and ease installation for new users.
+
+LPM requires an OpenMPI (<http://www.open-mpi.org>) distribution for parallel computing.
 
 The environmental variables `CC`, `CXX`, and `FC` specify the compilers.  
 For example, using the bash shell, these variables are set with
