@@ -80,7 +80,7 @@ Build / Install
 This latest version of LPM is written with support for KitWare's [CMake](http://www.cmake.org) cross-platform makefile generator, to aid
 portability and ease installation for new users.
 
-LPM requires an OpenMPI (<http://www.open-mpi.org>) distribution for parallel computing.
+LPM requires an [OpenMPI](<http://www.open-mpi.org>) distribution for parallel computing.
 
 The environmental variables `CC`, `CXX`, and `FC` specify the compilers.  
 For example, using the bash shell, these variables are set with
