@@ -1,4 +1,13 @@
 module BetaPlaneSolverModule
+!> @file BetaPlaneSolver.f90
+!> Data structure for integrating a planar incompressible flow with a background rotation forward in time using a fourth-order Runge-Kutta method.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup BetaPlaneSolver BetaPlaneSolver
+!> Data structure for integrating a planar incompressible flow with rotation forward in time using a fourth-order Runge-Kutta method.
+!> 
+!> @{
 
 use NumberKindsModule
 use OutputWriterModule
@@ -268,4 +277,6 @@ subroutine InitLogger(aLog,rank)
 	endif
 	logInit = .TRUE.
 end subroutine
+
+!> @}
 end module

@@ -1,5 +1,28 @@
 module BIVARInterfaceModule
-
+!> @file BIVARParticlesInterface.f90
+!> Interface and workspace for interpolation of LPM data by the BIVAR package.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup BIVARInterface BIVARInterface
+!> Interface and workspace for interpolation of LPM data by the BIVAR package.
+!> 
+!> Bivar performs its interpolation using quintic Hermite polynomials on triangles.  
+!> Derivatives are estimated as described in reference 2.  
+!> It must either build its own Delaunay triangulation of all LPM particles, or, if used with a triangular
+!> @ref PolyMesh2d object, the native LPM triangulation may be used.
+!>
+!> The BIVAR package is due to H. Akima and can be downloaded from the ACM TOMS web page.  
+!> LPM uses the updated Fortran 90 version provided by [Jeff Burkhardt](http://people.sc.fsu.edu/~jburkhardt). @n
+!> @n
+!> The complete description of the BIVAR package may be found in 
+!> 1. H. Akima, _A method of bivariate interpolation and smooth surface fitting
+!> for values given at irregularly distributed data points_, Office of Telecommunications Report OT 75:70, U. S. Dept. of Commerce, 1975.
+!> 2. H. Akima, A method of bivariate interpolation and smooth surface fitting
+!> for values given at irregularly distributed data points, _ACM TOMS_, 4:2, 1978.
+!> 3. H. Akima, On estimating partial derivatives for bivariate interpolation of scattered data, _Rocky Mtn. J. Math._, 14, 1984. @n
+!>
+!> @{
 use NumberKindsModule
 use LoggerModule
 use ParticlesModule
@@ -18,9 +41,9 @@ public InterpolateScalar, InterpolateVector, InterpolateLagParam
 !----------------
 !
 type BIVARInterface
-	integer(kint), dimension(:), allocatable :: intWork 
-	real(kreal), dimension(:), allocatable :: realWork 
-	integer(kint) :: md = 1
+	integer(kint), dimension(:), allocatable :: intWork !< Integer variable workspace, see bivar.f90 for requirements
+	real(kreal), dimension(:), allocatable :: realWork !< Real variable workspace, see bivar.f90 for requirements
+	integer(kint) :: md = 1 !< Flag to determine state of Delaunay triangulation, see bivar.f90 for definition
 	
 	contains
 		final :: deletePrivate
@@ -53,6 +76,10 @@ character(len=MAX_STRING_LENGTH) :: logString
 
 contains
 
+!> @brief Allocates memory for interpolation of LPM data using the Bivar package.
+!> 
+!> @param[out] self Target interpolation interface
+!> @param[in] sourceParticles @ref Particles object
 subroutine newPrivate( self, sourceParticles )
 	type(BIVARInterface), intent(out) :: self
 	type(Particles), intent(in) :: sourceParticles
@@ -63,6 +90,8 @@ subroutine newPrivate( self, sourceParticles )
 	allocate(self%realWork( 8 * sourceParticles%N ))
 end subroutine
 
+!> @brief Deletes and frees memory associated with a BIVARInterface object.
+!> @param[inout] self Target interpolation interface
 subroutine deletePrivate( self )
 	type(BIVARInterface), intent(inout)  :: self
 	
@@ -72,6 +101,11 @@ subroutine deletePrivate( self )
 	endif
 end subroutine
 
+!> @brief Resets the value of the Bivar "md" parameter.  
+!> See bivar.f90 for its definition.
+!> 
+!> @param[inout] self Target interpolation interface
+!> @param[in] md New parameter value
 subroutine SetBIVARMD(self, md)
 	type(BIVARInterface), intent(inout) :: self
 	integer(kint), intent(in) :: md
@@ -83,6 +117,14 @@ subroutine SetBIVARMD(self, md)
 	endif
 end subroutine
 
+!> @brief Interpolates a scalar @ref Field from a set of @ref Particles to a set of destination points.
+!> 
+!> @param[inout] scalarOut Interpolated scalar values, array must have been allocated prior to calling this routine.
+!> @param[in] xOut x-coordinates of destination points
+!> @param[in] yOut y-coordinates of destination points
+!> @param[inout] self Target interpolation interface
+!> @param[in] sourceParticles Existing @ref Particles
+!> @param[in] sourceField Existing scalar @ref Field
 subroutine InterpolateScalar( scalarOut, xOut, yOut, self, sourceParticles, sourceField )
 	real(kreal), dimension(:), intent(inout) :: scalarOut
 	real(kreal), dimension(:), intent(in) :: xOut
@@ -100,6 +142,14 @@ subroutine InterpolateScalar( scalarOut, xOut, yOut, self, sourceParticles, sour
 				 sourceField%scalar(1:nParticles), nOut, xOut, yOut, scalarOut, self%intWork, self%realWork)
 end subroutine	
 
+!> @brief Interpolates the Lagrangian coordinates from a set of @ref Particles to a set of destination points.
+!> 
+!> @param[inout] lagXOut Interpolated Lagrangian x-coordinate values, array must have been allocated prior to calling this routine.
+!> @param[inout] lagYOut Interpolated Lagrangian y-coordinate values, array must have been allocated prior to calling this routine.
+!> @param[in] xOut x-coordinates of destination points
+!> @param[in] yOut y-coordinates of destination points
+!> @param[inout] self Target interpolation interface
+!> @param[in] sourceParticles Existing @ref Particles
 subroutine InterpolateLagParam( lagXOut, lagYOut, xOut, yOut, self, sourceParticles )
 	real(kreal), dimension(:), intent(inout) :: lagXOut
 	real(kreal), dimension(:), intent(inout) :: lagYOut
@@ -126,6 +176,15 @@ subroutine InterpolateLagParam( lagXOut, lagYOut, xOut, yOut, self, sourcePartic
 	self%md = tempMD			 			 
 end subroutine
 
+!> @brief Interpolates a vector @ref Field from a set of @ref Particles to a set of destination points.
+!> 
+!> @param[inout] vecXOut Interpolated values of the vector field's x component, array must have been allocated prior to calling this routine.
+!> @param[inout] vecYOut Interpolated values of the vector field's y component, array must have been allocated prior to calling this routine.
+!> @param[in] xOut x-coordinates of destination points
+!> @param[in] yOut y-coordinates of destination points
+!> @param[inout] self Target interpolation interface
+!> @param[in] sourceParticles Existing @ref Particles
+!> @param[in] sourceField Existing vector @ref Field
 subroutine InterpolateVector( vecXOut, vecYOut, xOut, yOUt, self, sourceParticles, sourceField )
 	real(kreal), dimension(:), intent(inout) :: vecXOut
 	real(kreal), dimension(:), intent(inout) :: vecYOut
@@ -156,6 +215,12 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Initializes a logger for the BIVARInterface module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -168,4 +233,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

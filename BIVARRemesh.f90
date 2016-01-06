@@ -1,5 +1,16 @@
 module BIVARRemeshModule
-
+!> @file BIVARRemesh.f90
+!> Data structure and methods for remapping planar LPM data using the BIVAR package.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup BIVARRemesh BIVARRemesh
+!> Data structure and methods for remapping planar LPM data using the BIVAR package.
+!> Uses the interfaces provided by @ref BIVARInterface.  
+!> 
+!> For references describing the BIVAR package, see the @ref BIVARInterface module's detailed description.
+!> 
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -53,6 +64,19 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Performs a remesh/remap of an LPM simulation using direct interpolation of all variables in a @ref BetaPlane mesh.
+!> 
+!> @param[in] oldBetaPlane @ref BetaPlane source 
+!> @param[inout] newBetaPlane @ref BetaPlane target
+!> @param[in] AMR .TRUE. if adaptive refinement will be used
+!> @param[in] vortFlagFn1 Flag function for vorticity, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for first flag function
+!> @param[in] desc1 description of first type of refinement
+!> @param[in] flagFn2 Flag function for field2, must have same interface as refinementmodule::FlagFunction 
+!> @param[in] tol2 tolerance for second flag function
+!> @param[in] desc2 description of second type of refinement
+!> @param[in] field2 @ref Field to use for second type of refinement
 subroutine DirectRemeshBetaPlane( oldBetaPlane, newBetaPlane, AMR, vortFlagFn1, tol1, desc1, flagFn2, tol2, desc2, field2)
 	type(BetaPlaneMesh), intent(in) :: oldBetaPlane
 	type(BetaPlaneMesh), intent(inout) :: newBetaPlane
@@ -190,6 +214,24 @@ subroutine DirectRemeshBetaPlane( oldBetaPlane, newBetaPlane, AMR, vortFlagFn1, 
 	call Delete(bivar)
 end subroutine
 
+!> @brief Performs a remesh/remap of an LPM simulation using indirect interpolation of all variables in a @ref BetaPlane mesh.
+!> Remaps to reference time t = 0.
+!> 
+!> @param[in] oldBetaPlane @ref BetaPlane source 
+!> @param[inout] newBetaPlane @ref BetaPlane target
+!> @param[in] AMR .TRUE. if adaptive refinement will be used
+!> @param[in] relVortFn Vorticity distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
+!> @param[in] flagFn1 Flag function for vorticity, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for first flag function
+!> @param[in] desc1 description of first type of refinement
+!> @param[in] flagFn2 Flag function for field2, must have same interface as refinementmodule::FlagFunction 
+!> @param[in] tol2 tolerance for second flag function
+!> @param[in] desc2 description of second type of refinement
+!> @param[in] RefineFLowMapYN True if refinement of the flow map will be used
+!> @param[in] flowMapVarTol tolerance value for Lagrangian coordinate variation per face
+!> @param[in] nLagTracers number of Lagrangian passive tracers (currently 0, 1, or 2 are only values allowed)
+!> @param[in] tracerFn1 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
+!> @param[in] tracerFn2 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
 subroutine LagrangianRemeshBetaPlaneWithVorticityFunction( oldBetaPlane, newBetaPlane, AMR, relVortFn, &
 			flagFn1, tol1, desc1, flagFn2, tol2, desc2, RefineFLowMapYN, flowMapVarTol, nLagTracers, tracerFn1, tracerFn2)
 	type(BetaPlaneMesh), intent(in) :: oldBetaPlane
@@ -375,6 +417,25 @@ subroutine LagrangianRemeshBetaPlaneWithVorticityFunction( oldBetaPlane, newBeta
 	call Delete(bivar)
 end subroutine
 
+
+!> @brief Performs a remesh/remap of an LPM simulation using indirect interpolation of all variables in a @ref PlanarIncompressible mesh.
+!> Remaps to reference time t = 0.
+!>
+!> @param[inout] newPlane @ref PlanarIncompressible target
+!> @param[in] oldPlane @ref PlanarIncompressible source 
+!> @param[in] AMR .TRUE. if adaptive refinement will be used
+!> @param[in] vortFn Vorticity distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
+!> @param[in] flagFn1 Flag function for vorticity, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for first flag function
+!> @param[in] desc1 description of first type of refinement
+!> @param[in] flagFn2 Flag function for field2, must have same interface as refinementmodule::FlagFunction 
+!> @param[in] tol2 tolerance for second flag function
+!> @param[in] desc2 description of second type of refinement
+!> @param[in] RefineFLowMapYN True if refinement of the flow map will be used
+!> @param[in] flowMapVarTol tolerance value for Lagrangian coordinate variation per face
+!> @param[in] nLagTracers number of Lagrangian passive tracers (currently 0, 1, or 2 are only values allowed)
+!> @param[in] tracerFn1 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
+!> @param[in] tracerFn2 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
 subroutine LagrangianRemeshPlanarIncompressibleWithVorticityFunction( newPlane, oldPlane, vortFn, flagFn1, tol1, desc1, &
 				flagFn2, tol2, desc2, RefineFLowMapYN, flowMapVarTol, nLagTracers, tracerFn1, tracerFn2 )
 	type(PlaneMeshIncompressible), intent(inout) :: newPlane
@@ -546,7 +607,22 @@ subroutine LagrangianRemeshPlanarIncompressibleWithVorticityFunction( newPlane, 
 	call Delete(bivar)
 end subroutine
 
-! This subroutine assumes that the reference mesh's Lagrangian parameter has been reset, so that x = x0, y = y0
+
+!> @brief Performs a remesh/remap of an LPM simulation using indirect interpolation of all variables in a @ref PlanarIncompressible mesh.
+!> Remaps to reference time t = t_{rm}, where t_{rm} is time of definition for a reference mesh (numerical solution).
+!> Note that the reference mesh's Lagrangian parameter has been reset, so that x = x0, y = y0 at t = t_{rm}
+!>
+!> @param[inout] newPlane @ref PlanarIncompressible target
+!> @param[in] oldPlane @ref PlanarIncompressible source 
+!> @param[in] refPlane @ref PlanarIncompressible reference
+!> @param[in] flagFn1 Flag function for vorticity, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for first flag function
+!> @param[in] desc1 description of first type of refinement
+!> @param[in] flagFn2 Flag function for field2, must have same interface as refinementmodule::FlagFunction 
+!> @param[in] tol2 tolerance for second flag function
+!> @param[in] desc2 description of second type of refinement
+!> @param[in] RefineFLowMapYN True if refinement of the flow map will be used
+!> @param[in] flowMapVarTol tolerance value for Lagrangian coordinate variation per face
 subroutine LagrangianRemeshPlanarIncompressibleToReferenceMesh( newPlane, oldPlane, refPlane, flagFn1, tol1, desc1, &
 				flagFn2, tol2, desc2, RefineFLowMapYN, flowMapVarTol )
 	type(PlaneMeshIncompressible), intent(inout) :: newPlane
@@ -710,6 +786,12 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Initializes a logger for the BIVARRemesh module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -722,4 +804,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

@@ -1,4 +1,13 @@
 module SphereBVESolverModule
+!> @file SphereBVESolver.f90
+!> Data structure for solving the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup SphereBVESolver SphereBVESolver
+!> Data structure for solving the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere
+!> 
+!> @{
 
 use NumberKindsModule
 use OutputWriterModule
@@ -26,36 +35,36 @@ public BVESolver, New, Delete
 public Timestep
 
 type BVESolver
-	real(kreal), allocatable :: xStart(:)
-	real(kreal), allocatable :: yStart(:)
-	real(kreal), allocatable :: zStart(:)
-	real(kreal), allocatable :: relVortStart(:)
-	real(kreal), allocatable :: area(:)
-	real(kreal), allocatable :: u(:)
-	real(kreal), allocatable :: v(:)
-	real(kreal), allocatable :: w(:)
-	logical(klog), allocatable :: mask(:)
+	real(kreal), allocatable :: xStart(:) !< starting x-coordinate of each particle
+	real(kreal), allocatable :: yStart(:) !< starting y-coordinate of each particle
+	real(kreal), allocatable :: zStart(:) !< starting z-coordinate of each particle
+	real(kreal), allocatable :: relVortStart(:) !< starting vorticity carried by each particle
+	real(kreal), allocatable :: area(:) !< area represented by each particle (passive particles represent zero area)
+	real(kreal), allocatable :: u(:) !< x-component of velocity for each particle
+	real(kreal), allocatable :: v(:) !< y-component of velocity for each particle
+	real(kreal), allocatable :: w(:) !< w-component of velocity for each particle
+	logical(klog), allocatable :: mask(:) !< mask(i) is .TRUE. if particle i is active
 	
-	real(kreal), allocatable :: xIn(:) 
-	real(kreal), allocatable :: xStage1(:) 
-	real(kreal), allocatable :: xStage2(:) 
-	real(kreal), allocatable :: xStage3(:) 
-	real(kreal), allocatable :: xStage4(:) 
-	real(kreal), allocatable :: yIn(:) 
-	real(kreal), allocatable :: yStage1(:) 
-	real(kreal), allocatable :: yStage2(:) 
-	real(kreal), allocatable :: yStage3(:) 
-	real(kreal), allocatable :: yStage4(:) 
-	real(kreal), allocatable :: zIn(:) 
-	real(kreal), allocatable :: zStage1(:) 
-	real(kreal), allocatable :: zStage2(:) 
-	real(kreal), allocatable :: zStage3(:) 
-	real(kreal), allocatable :: zStage4(:) 
-	real(kreal), allocatable :: relVortIn(:) 
-	real(kreal), allocatable :: relVortStage1(:) 
-	real(kreal), allocatable :: relVortStage2(:) 
-	real(kreal), allocatable :: relVortStage3(:) 
-	real(kreal), allocatable :: relVortStage4(:) 
+	real(kreal), allocatable :: xIn(:) !< x-coordinate input to RK4
+	real(kreal), allocatable :: xStage1(:) !< x-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable :: xStage2(:) !< x-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable :: xStage3(:) !< x-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable :: xStage4(:) !< x-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable :: yIn(:) !< y-coordinate input to RK4
+	real(kreal), allocatable :: yStage1(:) !< y-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable :: yStage2(:) !< y-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable :: yStage3(:) !< y-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable :: yStage4(:) !< y-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable :: zIn(:) !< z-coordinate input to RK4
+	real(kreal), allocatable :: zStage1(:) !< z-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable :: zStage2(:) !< z-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable :: zStage3(:) !< z-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable :: zStage4(:) !< z-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable :: relVortIn(:) !< relative vorticity input to RK4
+	real(kreal), allocatable :: relVortStage1(:) !< relative vorticity of each particle at RK4 stage 1
+	real(kreal), allocatable :: relVortStage2(:) !< relative vorticity of each particle at RK4 stage 2
+	real(kreal), allocatable :: relVortStage3(:) !< relative vorticity of each particle at RK4 stage 3
+	real(kreal), allocatable :: relVortStage4(:) !< relative vorticity of each particle at RK4 stage 4
 	
 	contains
 		final :: deletePrivate
@@ -95,6 +104,10 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory for a new BVE Solver.  Initializes the solver to match the current mesh.
+!> @param[out] self Target BVE Solver
+!> @param[in] sphereBVE BVE Mesh
 subroutine newPrivate(self, sphereBVE )
 	type(BVESolver), intent(out) :: self
 	type(BVEMesh), intent(in) :: sphereBVE
@@ -153,6 +166,8 @@ subroutine newPrivate(self, sphereBVE )
 	!$acc create( self%relVortIn, self%relVortStage1, self%relVortStage2, self%relVortStage3, self%relVortStage4)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a BVE Solver
+!> @param[inout] self
 subroutine deletePrivate(self)
 	type(BVESolver), intent(inout) :: self
 	if ( allocated(self%xIn) ) then
@@ -196,6 +211,10 @@ subroutine deletePrivate(self)
 	endif
 end subroutine
 
+!> @brief Advances a BVE mesh forward in time by one timestep using 4th order Runge-Kutta.
+!> @param[inout] self BVE solver
+!> @param[inout] plane BVE mesh
+!> @param[in] dt timestep increment
 subroutine timestepPrivate( self, sphereBVE, dt )
 	type(BVESolver), intent(inout) :: self
 	type(BVEMesh), intent(inout) :: sphereBVE
@@ -331,6 +350,22 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Computes velocity based on the given vorticity of all point vortices (particles) using the Biot-Savart integral.
+!> Integral is computed in parallel as a direct summation.
+!>
+!> @param[out] u x-component of velocity at each particle
+!> @param[out] v y-component of velocity at each particle
+!> @param[out] w z-component of velocity at each particle
+!> @param[in] x x-coordinate of each particle
+!> @param[in] y y-coordinate of each particle
+!> @param[in] z y-coordinate of each particle
+!> @param[in] relVortIn vorticity carried by each particle
+!> @param[in] areaIn area carried by each particle
+!> @param[in] sphereRadius radius of sphere
+!> @param[in] rotationRate background angular velocity of sphere
+!> @param[in] activeMask .TRUE. for active particles, .FALSE. for passive particles
+!> @param[in] mpiParticles @ref MPISetup object to distribute integral over MPI processes
 subroutine BVESphereVelocity( u, v, w, x, y, z, relVortIn, areaIn, sphereRadius, rotationRate, activeMask, mpiParticles )
 	!$acc routine gang
 	real(kreal), dimension(:), intent(out) :: u
@@ -386,6 +421,11 @@ subroutine BVESphereVelocity( u, v, w, x, y, z, relVortIn, areaIn, sphereRadius,
 	enddo
 end subroutine
 
+!> @brief Initializes a logger for the PlanarIncompressible solver module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -398,4 +438,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

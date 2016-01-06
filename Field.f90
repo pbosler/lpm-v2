@@ -8,9 +8,10 @@ module FieldModule
 !> Peter Bosler, Sandia National Laboratories Center for Computing Research
 !
 !> @defgroup Field Field
-!> @brief Provides a vectorized data structure for scalar and vector fields defined on particlesmodule::particles objects.
+!> @brief Provides a vectorized data structure for scalar and vector fields defined on @ref Particles objects.
+!>
 !> Allows users to set a name and units, if applicable, for each field.
-!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of @ref Particles.
+!> Provides a data type for holding variables associated with an LPM spatial discretization by instances of @ref Particles .
 !> 
 !> May be scalar or vector data.
 !> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with 
@@ -79,7 +80,7 @@ interface Copy
 	module procedure copyPrivate
 end interface
 
-!> @brief Outputs statistics about a Field object to the console via a ::logger object.
+!> @brief Outputs statistics about a Field object to the console via a @ref Logger object.
 interface LogStats
 	module procedure logStatsPrivate
 end interface

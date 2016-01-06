@@ -1,5 +1,16 @@
 module SphereBVEModule
-
+!> @file SphereBVE.f90
+!> Data structure for representing solutions of the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup SphereBVE SphereBVE
+!> @brief Data structure for representing solutions of the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere.
+!>
+!> Combines a @ref PolyMesh2d with the data @ref Field objects for the BVE.  
+!> Allows users to optionally add tracer @ref Field objects.
+!> 
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -30,16 +41,16 @@ public TotalKE, TotalEnstrophy
 public MaxCirculationMagnitudePerFace
 
 type BVEMesh
-	type(PolyMesh2d) :: mesh
-	type(Field) :: absVort
-	type(Field) :: relVort
-	type(Field) :: relStream
-	type(Field) :: absStream
-	type(Field) :: velocity
-	type(Field), dimension(:), allocatable :: tracers
-	real(kreal) :: radius = 1.0_kreal
-	real(kreal) :: rotationRate = 0.0_kreal
-	type(MPISetup) :: mpiParticles
+	type(PolyMesh2d) :: mesh !< @ref PolyMesh2d for spatial discretization
+	type(Field) :: absVort !< scalar @ref Field
+	type(Field) :: relVort !< scalar @ref Field
+	type(Field) :: relStream !< scalar @ref Field
+	type(Field) :: absStream !< scalar @ref Field
+	type(Field) :: velocity !< vector @ref Field
+	type(Field), dimension(:), allocatable :: tracers !< allocatable array of scalar and vector @ref Field objects
+	real(kreal) :: radius = 1.0_kreal !< radius of sphere
+	real(kreal) :: rotationRate = 0.0_kreal !< background rotation rate (angular velocity)
+	type(MPISetup) :: mpiParticles !< @ref MPISetup to distribute all particles over the available MPI ranks
 	
 	contains
 		final :: deletePrivate
@@ -88,6 +99,16 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory and initializes a spherical mesh for BVE applications.
+!>
+!> @param[out] self new BVE mesh
+!> @param[in] meshSeed mesh seed integer, as defined in @ref NumberKinds
+!> @param[in] initNest initial level of uniform refinement
+!> @param[in] maxNest maximum level of uniform refinment
+!> @param[in] amrLimit maximum number of times an individual face can be divided beyond initNest
+!> @param[in] sphereRadius radius of sphere
+!> @param[in] rotationRate background angular velocity of sphere
 subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius, rotationRate )
 	type(BVEMesh), intent(out) :: self
 	integer(kint), intent(in) :: meshSeed
@@ -117,6 +138,8 @@ subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius
 	self%rotationRate = rotationRate	
 end subroutine
 
+!> @brief Deletes and frees memory associated with a spherical BVE Mesh
+!> @param[inout] self Target BVE Mesh
 subroutine deletePrivate( self )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint) :: i
@@ -136,6 +159,11 @@ subroutine deletePrivate( self )
 	endif
 end subroutine
 
+!> @brief Performs a deep copy of a BVE mesh and all of its variables.  
+!> The target mesh must have been allocated prior to calling this subroutine.
+!>
+!> @param[inout] self Target BVE mesh
+!> @param[in] other Source BVE Mesh
 subroutine copyPrivate(self, other)
 	type(BVEMesh), intent(inout) :: self
 	type(BVEMesh), intent(in) :: other
@@ -166,6 +194,11 @@ subroutine copyPrivate(self, other)
 	endif
 end subroutine
 
+!> @brief Adds memory for passive tracers to a spherical BVE mesh.
+!> @param[inout] self Target BVE mesh
+!> @param[in] nTracers number of tracers to add
+!> @param[in] tracerDims array of values (each 1, 2, or 3) corresponding to the dimensions of each tracer.  
+!> Scalar tracers will have dimension 1, vector tracers will have dimension 2 or 3, depending on their coordinate system.
 subroutine AddTracers(self, nTracers, tracerDims)
 	type(BVEMesh), intent(inout) :: self
 	integer(kint), intent(in) :: nTracers
@@ -184,6 +217,9 @@ subroutine AddTracers(self, nTracers, tracerDims)
 	enddo
 end subroutine
 
+!> @brief Output basic information about a BVE mesh to a @ref Logger
+!> @param[in] self BVE mesh
+!> @param[inout] aLog @ref Logger
 subroutine logStatsPrivate( self, aLog)
 	type(BVEMEsh), intent(in) :: self
 	type(Logger), intent(inout) :: aLog
@@ -204,6 +240,9 @@ subroutine logStatsPrivate( self, aLog)
 	endif
 end subroutine
 
+!> @brief Writes a BVE mesh to a legacy formatted .vtk file, including all @ref Field data for variables and tracers.
+!> @param[in] self BVE mesh
+!> @param[in] filename Name of output file
 subroutine OutputToVTK(self, filename)
 	type(BVEMesh), intent(in) :: self
 	character(len=*), intent(in) :: filename
@@ -241,6 +280,10 @@ subroutine OutputToVTK(self, filename)
 	close(WRITE_UNIT_1)
 end subroutine
 
+!> @brief Defines an initial vorticity distribution on a BVE mesh.
+!> 
+!> @param[inout] self BVE mesh
+!> @param[in] vortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
 subroutine SetInitialVorticityOnMesh(self, relVortFn )
 	type(BVEMesh), intent(inout) :: self
 	procedure(scalarFnOf3DSpace) :: relVortFn
@@ -258,6 +301,10 @@ subroutine SetInitialVorticityOnMesh(self, relVortFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial velocity distribution on a BVE mesh.
+!> 
+!> @param[inout] self BVE mesh
+!> @param[in] velFn Velocity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf3DSpace
 subroutine setVelocityFromFunction(self, velFn )
 	type(BVEMesh), intent(inout) :: self
 	procedure(vectorFnOf3DSpace) :: velFn 
@@ -269,6 +316,11 @@ subroutine setVelocityFromFunction(self, velFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial tracer distribution on a BVE mesh.
+!> 
+!> @param[inout] self BVE mesh
+!> @param[in] tracerID index of tracer in `bveMesh%%tracers(:)`
+!> @param[in] tracerFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
 subroutine SetScalarTracerOnMesh(self, tracerId, tracerFn )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint), intent(in) :: tracerId
@@ -283,6 +335,11 @@ subroutine SetScalarTracerOnMesh(self, tracerId, tracerFn )
 	enddo
 end subroutine
 
+!> @brief Defines an initial tracer distribution on a BVE mesh.
+!> 
+!> @param[inout] self BVE mesh
+!> @param[in] tracerID index of tracer in `bveMesh%%tracers(:)`
+!> @param[in] tracerFn Vorticity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf3DSpace
 subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint), intent(in) :: tracerId
@@ -300,6 +357,9 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn )
 	enddo
 end subroutine
 
+!> @brief Computes the total kinetic energy (a conserved integral) on a BVE mesh.
+!> @param[in] self BVE mesh
+!> @return totalKE total kinetic energy
 function TotalKE( self )
 	real(kreal) :: TotaLKE
 	type(BVEMesh), intent(in) :: self
@@ -316,6 +376,9 @@ function TotalKE( self )
 	TotalKE = 0.5_kreal * TotalKE
 end function
 
+!> @brief Computes the total enstrophy (a conserved integral) on a BVE mesh.
+!> @param[in] self BVE mesh
+!> @return totalKE total enstrophy
 function TotalEnstrophy( self )
 	real(kreal) :: TotalEnstrophy
 	type(BVEMesh), intent(in) :: self
@@ -330,6 +393,8 @@ function TotalEnstrophy( self )
 	TotalEnstrophy = 0.5_kreal * TotalEnstrophy 
 end function
 
+!> @brief Defines the absolute and relative stream functions on a BVE mesh using the Green's function integral.
+!> @param[inout] self BVE mesh
 subroutine SetStreamFunctionsOnMesh( self )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint) :: i, j, mpiErrCode
@@ -372,6 +437,8 @@ subroutine SetStreamFunctionsOnMesh( self )
 	enddo
 end subroutine
 
+!> @brief Defines the velocity distribution on a BVE mesh using the Biot-Savart integral.
+!> @param[inout] self BVE mesh
 subroutine setVelocityFromVorticity( self )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint) :: i, j, mpiErrCode
@@ -416,6 +483,9 @@ subroutine setVelocityFromVorticity( self )
 	enddo
 end subroutine
 
+!> @brief Computes the maximum circulation magnitude about each face and returns the maximum value for the whole mesh.
+!> @param[in] self BVE mesh
+!> @return MaximumCirculation magnitude
 function MaxCirculationMagnitudePerFace( self )
 	real(kreal) :: MaxCirculationMagnitudePerFace
 	type(BVEMesh), intent(in) :: self
@@ -439,6 +509,12 @@ end function
 ! private methods
 !----------------
 !
+
+!> @brief Initializes a logger for the BVE module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -451,5 +527,6 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module
 

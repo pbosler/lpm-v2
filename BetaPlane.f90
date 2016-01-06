@@ -1,5 +1,13 @@
 module BetaPlaneMeshModule
-
+!> @file BetaPlane.f90
+!> Data structure for  a planar incompressible flow with a background rotation
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup BetaPlane BetaPlane
+!> Data structure for  a planar incompressible flow with a background rotation
+!> 
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule

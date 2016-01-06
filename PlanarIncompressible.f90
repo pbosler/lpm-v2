@@ -4,7 +4,7 @@ module PlanarIncompressibleModule
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
 !>
 !>
-!> @defgroup PlanarIcompressible PlanarIncompressible
+!> @defgroup PlanarIncompressible PlanarIncompressible
 !> @brief Data structure for solving the fluid equations for two-dimensional (in the plane) inviscid, incompressible flow.
 !> 
 !> Inviscid planar incompressible flow may be characterized completely by the flow's vorticity and stream function.
@@ -346,7 +346,7 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn)
 	enddo
 end subroutine
 
-!> @brief Computes the total kinetic engery (a conserved integral) on a PlanarIncompressible mesh.
+!> @brief Computes the total kinetic energy (a conserved integral) on a PlanarIncompressible mesh.
 !> @param[in] self PlanarIncompressible mesh
 !> @return totalKE total kinetic energy
 function TotalKE( self )
