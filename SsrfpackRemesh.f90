@@ -1,6 +1,15 @@
 module SSRFPACKRemeshModule
-@file SsrfpackRemesh.f90
-@author Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!> @file SsrfpackRemesh.f90 
+!> Data structure and methods for remapping spherical LPM data using SSRFPACK.
+!> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!> 
+!> @defgroup SSRFPACKRemesh SSRFPACKRemesh
+!> Data structure and methods for remapping spherical LPM data using SSRFPACK. @n
+!>
+!> Uses the interfaces provided by @ref ssrfpackInterface module.
+!> For references describing the SSRFPACK package and its counterpart STRIPACK, see the @ref ssrfpackInterface module's detailed description.
+!> 
+!> @{
 use NumberKindsModule
 use STDIntVectorModule
 use OutputWriterModule
@@ -31,11 +40,11 @@ public LagrangianRemeshBVEToReferenceMesh
 !----------------
 !
 type BVERemeshSource
-	type(DelaunayTriangulation) :: delTri
-	type(SSRFPACKInterface) :: relVortSource
-	type(SSRFPACKInterface) :: absVortSource
-	type(SSRFPACKInterface) :: lagParamSource
-	type(SSRFPACKInterface), dimension(:), allocatable :: tracerSource
+	type(DelaunayTriangulation) :: delTri  	!< Delaunay triangulation from STRIPACK
+	type(SSRFPACKInterface) :: relVortSource !< Source data for relative vorticity interpolation
+	type(SSRFPACKInterface) :: absVortSource !< Source data for absolute vorticity interpolation
+	type(SSRFPACKInterface) :: lagParamSource !< Source data for Lagrangian parameter interpolation
+	type(SSRFPACKInterface), dimension(:), allocatable :: tracerSource !< Source data for passive tracers
 	
 	contains
 		final :: deleteBVE
@@ -73,6 +82,11 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory and initializes a remapping utility for a @ref SphereBVE BVE mesh.
+!> 
+!> @param[out] self target Remeshing data structure
+!> @param[in] oldSphere source @ref SphereBVE
 subroutine newBVE( self, oldSphere )
 	type(BVERemeshSource), intent(out) :: self
 	type(BVEMesh), intent(inout) :: oldSphere
@@ -114,6 +128,8 @@ subroutine newBVE( self, oldSphere )
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" newBVERemesh : ", "returning.")
 end subroutine
 
+!> @brief Deletes and frees memory associated with a BVE remeshing object
+!> @param[inout] self Target remeshing object
 subroutine deleteBVE( self )
 	type(BVERemeshSource), intent(inout) :: self
 	!
@@ -131,6 +147,20 @@ subroutine deleteBVE( self )
 	endif
 end subroutine
 
+!> @brief Performs a remesh/remap of an LPM simulation of the barotropic vorticity equation on the sphere using
+!> direct interpolation of each variable.
+!> 
+!> @param[in] self Remeshing data structure
+!> @param[in] oldSphere source @ref SphereBVE mesh
+!> @param[inout] newSphere target @ref SphereBVE mesh (note that this must have been allocated prior to calling this subroutine)
+!> @param[in] AMR .TRUE. if adaptive refinement will be used
+!> @param[in] vortFlagFn1 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for vortFlagFn1
+!> @param[in] desc1 description of AMR criterion used for vortFlagFn1
+!> @param[in] flagFn2 Flag function for refinement of field2
+!> @param[in] tol2 tolerance for flagFn2
+!> @param[in] desc2 description of AMR criterion used for flagFn2
+!> @param[inout] field2 second field to use for adaptive refinement
 subroutine DirectRemeshBVE(self, oldSphere, newSphere, AMR, vortFlagFn1, tol1, desc1, flagFn2, tol2, desc2, field2 )
 	type(BVERemeshSource), intent(in) :: self
 	type(BVEMesh), intent(in) :: oldSphere
@@ -268,6 +298,24 @@ subroutine DirectRemeshBVE(self, oldSphere, newSphere, AMR, vortFlagFn1, tol1, d
 	
 end subroutine
 
+!> @brief Performs a remesh/remap of an LPM BVE simulation using indirect interpolation for the variables in a @ref SphereBVE mesh.
+!> Remaps to reference time t = 0.
+!> 
+!> @param[in] self Remeshing data structure
+!> @param[in] oldSphere source @ref SphereBVE mesh
+!> @param[inout] newSphere target @ref SphereBVE mesh (note that this must have been allocated prior to calling this subroutine)
+!> @param[in] relVortFn Vorticity distribution function, must have same interface as numberkindsmodule::scalarFnOf3DSpace
+!> @param[in] flagFn1 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for flagFn1
+!> @param[in] desc1 description of AMR criterion used for flagFn1
+!> @param[in] flagFn2 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol2 tolerance for flagFn2
+!> @param[in] desc2 description of AMR criterion used for flagFn2
+!> @param[in] RefineFLowMapYN True if refinement of the flow map will be used
+!> @param[in] flowMapVarTol tolerance value for Lagrangian coordinate variation per face
+!> @param[in] nLagTracers number of Lagrangian passive tracers (currently 0, 1, or 2 are only values allowed)
+!> @param[in] tracerFn1 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf3DSpace
+!> @param[in] tracerFn2 tracer distribution function, must have same interface as numberkindsmodule::scalarFnOf3DSpace
 subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere, AMR, relVortFn, flagFn1, tol1, desc1, &
 								flagFn2, tol2, desc2, RefineFlowMapYN, flowMapVarTol, nLagTracers, tracerFn1, tracerFn2 )
 	type(BVERemeshSource), intent(in) :: self
@@ -441,6 +489,23 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 	call LogMessage( log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", " Lagrangian Remesh Complete.")
 end subroutine
 
+!> @brief Performs a remesh/remap of an LPM @ref SphereBVE simulation using indirect interpolation for all variables in a BVE mesh.
+!> Remaps to reference time t = t_{rm}, where t_{rm} is time of definition for a reference mesh (numerical solution).
+!> Note that the reference mesh's Lagrangian parameter has been reset, so that x = x0, y = y0, z = z0 at t = t_{rm}
+!> 
+!> @param[inout] newSphere target @ref SphereBVE mesh (note that this must have been allocated prior to calling this subroutine)
+!> @param[in] oldSphere source @ref SphereBVE mesh
+!> @param[in] refSphere @ref SphereBVE reference mesh
+!> @param[in] refRemesh remesh data structure associated with refSphere
+!> @param[in] AMR .TRUE. if adaptive refinement will be used
+!> @param[in] flagFn1 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol1 tolerance for flagFn1
+!> @param[in] desc1 description of AMR criterion used for flagFn1
+!> @param[in] flagFn2 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
+!> @param[in] tol2 tolerance for flagFn2
+!> @param[in] desc2 description of AMR criterion used for flagFn2
+!> @param[in] RefineFLowMapYN True if refinement of the flow map will be used
+!> @param[in] flowMapVarTol tolerance value for Lagrangian coordinate variation per face
 subroutine LagrangianRemeshBVEToReferenceMesh( newSphere, oldSphere, refSphere, refRemesh, AMR, flagFn1, tol1, desc1, &
 	flagFn2, tol2, desc2, RefineFlowMapYN, flowMapVarTol )
 	type(BVEMesh), intent(inout) :: newSphere
@@ -631,6 +696,12 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Initializes a logger for the SsrfpackRemesh module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 ! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog
@@ -644,4 +715,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

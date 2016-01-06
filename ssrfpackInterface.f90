@@ -2,7 +2,7 @@ module SSRFPACKInterfaceModule
 !> @file ssrfpackInterface.f90
 !> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
 !> 
-!> @defgroup SsrfpackInterface  ssrfpackInterface
+!> @defgroup ssrfpackInterface  ssrfpackInterface
 !> @brief Interface and workspace for interpolation of LPM data in spherical domains using the STRIPACK and SSRFPACK libraries.
 !> 
 !> STRIPACK produces a Delaunay triangulation of scattered data points on the surface of a unit sphere. @n
@@ -310,7 +310,18 @@ function InterpolateScalar( lon, lat, self, aMesh, delTri, scalarField)
 			 	 self%grad1, startTriangle, InterpolateScalar, errCode)
 end function
 
-
+!> @brief Performs parallel interpolation of a scalar field from an LPM particle set to a uniform latitude-longitude grid.
+!> 
+!> Distributes work of interpolation across MPI processes by assigning each process a subset of the output points (divided by longitude).
+!> Then broadcasts each processes work to the other processes.
+!> 
+!> @param[inout] self SSRFPACKInterface
+!> @param[in] aMesh @ref PolyMesh2d source mesh
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] scalarField source data
+!> @param[in] lons vector of longitudes associated with uniform lat-lon output grid
+!> @param[in] lats vector of latitudes associated with uniform lat-lon output grid
+!> @param[out] interpOut interpolated scalar output
 subroutine InterpolateScalarToUnifLatLonGrid( self, aMesh, delTri, scalarField, lons, lats, interpOut)
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -343,6 +354,18 @@ subroutine InterpolateScalarToUnifLatLonGrid( self, aMesh, delTri, scalarField, 
 	call Delete(mpiLons)
 end subroutine
 
+!> @brief Performs interpolation of a vector field at a single point.
+!>
+!> * Locates (lat, lon) in Delaunay triangulation
+!> * Computes interpolated value using cubic Hermite polynomial on triangle containing (lat,lon) 
+!>
+!> @param[in] lon Longitude of interpolation output 
+!> @param[in] lat Latitude of interpolation output
+!> @param[in] self SSRFPACKInterface ready for interpolation (a SetSource* subroutine has already been called)
+!> @param[in] aMesh @ref PolyMesh2d spherical mesh
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] vectorField source data
+!> @return interpolated vector value
 function InterpolateVector( lon, lat, self, aMesh, delTri, vectorField)
 	real(kreal), dimension(3) :: InterpolateVector
 	type(SSRFPACKInterface), intent(in) :: self
@@ -364,6 +387,20 @@ function InterpolateVector( lon, lat, self, aMesh, delTri, vectorField)
 				 self%grad3, startTriangle, InterpolateVector(3), errCode)				 				 
 end function
 
+!> @brief Performs parallel interpolation of a vector field from an LPM particle set to a uniform latitude-longitude grid.
+!> 
+!> Distributes work of interpolation across MPI processes by assigning each process a subset of the output points (divided by longitude).
+!> Then broadcasts each processes work to the other processes.
+!> 
+!> @param[inout] self SSRFPACKInterface ready for interpolation (a SetSource* subroutine has already been called)
+!> @param[in] aMesh @ref PolyMesh2d source mesh
+!> @param[in] delTri Delaunay triangulation
+!> @param[in] vectorField source data
+!> @param[in] lons vector of longitudes associated with uniform lat-lon output grid
+!> @param[in] lats vector of latitudes associated with uniform lat-lon output grid
+!> @param[out] interpX interpolated x component of vector field
+!> @param[out] interpY interpolated y component of vector field
+!> @param[out] interpZ interpolated z component of vector field
 subroutine InterpolateVectorToUnifLatLonGrid( self, aMesh, delTri, vectorField, lons, lats, interpX, interpY, interpZ)
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -408,6 +445,13 @@ subroutine InterpolateVectorToUnifLatLonGrid( self, aMesh, delTri, vectorField, 
 	call Delete(mpiLons)
 end subroutine
 
+!> @brief Interpolates the Lagrangian parameter from a set of LPM particles to a desired location on the sphere.
+!> 
+!> @param[in] lon longitude of interpolation output
+!> @param[in] lat latitude of interpolation output
+!> @param[inout] self SSRFPACKInterface ready for interpolation (a SetSourceLagrangianParameter subroutine has already been called)
+!> @param[in] aMesh source @ref PolyMesh2d
+!> @param[in] delTri Delaunay triangulation
 function InterpolateLagParam(lon, lat, self, aMesh, delTri )
 	real(kreal), dimension(3) :: InterpolateLagParam
 	type(SSRFPACKInterface), intent(in) :: self
@@ -438,6 +482,11 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Builds a Delaunay triangulation of a set of LPM @ref Particles on the surface of the unit sphere using stripack.f.
+!> 
+!> @param[inout] self STRIPACK data structures for Delaunay triangulation
+!> @param[in] aMesh spherical @ref PolyMesh2d
 subroutine BuildDelaunayTriangulation(self, aMesh)
 	type(DelaunayTriangulation), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -467,6 +516,12 @@ subroutine BuildDelaunayTriangulation(self, aMesh)
 	deallocate(near)
 	deallocate(next)
 end subroutine
+
+!> @brief Initializes a logger for the SSRFPACKInterface module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
