@@ -23,6 +23,10 @@ module ParticlesModule
 !> Active particles have nonzero area (2d) or volume (3d).
 !> Particles that do not contribute to the midpoint rule (i.e., vertex particles) are considered "passive."
 !> Passive particles have zero area or volume.
+!>
+!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$; 
+!> area (for 2d models) or volume (for 3d models).
+!>
 !> 
 !> @{
 !

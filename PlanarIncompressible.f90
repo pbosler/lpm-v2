@@ -14,7 +14,22 @@ module PlanarIncompressibleModule
 !> The spatial domain is discretized in space and time by a @ref PolyMesh2d object.
 !> Associated @ref Field objects for vorticity, velocity, and the stream function are provided, as well as a set 
 !> of optional @ref Field objects for passive tracers carried by the flow.  
-!> 
+!>
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
+!> the PlaneMeshIncompressible data type adds fields for vorticity @f$ \zeta(\vec{x},t) @f$, which is materially conserved, 
+!> velocity @f$ \vec{u}(\vec{x},t) @f$, and the stream function @f$ \psi(\vec{x},t) @f$.
+!> These variables are related by the equations
+!> @f{align*}{
+!>	\frac{\partial \zeta}{\partial t} + \vec{u}\cdot\nabla \zeta & = \frac{D\zeta}{Dt} = 0, \\
+!>  \nabla^2 \psi & = - \zeta, \\
+!>  \zeta &= \nabla \times \vec{u}.
+!> @f}
+!> These equations are solved using vortex methods (particles = point vortices).  For more information on these 
+!> numerical techniques, see
+!> * A. J. Chorin and J. E. Marsden, _A Mathematical Introduction to Fluid Mechanics_, 3rd edition, Springer, 2000.
+!> * G.-F. Cottet and P. D. Koumoutsakos, _Vortex Methods_, Cambridge University Press, 2000.
+!> * A. J. Majda and A. L. Bertozzi, _Vorticity and Incompressible Flow_, Cambridge University Press, 2002.
+!>
 !> Currently, only free boundary conditions are supported.  
 !> The flow is integrated in time using a @ref PlanarIncompressibleSolver object.
 !> 

@@ -8,8 +8,35 @@ module SphereBVEModule
 !> @brief Data structure for representing solutions of the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere.
 !>
 !> Combines a @ref PolyMesh2d with the data @ref Field objects for the BVE.  
-!> Allows users to optionally add tracer @ref Field objects.
+!> Allows users to optionally add @ref Field objects for passive tracers.
 !> 
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
+!> the BVEMesh data type adds fields for relative vorticity @f$ \zeta(x,y,z,t) @f$ and the materially conserved absolute vorticity @f$ \omega(x_0,y_0,z_0) @f$.
+!> These variables are related by the equation
+!> @f[
+!> 		\omega = \zeta + f,
+!> @f]
+!> where @f$ f = \frac{2\Omega}{a}z(t) @f$ is the Coriolis parameter, @f$ \Omega @f$ is the constant angular velocity of the sphere about the z-axis,
+!> and @f$ a @f$ is the radius of the sphere.
+!>
+!> Two stream functions are defined on the particles, @f$ \psi_r(x,y,z,t) @f$ is defined with respect to the rotating frame 
+!> and @f$ \psi_a(x,y,z,t) @f$ is defined with respect to the inertial frame. 
+!> Both are represented (and computed) by convolution with the Green's function kernel,
+!> @f{align*}{
+!> 		\psi_r(\vec{x},t) &= \frac{1}{4\pi a}\int_{S} \log( 1 - \vec{x} \cdot \vec{\tilde{x}})\zeta(\vec{\tilde{x}})\,dA, \\
+!> 	    \psi_a(\vec{x},t) &= \frac{1}{4\pi a}\int_{S} \log( 1 - \vec{x} \cdot \vec{\tilde{x}})\omega(\vec{\tilde{x}})\,dA.
+!> @f}
+!>
+!> The particles also have a @ref Field to track their velocity, which is given by convolution with the Biot-Savart kernel,
+!> @f[
+!> 		\vec{u}(\vec{x},t) = -\frac{1}{4\pi a}\int_{S} \frac{ \vec{x} \times \vec{\tilde{x}} }{a^2 - \vec{x}\cdot\vec{\tilde{x}}} \zeta(\vec{\tilde{x}})\,dA.	
+!> @f]
+!> 
+!>	For a more detailed discussion, see @n
+!> * P. Bosler, L. Wang, C. Jablonowski, and R. Krasny, A Lagrangian particle/panel method for the barotropic vorticity
+!> 	equations on a rotating sphere, _Fluid Dynamics Research_ 46 (2014).  DOI: 10.1088/0169-5983/46/3/031406.
+!>  
+!>
 !> @{
 use NumberKindsModule
 use OutputWriterModule

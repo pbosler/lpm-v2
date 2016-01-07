@@ -116,3 +116,29 @@ To run an application driver, LPM executables may be run with the command
     mpirun -np 6 <LPMfile>.exe  <namelist file>
 
 This would execute the specified .exe file using 6 MPI processes and the input variables defined in the specified namelist file.
+
+Driver programs
+----------------
+
+Each application is defined in its own driver program.  
+Examples include `CollidingDipoles.f90`, `BVESingleGaussianVortex.f90`, and `PlaneSWEGravityWaves.f90`. @n
+
+Driver programs are organized into three phases:
+1. __Initialize:__ The computing environment is defined and initialized using appropriate calls to MPI subroutines. @n
+	User input is read from the appropriate namelist file. @n
+	The initial set of particles and their initial mesh are defined. @n
+	Initial conditions for each variable are defined on the mesh. @n
+	Any initial adaptive refinement is completed. @n
+	The initial conditions are output to data files. @n
+2. __Run:__ The time step loop resides in the section of the driver. @n
+	Within the timestep loop, an `if` statement determinces whether or not a particle set needs to be remeshed and/or remapped. @n
+	Remeshing (if necessary) is completed. @n
+	Time is advanced by one time step for each iteration of the loop. @n
+	Time-dependent output is written to a data file. @n
+3. __Finalize:__ Final output is written to data files. @n
+	Performance and timing data are output to console. @n
+	All LPM objects are deleted and all memory used by the driver is freed.
+
+Within the `contains` section of a driver program, users may insert functions relevant to their application.  @n
+In most cases, these functions must conform to the interfaces defined in @ref NumberKinds and @ref Refinement . 
+Additionally, since different applications will require different input, each driver requires its own version of the `ReadNamelistFile` subroutine.
