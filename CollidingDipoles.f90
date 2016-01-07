@@ -1,5 +1,12 @@
 program CollidingDipoles
-
+!> @file CollidingDipoles.f90
+!> Driver program for the problem of two colliding Lamb dipoles in the plane.@n
+!> Demonstrates the solution of an inviscid incompressible flow in the plane using @ref PlanarIncompressible,
+!> @ref PlanarIncompressibleSolver, @ref Refinement, and @ref BIVARRemesh.
+!>
+!> @image html collidingDipolesInitCond.png "Initial vorticity distribution for colliding dipoles problem."
+!>
+!> 
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -20,7 +27,7 @@ implicit none
 include 'mpif.h'
 
 ! mesh variables
-type(PlaneMeshIncompressible) :: plane
+type(PlaneMeshIncompressible) :: plane 
 integer(kint) :: initNest
 integer(kint) :: maxNest
 integer(kint) :: amrLimit
@@ -338,6 +345,11 @@ call MPI_FINALIZE(mpiErrCode)
 
 contains
 
+!> @brief Stores the Lagrangian coordinate of each particle as a passive tracer.
+!> Helpful for visualization of transport
+!>
+!> @param[inout] aPlane @ref PlanarIncompressible mesh
+!> @param[in] tracerID index to `PlanarIncompressible%%tracers(:)` array to store the Lagrangian coordinate
 subroutine StoreLagParamAsTracer( aPlane, tracerID )
 	type(PlaneMeshIncompressible), intent(inout) :: aPlane
 	integer(kint), intent(in) :: tracerID
@@ -350,6 +362,14 @@ subroutine StoreLagParamAsTracer( aPlane, tracerID )
 	enddo
 end subroutine
 
+!> @brief Vorticity distribution function, used to define initial conditions and for indirect vorticity interpolation
+!> to @f$ t = 0 @f$.
+!>
+!> Conforms to the numberkindsmodule::scalarFnOf2dSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return vorticity value at initial time at location (x,y)
 function TwoDipolesVorticity( x, y ) 
 	real(kreal) :: TwoDipolesVorticity
 	real(kreal), intent(in) :: x, y
@@ -358,6 +378,14 @@ function TwoDipolesVorticity( x, y )
 						  LambDipole( x, y, radius2, initStrength2, initX2, initY2 )
 end function
 
+!> @brief Vorticity function associated with a single Lamb dipole at location `(xcent, ycent)`
+!> 
+!> @param[in] x x-coordinate of output vorticity
+!> @param[in] y y-coordinate of output vorticity
+!> @param[in] lambR radius of dipole
+!> @param[in] U0 strength parameter 
+!> @param[in] xcent x-coordinate of dipole center
+!> @param[in] ycent y-coordinate of dipole center
 function LambDipole( x, y, lambR, U0, xcent, ycent)
 	real(kreal) ::LambDipole
 	real(kreal), intent(in) :: x, y, xCent, yCent, lambR, U0
@@ -381,6 +409,12 @@ function LambDipole( x, y, lambR, U0, xcent, ycent)
 	endif
 end function
 
+!> @brief Reads a namelist file, which must be specified on the command line at run-time execution as the first argument,
+!> to define the user-specified variables for this driver program.
+!> 
+!> Only MPI rank 0 reads the file; it then broadcasts the relevant data to all other ranks.
+!>
+!> @param[in] rank MPI rank
 subroutine ReadNamelistFile( rank )
 	integer(kint), intent(in) :: rank
 	!
@@ -481,7 +515,12 @@ subroutine ReadNamelistFile( rank )
 end subroutine
 
 
-
+!> @brief Initializes a @ref Logger for this executable program.
+!> 
+!> Output is controlled by message priority level and MPI rank.
+!> 
+!> @param[in] aLog @ref Logger to initialize
+!> @param[in] rank MPI rank
 subroutine InitLogger(aLog,rank)
 	type(Logger), intent(out) :: aLog
 	integer(kint), intent(in) :: rank
@@ -496,15 +535,22 @@ end subroutine
 
 end program
 
-FUNCTION BESSJ (N,X)
 
-!     This subroutine calculates the first kind modified Bessel function
-!     of integer order N, for any REAL X. We use here the classical
-!     recursion formula, when X > N. For X < N, the Miller's algorithm
-!     is used to avoid overflows.
-!     REFERENCE:
-!     C.W.CLENSHAW, CHEBYSHEV SERIES FOR MATHEMATICAL FUNCTIONS,
-!     MATHEMATICAL TABLES, VOL.5, 1962.
+!>    @brief This function calculates the first kind modified Bessel function
+!>     of integer order N, for any REAL X. 
+!>
+!>     We use here the classical
+!>     recursion formula, when X > N. For X < N, the Miller's algorithm
+!>     is used to avoid overflows.
+!>
+!>     REFERENCE:
+!>     C.W.CLENSHAW, CHEBYSHEV SERIES FOR MATHEMATICAL FUNCTIONS,
+!>     MATHEMATICAL TABLES, VOL.5, 1962.
+!> 
+!> @param[in] n order of Bessel function
+!> @param[in] x 
+!> @return Bessel function output, @f$ B_n(x) @f$
+FUNCTION BESSJ (N,X)
 
       PARAMETER (IACC = 40,BIGNO = 1.D10, BIGNI = 1.D-10)
       REAL *8 X,BESSJ,BESSJ0,BESSJ1,TOX,BJM,BJ,BJP,SUM
@@ -558,16 +604,24 @@ FUNCTION BESSJ (N,X)
       RETURN
       END
 
+
+!>  @brief   This function calculates the First Kind Bessel Function of
+!>     order 0, for any real number X. 
+!> 
+!> The polynomial approximation by
+!> series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
+!> 
+!>     REFERENCES:
+!>     M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
+!>     C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
+!>     VOL.5, 1962.
+!>
+!> @param[in] x 
+!> @return Bessel function output, @f$ B_0(x) @f$
       FUNCTION BESSJ0 (X)
       REAL *8 X,BESSJ0,AX,FR,FS,Z,FP,FQ,XX
 
-!     This subroutine calculates the First Kind Bessel Function of
-!     order 0, for any real number X. The polynomial approximation by
-!     series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
-!     REFERENCES:
-!     M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
-!     C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
-!     VOL.5, 1962.
+
 
       REAL *8 Y,P1,P2,P3,P4,P5,R1,R2,R3,R4,R5,R6  &
                ,Q1,Q2,Q3,Q4,Q5,S1,S2,S3,S4,S5,S6
@@ -599,15 +653,22 @@ FUNCTION BESSJ (N,X)
       RETURN
       END
 ! ---------------------------------------------------------------------------
+
+!>  @brief   This function calculates the First Kind Bessel Function of
+!>     order 1, for any real number X. 
+!> 
+!> The polynomial approximation by
+!> series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
+!> 
+!>     REFERENCES:
+!>     M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
+!>     C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
+!>     VOL.5, 1962.
+!>
+!> @param[in] x 
+!> @return Bessel function output, @f$ B_1(x) @f$
       FUNCTION BESSJ1 (X)
       REAL *8 X,BESSJ1,AX,FR,FS,Z,FP,FQ,XX
-!     This subroutine calculates the First Kind Bessel Function of
-!     order 1, for any real number X. The polynomial approximation by
-!     series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
-!     REFERENCES:
-!     M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
-!     C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
-!     VOL.5, 1962.
       REAL *8 Y,P1,P2,P3,P4,P5,P6,R1,R2,R3,R4,R5,R6  &
                ,Q1,Q2,Q3,Q4,Q5,S1,S2,S3,S4,S5,S6
       DATA P1,P2,P3,P4,P5 /1.D0,.183105D-2,-.3516396496D-4,  &

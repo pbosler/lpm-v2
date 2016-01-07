@@ -19,7 +19,7 @@ Design / Use
 =========
 
 The code is organized in an object-oriented style using modern Fortran. 
-Hence, there is a class (or Fortran derived data type) that corresponds to every task that the code completes.
+Hence, there is a class (Fortran derived data type) that corresponds to every task that the code completes.
 Generally, each data type has its own module file.
 A C++ implementation is in development.
 
@@ -27,47 +27,50 @@ Base objects
 ------------
 LPM provides a small library of fundamental modules that are used by the rest of the code.
 
-* The NumberKinds module defines constants used by the rest of the code, including variable kind definitions and physical constants.
-* The OutputWriter class defines methods for formatting output either for the console or ASCII files.  
-* The Logger class provides objects and methods for outputting to the console various types of messages from the rest of the LPM code in a parallel computing environment.  
-* The SphereGeometry and PlaneGeometry modules define geometric formulas for distance and areas. 
-* The MPISetup module provides a type and methods for distribution other objects across MPI ranks. 
-* The STDIntVector module provides a data type that mimics the C++ `std::vector<int>` class to dynamically allocate and resize integer arrays of rank 1
+* The @ref NumberKinds module defines constants used by the rest of the code, including variable kind definitions and physical constants.
+* The @ref OutputWriter class defines methods for formatting output either for the console or ASCII files.  
+* The @ref Logger class provides objects and methods for outputting to the console various types of messages from the rest of the LPM code in a parallel computing environment.  
+* The @ref SphereGeom and @ref PlaneGeom modules define geometric formulas for distance and areas. 
+* The @ref MPISetup module provides a type and methods for distribution other objects across MPI ranks. 
+* The @ref STDIntVector module provides a data type that mimics the C++ `std::vector<int>` class to dynamically allocate and resize integer arrays of rank 1
 
 Particles and Fields
 --------------------
 The primary computing objects used by LPM are the Lagrangian particles, defined in the particles module, and the fields, defined in the field module. 
-* Particles provide the spatial discretization of a domain and have both physical and Lagrangian coordinates.  
-* Fields are either scalar or vector fields defined on a set of particles; fields are used to store variables (e.g., vorticity, temperature, etc.) on a set of particles.  
+* @ref Particles provide the spatial discretization of a domain and have both physical and Lagrangian coordinates.  
+* A @ref Field may be either a scalar or vector field defined on a set of particles; fields are used to store variables (e.g., vorticity, temperature, etc.) on a set of particles.  
 
 
 Mesh objects
 ------------
 While the dynamics and PDEs are solved by LPM in a ''meshfree'' context, we often find it helpful and efficient to maintain a mesh to organize our particles.   
 Topologically two-dimensional meshes (e.g., spheres and planes) are currently implemented using triangles and quadrilaterals.  
-* The Edges module defines directed edges that connect an origin particle to a destination particle, and have a left face and a right face.
-* The Faces module defines polyhedral faces that have an associated list of edges and vertices.  
-* The Polymesh2d module collects particles, edges, and faces, into a single mesh object.   
+* The @ref Edges module defines directed edges that connect an origin particle to a destination particle, and have a left face and a right face.
+* The @ref Faces module defines polyhedral faces that have an associated list of edges and vertices.  
+* The @ref PolyMesh2d module collects particles, edges, and faces, into a single mesh object.   
 Meshes are initialized from a ''seed'' that is recursively divided until a desired spatial resolution is achieved.  
 
-* Polymesh2d meshes may be adaptively refined using the Refinement module.  
+* @ref PolyMesh2d meshes may be adaptively refined using the @ref Refinement module.  
+* Remesh/remap subroutines depend on a separate scattered data algorithm.  Current implementations include @ref BIVARRemesh for planar problems
+and @ref SSRFPACKRemesh for spherical problems.
 
 External libraries
 -------------------
 LPM code requires scattered data interpolation or approximation algorithms to perform its remesh/remap step.   
-For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, ACM TOMS, 1978) are used.
-For spherical applications, the cubic Hermite polynomials with exponential tension factors of the STRIPACK/SSRFPACK libraries (Renka, ACM TOMS, 1997) are used.  
+For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, ACM TOMS, 1978) are used (bivar.f90).
+For spherical applications, the cubic Hermite polynomials with exponential tension factors of the STRIPACK/SSRFPACK libraries (Renka, ACM TOMS, 1997) are used (stripack.f and ssrfpack.f).  
 
 Other methods for scattered data approximation are under development.  
 
 PDE types and Solver objects
 --------------
 PDEs are solved using a ''method of lines'' discretization. 
-A mesh is connected to its relevant variables by a PDE type, e.g., an SWEMesh or a BVEMesh object.
+A mesh is connected to its relevant variables by a PDE type, e.g., an SWEMesh or a @ref SphereBVE BVEMesh object.
 These objects combine a PolyMesh2d for the spatial discretization with the various Fields (e.g., vorticity, temperature) 
 appropriate to the chosen PDE.
 
-Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
+Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver
+(e.g., @ref SphereBVESolver, @ref PlanarIncompressibleSolver) object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
 
 
 Drivers
@@ -140,5 +143,5 @@ Driver programs are organized into three phases:
 	All LPM objects are deleted and all memory used by the driver is freed.
 
 Within the `contains` section of a driver program, users may insert functions relevant to their application.  @n
-In most cases, these functions must conform to the interfaces defined in @ref NumberKinds and @ref Refinement . 
+In most cases, these functions must conform to the interfaces defined in @ref NumberKinds and @ref Refinement . @n
 Additionally, since different applications will require different input, each driver requires its own version of the `ReadNamelistFile` subroutine.
