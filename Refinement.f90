@@ -166,8 +166,8 @@ end subroutine
 !> be updated with new values at all new particles.
 !> 
 !> @param[inout] self target RefineSetup object
-!> @param[inout] aMesh target @PolyMesh2d mesh to be refined
-!> @param[in] aField @Field whose values will be used to flag faces
+!> @param[inout] aMesh target @ref PolyMesh2d mesh to be refined
+!> @param[in] aField @ref Field whose values will be used to flag faces
 !> @param[in] flagFn Flag function, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol tolerance value for use with Flag Function
 !> @param[in] desc String describing the type of refinement
@@ -214,12 +214,12 @@ end subroutine
 !> be updated with new values at all new particles.
 !> 
 !> @param[inout] self target RefineSetup object
-!> @param[inout] aMesh target @PolyMesh2d mesh to be refined
-!> @param[in] field1  First @Field whose values will be used to flag faces
+!> @param[inout] aMesh target @ref PolyMesh2d mesh to be refined
+!> @param[in] field1  First @ref Field whose values will be used to flag faces
 !> @param[in] flagFn1 Flag function for use with field1, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol1 tolerance value for use with first Flag Function
 !> @param[in] desc1 String describing the first type of refinement
-!> @param[in] field2 Second @Field whose values will be used to flag faces
+!> @param[in] field2 Second @ref Field whose values will be used to flag faces
 !> @param[in] flagFn2 Flag function for use with field2, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol2 tolerance value for use with second Flag Function
 !> @param[in] desc2 String describing the second type of refinement
@@ -278,12 +278,12 @@ end subroutine
 !> be updated with new values at all new particles.
 !> 
 !> @param[inout] self target RefineSetup object
-!> @param[inout] aMesh target @PolyMesh2d mesh to be refined
-!> @param[in] field1  First @Field whose values will be used to flag faces
+!> @param[inout] aMesh target @ref PolyMesh2d mesh to be refined
+!> @param[in] field1  First @ref Field whose values will be used to flag faces
 !> @param[in] flagFn1 Flag function for use with field1, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol1 tolerance value for use with first Flag Function
 !> @param[in] desc1 String describing the first type of refinement
-!> @param[in] field2 Second @Field whose values will be used to flag faces
+!> @param[in] field2 Second @ref Field whose values will be used to flag faces
 !> @param[in] flagFn2 Flag function for use with field2, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol2 tolerance value for use with second Flag Function
 !> @param[in] desc2 String describing the second type of refinement
@@ -356,8 +356,8 @@ end subroutine
 !> be updated with new values at all new particles.
 !> 
 !> @param[inout] self target RefineSetup object
-!> @param[inout] aMesh target @PolyMesh2d mesh to be refined
-!> @param[in] aField @Field whose values will be used to flag faces
+!> @param[inout] aMesh target @ref PolyMesh2d mesh to be refined
+!> @param[in] aField @ref Field whose values will be used to flag faces
 !> @param[in] flagFn Flag function, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol tolerance value for use with Flag Function
 !> @param[in] desc String describing the type of refinement
@@ -420,7 +420,7 @@ end subroutine
 !> be updated with new values at all new particles.
 !> 
 !> @param[inout] self target RefineSetup object
-!> @param[inout] aMesh target @PolyMesh2d mesh to be refined
+!> @param[inout] aMesh target @ref PolyMesh2d mesh to be refined
 !> @param[in] flowMapVarTol tolerance for maximum Lagrangian coordinate variation per face
 !> @param[out] nParticlesStart the number of particles in the mesh upon entry to this subroutine
 !> @param[out] nParticlesEnd the number of particles in the mesh upon exit from this subroutine
@@ -475,14 +475,14 @@ function ScalarIntegralRefinement( mesh, dataField, tol, faceIndex )
 	ScalarIntegralRefinement = ( abs(dataField%scalar(pIndex)) * mesh%particles%area(pIndex) > tol )
 end function
 
-!> @brief Example Flag Function to refine panels whose scalar @Field variation per face exceed a given tolerance.
+!> @brief Example Flag Function to refine panels whose scalar @ref Field variation per face exceed a given tolerance.
 !> 
 !> The scalar variation scalar f(x) of face F_i is computed as @f$ \max_{F_i} f(x) - \min_{F_i} f(x) @f$,
 !> where the max and min are simply the maximum and minimum values of the scalar field carried by all particles associated
 !> with face F_i (center and vertices).
 !>
-!> @param[in] mesh @PolyMesh2d 
-!> @param[in] dataField scalar @Field 
+!> @param[in] mesh @ref PolyMesh2d 
+!> @param[in] dataField scalar @ref Field 
 !> @param[in] tol tolerance value
 !> @param[in] faceIndex face to flag, if tolerance is exceeded
 !> @return Flag value
@@ -514,7 +514,7 @@ end function
 !> where the max and min are simply the maximum and minimum values of the Lagrangian coordinate components carried by all particles associated
 !> with face F_j (center and vertices).
 !>
-!> @param[in] mesh @PolyMesh2d 
+!> @param[in] mesh @ref PolyMesh2d 
 !> @param[in] tol tolerance value
 !> @param[in] faceIndex face to flag, if tolerance is exceeded
 !> @return Flag value

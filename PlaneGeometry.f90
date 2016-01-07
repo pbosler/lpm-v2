@@ -101,9 +101,9 @@ end function
 !
 !> @ingroup PlaneGeom
 !
-!> @param[in] xyA double precision real size(2); vector in the plane
-!> @param[in] xyB double precision real size(2); vector in the plane
-!> @param[in] xyC double precision real size(2); vector in the plane
+!> @param[in] xA double precision real size(2); vector in the plane
+!> @param[in] xB double precision real size(2); vector in the plane
+!> @param[in] xC double precision real size(2); vector in the plane
 !> @return TriArea double precision real; scalar area of triangle 
 !------------------------------------------------------------------------------
 function TriArea( xA, xB, xC )

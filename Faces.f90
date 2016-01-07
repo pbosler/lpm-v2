@@ -975,9 +975,9 @@ function TriFaceArea( self, index, aParticles )
 end function
 
 !> @brief Computes the centroid (in physical space) of a face based on its vertices.
-!> @param self[in] Target faces object
-!> @param index[in] Index of face whose centroid is needed
-!> @param aParticles[in] Particles object associated with this set of faces
+!> @param[in] self Target faces object
+!> @param[in] index Index of face whose centroid is needed
+!> @param[in] aParticles Particles object associated with this set of faces
 !> @return Position vector of face centroid
 function FaceCentroid(self, index, aParticles )
 	real(kreal) :: FaceCentroid(3)

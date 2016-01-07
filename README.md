@@ -10,7 +10,7 @@ Code associated with
 > submitted to _Journal of Computational Physics_, 2015.
 
 
-> P. Bosler,  L. Wang,  R. Krasny, and C. Jablonowski.  
+> P. Bosler,  L. Wang,  C. Jablonowski, and R. Krasny.
 >	"A Lagrangian particle/panel method for the barotropic vorticity equation on a rotating sphere," _Fluid Dynamics Research_,  46 : 031406, 2014.
 
 > P. Bosler, "Particle Methods for Geophysical Flow on the Sphere," PhD Thesis, University of Michigan, 2013.
@@ -20,7 +20,7 @@ Design / Use
 
 The code is organized in an object-oriented style using modern Fortran. 
 Hence, there is a class (Fortran derived data type) that corresponds to every task that the code completes.
-Generally, each data type has its own module file.
+Generally, each data type has its own module file.@n
 A C++ implementation is in development.
 
 Base objects 
@@ -57,8 +57,8 @@ and @ref SSRFPACKRemesh for spherical problems.
 External libraries
 -------------------
 LPM code requires scattered data interpolation or approximation algorithms to perform its remesh/remap step.   
-For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, ACM TOMS, 1978) are used (bivar.f90).
-For spherical applications, the cubic Hermite polynomials with exponential tension factors of the STRIPACK/SSRFPACK libraries (Renka, ACM TOMS, 1997) are used (stripack.f and ssrfpack.f).  
+For planar applications, the bivariate quintic Hermite polynomials of the BIVAR pacakge (H. Akima, _ACM TOMS_, 1978) are used (bivar.f90).
+For spherical applications, the cubic Hermite polynomials with exponential tension factors of the STRIPACK/SSRFPACK libraries (Renka, _ACM TOMS_, 1997) are used (stripack.f and ssrfpack.f).  
 
 Other methods for scattered data approximation are under development.  
 
@@ -70,14 +70,22 @@ These objects combine a PolyMesh2d for the spatial discretization with the vario
 appropriate to the chosen PDE.
 
 Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver
-(e.g., @ref SphereBVESolver, @ref PlanarIncompressibleSolver) object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
+(e.g., @ref SphereBVESolver) object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
 
+* Planar, inviscid, incompressible flow: See @ref PlanarIncompressible, @ref PlanarIncompressibleSolver, and CollidingDipoles.f90
+* Rotating planar, inviscid, incompressible flow: See @ref BetaPlane, @ref BetaPlaneSolver
+* Spherical Barotropic Vorticity Equation (BVE): See @ref SphereBVE, @ref SphereBVESolver, and BVESingleGaussianVortex.f90
+* Rotating planar Shallow Water Equations (SWE): See @ref PlanarSWE, @ref SWEPlaneSolver, NitscheStrickland.f90, etc.
 
-Drivers
+Application Drivers
 --------
 Finally, all of the above objects are assembled by a driver program that solves a specific problem.  
 Within the driver program all initial conditions must be defined.
-It is within these programs that the timestepping loop and remeshing procedures are called.
+
+Run-time user input to driver programs is handled via namelist file, that is typically supplied as the first argument on the command line.
+See below for more discussion.
+
+It is within these driver programs that the timestepping loop and remeshing procedures are called.
 See PlaneSWEGravityWaves.f90 or CollidingDipoles.f90 for examples.
 
 

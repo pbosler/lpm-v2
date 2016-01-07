@@ -7,6 +7,15 @@ module SWEPlaneSolverModule
 !> @defgroup SWEPlaneSolver SWEPlaneSolver
 !> Data structure for solving the Shallow Water Equations (SWE) in the beta plane.
 !> Used with the @ref PlanarSWE module.
+!>
+!> The shallow water equations are presented in the detailed description of the @ref PlanarSWE module.  @n
+!> 
+!> Integrals are used to compute the velocity @f$\vec{u}@f$, the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$, and a PSE integral (see @ref PSEDirectSum) 
+!> approximates the Laplacian of the fluid surface.@n
+!> As with the other integrals in LPM, these integrals are computed as a parallel direct summation across all MPI ranks.@n
+!> See sweplanesolvermodule::sweplanerhsintegrals.
+!> 
+!> All other terms are computed as ODEs along each particle trajectory; see sweplanesolvermodule::timestepprivate. 
 !> 
 !> @{
 use NumberKindsModule
@@ -32,49 +41,49 @@ public Timestep
 !----------------
 !
 type SWESolver
-	real(kreal), allocatable :: xStart(:)
-	real(kreal), allocatable :: yStart(:)
-	real(kreal), allocatable :: relVortStart(:)
-	real(kreal), allocatable :: areaStart(:)
-	real(kreal), allocatable :: divStart(:)
-	real(kreal), allocatable :: hStart(:)
-	real(kreal), allocatable :: u(:)
-	real(kreal), allocatable :: v(:)
-	logical(klog), allocatable :: mask(:)
-	real(kreal), allocatable :: potVort(:)
-	real(kreal), allocatable :: doubleDot(:)
-	real(kreal), allocatable :: lapSurf(:)
+	real(kreal), allocatable :: xStart(:) !< starting x-coordinate of each particle
+	real(kreal), allocatable :: yStart(:) !< starting y-coordinate of each particle
+	real(kreal), allocatable :: relVortStart(:) !< starting relative vorticity of each particle
+	real(kreal), allocatable :: areaStart(:) !< starting area of each particle
+	real(kreal), allocatable :: divStart(:) !< starting divergence of each particle
+	real(kreal), allocatable :: hStart(:) !< starting depth at each particle
+	real(kreal), allocatable :: u(:) !< x-component of fluid velocity
+	real(kreal), allocatable :: v(:) !< y-component of fluid velocity
+	logical(klog), allocatable :: mask(:) !< mask(i) is .TRUE. if particle i is active
+	real(kreal), allocatable :: potVort(:) !< potential vorticity of each particle
+	real(kreal), allocatable :: doubleDot(:) !< double dot product of velocity at each particle
+	real(kreal), allocatable :: lapSurf(:) !< Laplacian of fluid surface at each particle
 	
-	real(kreal), allocatable :: xIn(:) 
-	real(kreal), allocatable :: xStage1(:) 
-	real(kreal), allocatable :: xStage2(:) 
-	real(kreal), allocatable :: xStage3(:) 
-	real(kreal), allocatable :: xStage4(:) 
-	real(kreal), allocatable :: yIn(:) 
-	real(kreal), allocatable :: yStage1(:) 
-	real(kreal), allocatable :: yStage2(:) 
-	real(kreal), allocatable :: yStage3(:) 
-	real(kreal), allocatable :: yStage4(:) 
-	real(kreal), allocatable :: areaIn(:) 
-	real(kreal), allocatable :: areaStage1(:) 
-	real(kreal), allocatable :: areaStage2(:) 
-	real(kreal), allocatable :: areaStage3(:) 
-	real(kreal), allocatable :: areaStage4(:) 
-	real(kreal), allocatable :: relVortIn(:) 
-	real(kreal), allocatable :: relVortStage1(:) 
-	real(kreal), allocatable :: relVortStage2(:) 
-	real(kreal), allocatable :: relVortStage3(:) 
-	real(kreal), allocatable :: relVortStage4(:) 
-	real(kreal), allocatable :: divIn(:) 
-	real(kreal), allocatable :: divStage1(:) 
-	real(kreal), allocatable :: divStage2(:) 
-	real(kreal), allocatable :: divStage3(:) 
-	real(kreal), allocatable :: divStage4(:) 
-	real(kreal), allocatable :: hIn(:)
-	real(kreal), allocatable :: hStage1(:) 
-	real(kreal), allocatable :: hStage2(:) 
-	real(kreal), allocatable :: hStage3(:) 
-	real(kreal), allocatable :: hStage4(:) 
+	real(kreal), allocatable :: xIn(:)  !< x-coordinate input to RK4
+	real(kreal), allocatable :: xStage1(:) !< x-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable :: xStage2(:) !< x-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable :: xStage3(:) !< x-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable :: xStage4(:) !< x-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable :: yIn(:) !< y-coordinate input to RK4
+	real(kreal), allocatable :: yStage1(:) !< y-coordinates of each particle at RK4 stage 1
+	real(kreal), allocatable :: yStage2(:) !< y-coordinates of each particle at RK4 stage 2
+	real(kreal), allocatable :: yStage3(:) !< y-coordinates of each particle at RK4 stage 3
+	real(kreal), allocatable :: yStage4(:) !< y-coordinates of each particle at RK4 stage 4
+	real(kreal), allocatable :: areaIn(:) !< area input to RK4
+	real(kreal), allocatable :: areaStage1(:) !< area of each particle at RK4 stage 1
+	real(kreal), allocatable :: areaStage2(:) !< area of each particle at RK4 stage 2
+	real(kreal), allocatable :: areaStage3(:) !< area of each particle at RK4 stage 3
+	real(kreal), allocatable :: areaStage4(:) !< area of each particle at RK4 stage 4
+	real(kreal), allocatable :: relVortIn(:) !< relative vorticity input to RK4
+	real(kreal), allocatable :: relVortStage1(:) !< relative vorticity of each particle at RK4 stage 1
+	real(kreal), allocatable :: relVortStage2(:) !< relative vorticity of each particle at RK4 stage 2
+	real(kreal), allocatable :: relVortStage3(:) !< relative vorticity of each particle at RK4 stage 3
+	real(kreal), allocatable :: relVortStage4(:) !< relative vorticity of each particle at RK4 stage 4
+	real(kreal), allocatable :: divIn(:) !< divergence input to RK4
+	real(kreal), allocatable :: divStage1(:) !< divergence of each particle at RK4 stage 1
+	real(kreal), allocatable :: divStage2(:) !< divergence of each particle at RK4 stage 2
+	real(kreal), allocatable :: divStage3(:) !< divergence of each particle at RK4 stage 3
+	real(kreal), allocatable :: divStage4(:) !< divergence of each particle at RK4 stage 4
+	real(kreal), allocatable :: hIn(:) !< depth input to RK4
+	real(kreal), allocatable :: hStage1(:) !< depth of each particle at RK4 stage 1
+	real(kreal), allocatable :: hStage2(:) !< depth of each particle at RK4 stage 2
+	real(kreal), allocatable :: hStage3(:) !< depth of each particle at RK4 stage 3
+	real(kreal), allocatable :: hStage4(:) !< depth of each particle at RK4 stage 4
 
 	contains
 		final :: deletePrivate
@@ -114,6 +123,11 @@ contains
 ! public methods
 !----------------
 !
+
+!> @brief Allocates memory for a new SWE Solver.  Initializes the solver to match the current mesh.
+!> @param[out] self Target SWE Solver
+!> @param[in] plane @ref PlanarSWE mesh
+!> @param[in] topoFn bottom topography function, must conform to the numberkindsmodule::scalarFnOf2DSpace interface
 subroutine newPrivate( self, plane, topoFn )
 	type(SWESolver), intent(out) :: self
 	type(SWEMesh), intent(in) :: plane
@@ -184,6 +198,8 @@ subroutine newPrivate( self, plane, topoFn )
 				self%divStart, self%hStart, topoFn, self%areaStart, self%mask, plane%pseEps, plane%mpiParticles)
 end subroutine
 
+!> @brief Deletes and frees memory associated with an SWESolver.
+!> @param[inout] self Solver
 subroutine deletePrivate(self)
 	type(SWESolver), intent(inout) :: self
 	if ( allocated(self%xStart)) then
@@ -233,6 +249,11 @@ subroutine deletePrivate(self)
 	endif
 end subroutine
 
+!> @brief Advances a SWE mesh forward in time by one timestep using 4th order Runge-Kutta.
+!> @param[inout] self SWE solver
+!> @param[inout] plane @ref PlanarSWE mesh
+!> @param[in] dt timestep increment
+!> @param[in] topoFn bottom topography function, must conform to the numberkindsmodule::scalarFnOf2DSpace interface
 subroutine timestepPrivate( self, plane, dt, topoFn )
 	type(SWESolver), intent(inout) :: self
 	type(SWEMesh), intent(inout) :: plane
@@ -371,6 +392,27 @@ end subroutine
 ! private methods
 !----------------
 !
+
+!> @brief Computes the integral expressions on the right-hand side of the set of ODEs from a Lagrangian method of lines discretization; see @ref PlanarSWE.
+!> 
+!> Integrals are used to compute the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$ and a PSE integral (see @ref PSEDirectSum) 
+!> approximates the Laplacian of the fluid surface.@n
+!> As with the other integrals in LPM, these integrals are computed as a parallel direct summation across all MPI ranks.
+!> 
+!> @param[out] u x-component of velocity
+!> @param[out] v y-component of velocity
+!> @param[out] doubleDot double dot product
+!> @param[out] lapSurf Laplacian of fluid surface
+!> @param[in] x x-coordinates of particles
+!> @param[in] y y-coordinates of particles
+!> @param[in] vort vorticity carried by particles
+!> @param[in] div divergence carried by particles
+!> @param[in] h fluid depth at particles
+!> @param[in] topoFn bottom topography height function, must conform to numberkindsmodule::scalarFnOf2DSpace interface
+!> @param[in] area area represented by each particle
+!> @param[in] mask mask(i) is true if particle i is active
+!> @param[in] pseEps PSE particle influence radius
+!> @param[in] mpiParticles @ref MPISetup to distribute work of particle integration across all MPI ranks
 subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, topoFn, area, mask, pseEps, mpiParticles)
 	real(kreal), dimension(:), intent(out) :: u
 	real(kreal), dimension(:), intent(out) :: v
@@ -479,6 +521,11 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 !	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" min(lapS) = ", minval(lapSurf) )
 end subroutine
 
+!> @brief Initializes a logger for the planar SWE solver module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 ! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog

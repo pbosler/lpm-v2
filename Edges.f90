@@ -724,7 +724,7 @@ end subroutine
 !>
 !> @param self Target edge object
 !> @param aParticles particles object associated with this set of edges
-!> @param index to the particle at the center of the edge's face
+!> @param centerParticle index to the particle at the center of the edge's face
 !> @param leafEdges indices of the child edges associated with a face whose neighbors may be more refined than itself
 !> @param nLeaves number of leafEdges
 !> @return Area represented by one side of a polyhedral face

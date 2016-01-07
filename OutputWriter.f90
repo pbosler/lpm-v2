@@ -260,8 +260,8 @@ subroutine WriteVTKFileHeader( fileunit, title )
 end subroutine
 
 !> @brief Writes the section header for VTK Point Data in a legacy formatted .vtk file
-!> @param fileunit Integer unit of output .vtk file
-!> @param fileunit Integer number of points
+!> @param[in] fileunit Integer unit of output .vtk file
+!> @param[in] nPoints Integer number of points
 subroutine WriteVTKPointDataSectionHeader(fileunit, nPoints)
 	integer(kint), intent(in) :: fileunit
 	integer(kint), intent(in) :: nPoints
@@ -347,7 +347,7 @@ end subroutine
 !
 
 !> @brief This function returns a string with white space prepended to the intput formatString to provide appropriate indentation.
-!> @param Target OutputWriter object
+!> @param self Target OutputWriter object
 !> @param formatString Format intsructions for console output
 function FormatWithIndent(self,formatString)
 	

@@ -304,6 +304,7 @@ end subroutine
 !> @param[in] self Remeshing data structure
 !> @param[in] oldSphere source @ref SphereBVE mesh
 !> @param[inout] newSphere target @ref SphereBVE mesh (note that this must have been allocated prior to calling this subroutine)
+!> @param[in] AMR true if adaptive refinement will be used
 !> @param[in] relVortFn Vorticity distribution function, must have same interface as numberkindsmodule::scalarFnOf3DSpace
 !> @param[in] flagFn1 FlagFunction for vorticity refinement, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol1 tolerance for flagFn1

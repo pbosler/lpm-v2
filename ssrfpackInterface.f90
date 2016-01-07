@@ -167,7 +167,7 @@ subroutine deleteDelTri(self)
 end subroutine
 
 !> @brief Deletes and frees memory associated with an SSRFPACKInterface object.
-!> @param[inout] Target SSRFPACKInterface
+!> @param[inout] self Target SSRFPACKInterface
 subroutine deletePrivate( self )
 	type(SSRFPACKInterface), intent(inout) :: self
 	if ( allocated(self%grad1) ) then

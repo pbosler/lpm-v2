@@ -603,7 +603,7 @@ end function
 
 !> @brief Computes the value of a kernel that approximates a delta function on @f$ \mathbb{R}^2 @f$ to 8th order accuracy.
 !> 
-!> @param[in] radialDist Kernel input, typically from ::integralKernelInput
+!> @param[in] radialDist Kernel input, typically from psedirectsummodule::integralkernelinput
 !> @return kernel value
 pure function bivariateDeltaKernel8( radialDist ) 
 	real(kreal) :: bivariateDeltaKernel8
@@ -614,7 +614,7 @@ end function
 
 !> @brief Computes the value of a kernel that approximates the Laplacian on @f$ \mathbb{R}^2 @f$ to 8th order accuracy.
 !> 
-!> @param[in] radialDist Kernel input, typically from ::integralKernelInput
+!> @param[in] radialDist Kernel input, typically from psedirectsummodule::integralkernelinput
 !> @return kernel value
 pure function bivariateLaplacianKernel8( radialDist )
 	real(kreal) :: bivariateLaplacianKernel8

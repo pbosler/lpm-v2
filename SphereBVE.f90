@@ -310,7 +310,7 @@ end subroutine
 !> @brief Defines an initial vorticity distribution on a BVE mesh.
 !> 
 !> @param[inout] self BVE mesh
-!> @param[in] vortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
+!> @param[in] relVortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
 subroutine SetInitialVorticityOnMesh(self, relVortFn )
 	type(BVEMesh), intent(inout) :: self
 	procedure(scalarFnOf3DSpace) :: relVortFn

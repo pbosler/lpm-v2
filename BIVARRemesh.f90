@@ -423,7 +423,6 @@ end subroutine
 !>
 !> @param[inout] newPlane @ref PlanarIncompressible target
 !> @param[in] oldPlane @ref PlanarIncompressible source 
-!> @param[in] AMR .TRUE. if adaptive refinement will be used
 !> @param[in] vortFn Vorticity distribution function, must have same interface as numberkindsmodule::scalarFnOf2DSpace
 !> @param[in] flagFn1 Flag function for vorticity, must have same interface as refinementmodule::FlagFunction
 !> @param[in] tol1 tolerance for first flag function

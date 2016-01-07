@@ -1,5 +1,22 @@
 program NitcheStrickland
-
+!> @file NitscheStrickland.f90
+!> Driver program for a planar SWE problem defined by a symmetric vortex and zero initial divergence.
+!> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!>
+!> Demonstrates flow interaction with topography.@n
+!> Demontstrates the use of @ref PlanarSWE, @ref SWEPlaneSolver, and @ref PSEDirectSum. @n
+!> Driver program based on the setup of an isentropic gas dymanics problem from Nitsche and Strickland (2002).@n
+!> Intial conditions are a symmetric vortex located at the origin, uniform fluid depth and zero initial divergence.
+!> 
+!> Users may alter the source code to change the bottom topography function (each change requires a new compilation).@n
+!> 
+!> Other input is supplied via namelist file.  
+!>
+!> @image html NS2002WithTopo.png "Flow interaction with topography. A vortex interacting with a mountain generates gravity waves."
+!>
+!> For a complete description of the problem that this application is based upon, see @n
+!> [M. Nitsche and J. Strickland, Extension of the gridless vortex method into the compressible flow regime. <i> J. Turb. </i> 3 (2002)](http://www.math.unm.edu/~nitsche/webhome/preprints.html)
+!> 
 use NumberKindsModule
 use LoggerModule 
 use PlanarSWEModule
@@ -146,12 +163,26 @@ call MPI_FINALIZE(mpiErrCode)
 
 contains
 
+!> @brief Defines the initial divergence.
+!> 
+!> Conforms to the numberkindsmodule::scalarFnOf2DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return initial divergence, @f$ \delta(x,y,0) @f$
 function initDivergence( x, y )
 	real(kreal) :: initDivergence
 	real(kreal), intent(in) :: x, y
 	initDivergence = 0.0_kreal
 end function 
 
+!> @brief Defines the initial vorticity.
+!> 
+!> Conforms to the numberkindsmodule::scalarFnOf2DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return initial vorticiy, @f$ \zeta(x,y,0) @f$
 function initVorticity( x, y)
 	real(kreal) :: initVorticity
 	real(kreal), intent(in) :: x, y
@@ -162,6 +193,13 @@ function initVorticity( x, y)
 	initVorticity = (3.0_kreal * sqrt(r2) /( r2 + ZERO_TOL * ZERO_TOL) - 2.0_kreal * b * sqrt(r2)) * r2 * exp(-b * r2)
 end function 
 
+!> @brief Defines the initial velocity.
+!> 
+!> Conforms to the numberkindsmodule::vectorFnOf2DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return initial velocity, @f$ \vec{u}(x,y,0) @f$
 function initVelocity(x, y)
 	real(kreal) :: initVelocity(2)
 	real(kreal), intent(in) :: x, y
@@ -177,12 +215,26 @@ function initVelocity(x, y)
 	initVelocity(2) =   utheta * cos(theta)
 end function 
 
+!> @brief Defines the initial fluid depth.
+!> 
+!> Conforms to the numberkindsmodule::scalarFnOf2DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return initial depth, @f$ h(x,y,0) @f$
 function initH(x, y)
 	real(kreal) :: initH
 	real(kreal), intent(in) :: x, y
 	initH = 1.0_kreal - bottomTopo(x,y)
 end function
 
+!> @brief Defines the bottom topography.
+!> 
+!> Conforms to the numberkindsmodule::scalarFnOf2DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @return height of bottom, @f$ h_B(x,y) @f$
 function bottomTopo(x,y)
 	real(kreal) :: bottomTopo
 	real(kreal), intent(in) :: x, y
@@ -190,12 +242,12 @@ function bottomTopo(x,y)
 	bottomTopo = 0.5_kreal * exp( -5.0_kreal * (x-0.75_kreal) * (x-0.75_kreal) - 5.0_kreal * y * y)
 end function
 
-function DepthLaplacian( x, y )
-	real(kreal) :: DepthLaplacian
-	real(kreal), intent(in) :: x, y
-	DepthLaplacian = 0.0_kreal
-end function
-
+!> @brief Initializes a @ref Logger for this executable program.
+!> 
+!> Output is controlled by message priority level and MPI rank.
+!> 
+!> @param[in] log @ref Logger to initialize
+!> @param[in] rank MPI rank
 subroutine InitLogger(log, rank)
 	type(Logger), intent(inout) :: log
 	integer(kint), intent(in) :: rank
@@ -207,6 +259,12 @@ subroutine InitLogger(log, rank)
 	write(logKey,'(A,I0.2,A)') trim(logKey)//"_", rank, ":"
 end subroutine
 
+!> @brief Reads a namelist file, which must be specified on the command line at run-time execution as the first argument,
+!> to define the user-specified variables for this driver program.
+!> 
+!> Only MPI rank 0 reads the file; it then broadcasts the relevant data to all other ranks.
+!>
+!> @param[in] rank MPI rank
 subroutine ReadNamelistFile(rank)
 	integer(kint), intent(in) :: rank
 	!

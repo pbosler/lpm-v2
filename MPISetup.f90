@@ -94,8 +94,8 @@ subroutine deletePrivate(self)
 end subroutine
 
 !> @brief Copies an MPISetup object
-!> @param Target MPISetup object
-!> @param Source MPISetup object
+!> @param self Target MPISetup object
+!> @param other Source MPISetup object
 subroutine copyPrivate(self, other)
 	type(MPISetup), intent(inout) :: self
 	type(MPISetup), intent(in) :: other

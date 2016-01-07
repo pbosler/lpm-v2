@@ -527,7 +527,7 @@ end function
 
 !> @brief Constructs the projection matrix for a vector tangent to the sphere at location xyz.
 !> @param xyz
-!> @return @f$ P = I - x x^T $@f
+!> @return @f$ P = I - x x^T @f$
 pure function SphereProjection( xyz )
 	real(kreal) :: SphereProjection(3,3)
 	real(kreal), intent(in) :: xyz(3)
@@ -589,7 +589,7 @@ end function
 !> @param[in] xA double precision real size(3)
 !> @param[in] xB double precision real size(3)
 !> @param[in] xC double precision real size(3)
-!> @return \f$ x_A \cdot (x_b \times x_c) $\f double precision real size(3)
+!> @return @f$ x_A \cdot (x_b \times x_c) @f$ double precision real size(3)
 !------------------------------------------------------------------------------
 pure function Determinant(xA,xB,xC)
 	! Computes the vector determinant (triple product) of xA, xB, and xC

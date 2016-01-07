@@ -68,7 +68,7 @@ type Particles
 	real(kreal), allocatable :: area(:)  !< area represented by each particle
 	real(kreal), allocatable :: volume(:)  !< volume represented by each particle
 	integer(kint), allocatable :: nEdges(:)  !< number of edges (if a mesh is used) incident to each particle
-	integer(kint), allocatable :: incidentEdges(:,:)  !< indices to ::edges incident on each particle (only if a mesh is used)
+	integer(kint), allocatable :: incidentEdges(:,:)  !< indices to @ref Edges incident on each particle (only if a mesh is used)
 	real(kreal), allocatable :: incidentAngles(:,:)  !< angles of indcidence for edges at each particle (only if a mesh is used)
 	logical(klog), allocatable :: isActive(:)  ! true if particle represents a leaf face or cell; corresponds to area, volume > 0
 	logical(klog), allocatable :: isPassive(:)  ! true if particle represents a leaf vertex
@@ -445,8 +445,9 @@ subroutine WriteVTKParticleVolume(self, fileunit )
 end subroutine
 
 !> @brief Inserts a single particle into a particles object.
-!> @param physX physical coordinate vector
-!> @param lagX Lagrangian coordinate vector
+!> @param[inout] self a set of particles
+!> @param[in] physX physical coordinate vector of particle to add
+!> @param[in] lagX Lagrangian coordinate vector of particle to add
 subroutine InsertParticle( self, physX, lagX )
 	type(Particles), intent(inout) :: self
 	real(kreal), intent(in) :: physX(:), lagX(:)

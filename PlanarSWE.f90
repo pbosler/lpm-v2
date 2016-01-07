@@ -1,5 +1,5 @@
 module PlanarSWEModule
-!> @file PlaneSWE.f90
+!> @file PlanarSWE.f90
 !> Data structure for representing solutions of the shallow water equations in a beta-plane.
 !> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
 !> 

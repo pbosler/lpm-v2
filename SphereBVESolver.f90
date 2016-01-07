@@ -214,7 +214,7 @@ end subroutine
 
 !> @brief Advances a BVE mesh forward in time by one timestep using 4th order Runge-Kutta.
 !> @param[inout] self BVE solver
-!> @param[inout] plane BVE mesh
+!> @param[inout] sphereBVE BVE mesh
 !> @param[in] dt timestep increment
 subroutine timestepPrivate( self, sphereBVE, dt )
 	type(BVESolver), intent(inout) :: self
@@ -422,7 +422,7 @@ subroutine BVESphereVelocity( u, v, w, x, y, z, relVortIn, areaIn, sphereRadius,
 	enddo
 end subroutine
 
-!> @brief Initializes a logger for the PlanarIncompressible solver module
+!> @brief Initializes a logger for the SphereBVE solver module
 !> 
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object

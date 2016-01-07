@@ -97,10 +97,11 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 contains
 
 !> @brief Allocates memory and initializes to zero a Field object.
-!> @param self Target field object
-!> @param nDim number of components in this Field object (not the spatial domain of its accompanying particle set)
-!> @param name e.g., vorticity or potential
-!> @param units physical units, if applicable
+!> @param[out] self Target field object
+!> @param[in] nDim number of components in this Field object (not the spatial domain of its accompanying particle set)
+!> @param[in] nMax max number of particles that can be associated with this field
+!> @param[in] name e.g., vorticity or potential
+!> @param[in] units physical units, if applicable
 subroutine newPrivate(self, nDim, nMax, name, units )
 	type(Field), intent(out) :: self
 	integer(kint), intent(in) :: nDim, nMax
@@ -235,7 +236,7 @@ end subroutine
 !> @brief Finds the area-average of a scalar.
 !> @param self Target field object
 !> @param aParticles particlesmodule::particles object associated with this field
-!> @return @f$ \frac{1}{A} \int f(x)\, dA $ @f
+!> @return @f$ \frac{1}{A} \int f(x)\, dA @f$
 function ScalarAverage(self, aParticles )
 	real(kreal) :: ScalarAverage
 	type(Field), intent(in) :: self

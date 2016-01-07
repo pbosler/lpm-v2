@@ -439,7 +439,7 @@ end subroutine
 !> 
 !> Output is controlled by message priority level and MPI rank.
 !> 
-!> @param[in] aLog @ref Logger to initialize
+!> @param[in] log @ref Logger to initialize
 !> @param[in] rank MPI rank
 
 subroutine InitLogger(log, rank)
