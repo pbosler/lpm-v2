@@ -1,5 +1,15 @@
-program BVESingleGaussianVortex
-
+program BVESingleGaussianVortexDriver
+!> @file BVESingleGaussianVortex.f90
+!> Driver program for the problem of a single Gaussian vortex on a rotating sphere.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
+!> Driver program for the problem of a single Gaussian vortex on a rotating sphere.@n
+!> Demonstrates the solution of an inviscid incompressible flow on the sphere using @ref SphereBVE,
+!> @ref SphereBVESolver, @ref Refinement, and @ref SSRFPACKRemesh.
+!>
+!> @image html BVEGaussVortSol.png "Late-time vorticity distribution of an initially Gaussian vortex on a rotating sphere (coarse resolution)."
+!>
+!> 
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -269,12 +279,19 @@ call MPI_FINALIZE(mpiErrCode)
 
 contains
 
+!> @brief Returns the latitude of a Lagrangian coordinate.  
+!> 
+!> Conforms to numberkindsmodule::scalarFnOf3DSpace interface.
 pure function InitLatTracer( x0, y0, z0 )
 	real(kreal) :: InitLatTracer
 	real(kreal), intent(in) :: x0, y0, z0
 	InitLatTracer = Latitude( x0, y0, z0 )
 end function
 
+!> @brief Sets absolute tolerances for AMR criteria based on an initially uniform mesh with corresponding vorticity distribution.
+!> @param[in] aBVEMesh @ref SphereBVE mesh
+!> @param[inout] circTol On input, relative tolerance (between 0 and 1).  On output, absolute tolerance for circulation magnitude about a face.
+!> @param[inout] lagVarTol On input, relative tolerance (between 0 and 1).  On output, absolute tolerance for Lagrangian variation magnitude on each face.
 subroutine SetAbsoluteTolerances( aBVEMesh, circTol, lagVarTol )
 	type(BVEMesh), intent(in) :: aBVEMesh
 	real(kreal), intent(inout) :: circTol
@@ -284,6 +301,15 @@ subroutine SetAbsoluteTolerances( aBVEMesh, circTol, lagVarTol )
 	lagVarTol = lagVarTol * MaxLagrangianVariationPerFace(aBVEMesh%mesh)
 end subroutine
 
+!> @brief Vorticity distribution function, used to define initial conditions and for indirect vorticity interpolation
+!> to @f$ t = 0 @f$.
+!>
+!> Conforms to the numberkindsmodule::scalarFnOf3DSpace interface.
+!> 
+!> @param[in] x
+!> @param[in] y
+!> @param[in] z 
+!> @return initial vorticity value at at location (x,y,z)
 function GaussianVortexVorticity( x, y, z )
 	real(kreal) :: GaussianVortexVorticity
 	real(kreal), intent(in) :: x, y, z
@@ -291,6 +317,14 @@ function GaussianVortexVorticity( x, y, z )
 		(radius * radius - x * vortCenter(1) - y * vortCenter(2) - z * vortCenter(3)) ) - GAUSS_CONST
 end function
 
+!> @brief Defines a constant to ensure that the total integral of vorticity is zero over the whole sphere.
+!> 
+!> @param[in] aBVEMesh @ref SphereBVE mesh
+!> @return C such that 
+!> @f[
+!> 		\int_S \zeta(\vec{x})\,dA = \int_{S} \zeta_G(\vec{x})\,dA - C = 0,
+!> @f]
+!> where @f$ \zeta_G @f$ is a Gaussian distribution on a sphere.
 function SetGaussConst( aBVEMesh )
 	real(kreal) :: SetGaussConst
 	type(BVEMesh), intent(in) :: aBVEMesh
@@ -300,6 +334,12 @@ function SetGaussConst( aBVEMesh )
 						 (4.0_kreal * PI * aBVEMesh%radius )
 end function
 
+!> @brief Reads a namelist file, which must be specified on the command line at run-time execution as the first argument,
+!> to define the user-specified variables for this driver program.
+!> 
+!> Only MPI rank 0 reads the file; it then broadcasts the relevant data to all other ranks.
+!>
+!> @param[in] rank MPI rank
 subroutine ReadNamelistFile( rank )
 	integer(kint), intent(in) :: rank
 	!
@@ -395,6 +435,12 @@ subroutine ReadNamelistFile( rank )
 	flowMapVarTol = bcastReals(9)
 end subroutine
 
+!> @brief Initializes a @ref Logger for this executable program.
+!> 
+!> Output is controlled by message priority level and MPI rank.
+!> 
+!> @param[in] aLog @ref Logger to initialize
+!> @param[in] rank MPI rank
 
 subroutine InitLogger(log, rank)
 	type(Logger), intent(inout) :: log

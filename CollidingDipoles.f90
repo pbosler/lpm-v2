@@ -1,5 +1,8 @@
-program CollidingDipoles
+program CollidingDipolesDriver
 !> @file CollidingDipoles.f90
+!> Driver program for the problem of two colliding Lamb dipoles in the plane.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
 !> Driver program for the problem of two colliding Lamb dipoles in the plane.@n
 !> Demonstrates the solution of an inviscid incompressible flow in the plane using @ref PlanarIncompressible,
 !> @ref PlanarIncompressibleSolver, @ref Refinement, and @ref BIVARRemesh.
@@ -365,7 +368,7 @@ end subroutine
 !> @brief Vorticity distribution function, used to define initial conditions and for indirect vorticity interpolation
 !> to @f$ t = 0 @f$.
 !>
-!> Conforms to the numberkindsmodule::scalarFnOf2dSpace interface.
+!> Conforms to the numberkindsmodule::scalarFnOf2DSpace interface.
 !> 
 !> @param[in] x
 !> @param[in] y
