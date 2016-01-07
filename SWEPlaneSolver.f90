@@ -1,5 +1,14 @@
 module SWEPlaneSolverModule
-
+!> @file SWEPlaneSolver.f90
+!> Data structure for solving the Shallow Water Equations (SWE) in the beta plane.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup SWEPlaneSolver SWEPlaneSolver
+!> Data structure for solving the Shallow Water Equations (SWE) in the beta plane.
+!> Used with the @ref PlanarSWE module.
+!> 
+!> @{
 use NumberKindsModule
 use LoggerModule
 use ParticlesModule
@@ -483,5 +492,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
-
+!> @}
 end module

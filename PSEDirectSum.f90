@@ -1,5 +1,36 @@
 module PSEDirectSumModule
-
+!> @file PSEDirectSum.f90
+!> Data structure and methods for approximations of scattered data and derivatives using Particle Strength Exchange (PSE).
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!> 
+!>
+!> @defgroup PSEDirectSum PSEDirectSum
+!> @brief  Data structure and methods for approximations of scattered data and derivatives using Particle Strength Exchange (PSE).
+!>
+!>	PSE provides a method for approximating derivatives on scattered data by replacing a differential operator with 
+!>  an integral convolution that approximates the action of the differential operator in the sense of distributions. @n
+!>  PSE approximations converge as a small parameter @f$ \epsilon @f$ approaches zero in a limit that also depends on the 
+!>  distance between particles, @f$ \Delta x @f$,
+!> @f[
+!> 		\epsilon = \Delta x^{1/p},\quad p>1.
+!> @f]
+!>
+!>  A differential operator @f$ D^\beta @f$, where @f$ \beta @f$ is a multi-index, is approximated by a linear integral operator @f$ L^\beta @f$,
+!> @f[
+!> 		D^\beta f(\vec{x}) \approx L^\beta f(\vec{x}) = \frac{1}{\epsilon^{|\beta|}}\int_{\mathbb{R}^d} \left( f(\vec{y}) \mp f(\vec{x})\right)\eta_\epsilon^\beta(\vec{x}-\vec{y})\,dV(\vec{y}),
+!> @f]
+!> 	where d the dimension of the space, @f$ \eta_{\epsilon}^\beta = \eta^\beta(|\vec{x}|/\epsilon) @f$, where @f$\eta^\beta @f$
+!> is defined to satisfy a set of moment conditions related to @f$D^\beta@f$ that define its order of accuracy as @f$ \epsilon\to 0@f$.
+!> 
+!>  Using PSE for derivatives transforms spatial derivatives on moving sets of LPM particles into integrals of the same form
+!>  we already use to compute the velocity. @n
+!>  Like stream functions and the Biot-Savart integral, PSE integrals are currently computed using a parallel direct summation algorithm.
+!>
+!>	For a detailed description of how to construct PSE kernels for Euclidean spaces with free boundaries, see @n
+!>    [J. Eldredge, A. Leonard, and T. Colonius, A general deterministic treatment of derivatives in particle methods, 
+!>    <i>J. Comput. Phys.,</i> 180 (2002).](http://kefalari.seas.ucla.edu/~jeff/getpaper.php?id=14)
+!>
+!> @{
 use NumberKindsModule
 use LoggerModule
 use ParticlesModule
@@ -22,7 +53,7 @@ public bivariateFirstDerivativeKernel8, bivariateLaplacianKernel8
 public PSEPlaneDoubleDotProductAtParticles
 
 type PSE
-	real(kreal) :: eps
+	real(kreal) :: eps !< PSE radius of influence, depends on mesh size
 	contains
 		final :: deletePrivate
 end type
@@ -51,30 +82,47 @@ contains
 ! Public functions
 !
 !----------------
+
+!> @brief Initializes a new PSE object and computes the PSE parameter epsilon.
+!> 
+!> Epsilon is defined to be a fractional power of the mesh size,
+!> @f[
+!> 	\epsilon = \Delta x^{1/p},\quad p > 1
+!> @f]
 subroutine newPrivate( self, aMesh, radiusMultiplier )
 	type(PSE), intent(out) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
 	real(kreal), intent(in), optional :: radiusMultiplier
 	!
-	real(kreal) :: multiple
+	real(kreal) :: h, pow
 	integer(kint) :: nP
 	
 	if ( .NOT. logInit ) call InitLogger(log, procRank) 
 	
+	h = MaxEdgeLength( aMesh%edges, aMesh%particles)
+	
 	if ( present(radiusMultiplier) ) then
-		multiple = radiusMultiplier
+		pow = radiusMultiplier
 	else
-		multiple = 2.0_kreal
+		pow = 0.75_kreal
 	endif
 	
-	self%eps = multiple * MaxEdgeLength( aMesh%edges, aMesh%particles)
-	
+	self%eps = h ** pow	
 end subroutine
 
+!> @brief Deletes and frees memory associated with a PSE object.
+!> @param[inout] self PSE object
 subroutine deletePrivate(self)
 	type(PSE), intent(inout) :: self
 end subroutine
 
+!> @brief Interpolates a scalar field in the plane using convolution with a kernel that approximates a delta function.
+!> 
+!> @param[in] self PSE object
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] scalarField scalar @ref Field
+!> @param[in] interpLoc position vector of desired interpolation location
+!> @return Interpolated scalar value
 pure function PSEPlaneInterpolateScalar(self, aMesh, scalarField, interpLoc )
 	real(kreal) :: PSEPlaneInterpolateScalar
 	type(PSE), intent(in) :: self
@@ -96,7 +144,15 @@ pure function PSEPlaneInterpolateScalar(self, aMesh, scalarField, interpLoc )
 	enddo
 end function
 
-
+!> @brief Constructs a @ref Field that approximates that gradient of a scalar in the plane using PSE.
+!> 
+!> Integration is carried out in parallel using direct summation.
+!>
+!> @param[in] self PSE object
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] scalarField scalar @ref Field containing source data
+!> @param[inout] scalarGrad vector @ref Field (preallocated) that, on output, stores the approximate scalar gradient at each particles
+!> @param[in] particlesMPI @ref MPISetup object to distribute particles across processes
 subroutine PSEPlaneGradientAtParticles( self, aMesh, scalarField, scalarGrad, particlesMPI )
 	type(PSE), intent(in) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -135,6 +191,7 @@ subroutine PSEPlaneGradientAtParticles( self, aMesh, scalarField, scalarGrad, pa
 	
 	call MultiplyFieldByScalar(scalarGrad, 1.0_kreal/self%eps)
 end subroutine
+
 
 subroutine PSESphereGradientAtParticles( self, amesh, scalarField, scalarGrad, particlesMPI )
 	type(PSE), intent(in) :: self
@@ -374,6 +431,15 @@ subroutine PSEDoubleDotProductArrays( self, doubleDot, xIn, yIn, uIn, vIn, areaI
 	enddo
 end subroutine
 
+!> @brief Constructs a @ref Field that approximates that Laplacian of a scalar in the plane using PSE.
+!> 
+!> Integration is carried out in parallel using direct summation.
+!>
+!> @param[in] self PSE object
+!> @param[in] aMesh @ref PolyMesh2d
+!> @param[in] scalarField scalar @ref Field containing source data
+!> @param[inout] scalarLap scalar @ref Field (preallocated) that, on output, stores the approximate Laplacian at each particle
+!> @param[in] particlesMPI @ref MPISetup object to distribute particles across processes
 subroutine PSEPlaneLaplacianAtParticles(self, aMesh, scalarField, scalarLap, particlesMPI )
 	type(PSE), intent(in) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
@@ -515,6 +581,13 @@ end subroutine
 !
 !----------------
 
+!> @brief Computes the scaled input to a PSE kernel.
+!>
+!> @param[in] xi position vector of particle i
+!> @param[in] xj position vector of particle j
+!> @param[in] eps PSE parameter
+!> @param[in] geomKind geometry kind (e.g., planar or spherical) as defined in @ref NumberKinds
+!> @return Scaled kernel input @f$ \frac{|\vec{x}_i - \vec{x}_j|}{\epsilon}  @f$
 pure function integralKernelInput( xi, xj, eps, geomKind )
 	real(kreal) :: integralKernelInput
 	real(kreal), intent(in) :: xi(3), xj(3), eps
@@ -528,6 +601,10 @@ pure function integralKernelInput( xi, xj, eps, geomKind )
 	endif
 end function
 
+!> @brief Computes the value of a kernel that approximates a delta function on @f$ \mathbb{R}^2 @f$ to 8th order accuracy.
+!> 
+!> @param[in] radialDist Kernel input, typically from ::integralKernelInput
+!> @return kernel value
 pure function bivariateDeltaKernel8( radialDist ) 
 	real(kreal) :: bivariateDeltaKernel8
 	real(kreal), intent(in) :: radialDist
@@ -535,6 +612,10 @@ pure function bivariateDeltaKernel8( radialDist )
 			 radialDist**6 / 6.0_kreal) * exp(-radialDist * radialDist) / PI
 end function
 
+!> @brief Computes the value of a kernel that approximates the Laplacian on @f$ \mathbb{R}^2 @f$ to 8th order accuracy.
+!> 
+!> @param[in] radialDist Kernel input, typically from ::integralKernelInput
+!> @return kernel value
 pure function bivariateLaplacianKernel8( radialDist )
 	real(kreal) :: bivariateLaplacianKernel8
 	real(kreal), intent(in) :: radialDist
@@ -579,6 +660,11 @@ pure function trivariateFirstDerivativeKernel8( radialDist, eps )
 										radialDist**6/3.0_kreal ) * exp(-radialDist**2)
 end function
 
+!> @brief Initializes a logger for the PSEDirectSum module
+!> 
+!> Output is controlled both by message priority and by MPI Rank
+!> @param aLog Target Logger object
+!> @param rank Rank of this processor
 subroutine InitLogger(aLog,rank)
 ! Initialize a logger for this module and processor
 	type(Logger), intent(out) :: aLog
@@ -592,5 +678,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
-
+!> @}
 end module 

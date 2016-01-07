@@ -1,5 +1,52 @@
 module PlanarSWEModule
-
+!> @file PlaneSWE.f90
+!> Data structure for representing solutions of the shallow water equations in a beta-plane.
+!> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!> 
+!> @defgroup PlanarSWE PlanarSWE
+!> @brief Data structure for representing solutions of the shallow water equations in a beta-plane.  
+!>
+!> Combines a @ref PolyMesh2d with data @ref Field objects relevant to the shallow water equations.  @n
+!> Solutions are integrated in time using the @ref SWEPlaneSolver module.
+!> 
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
+!> the BVEMesh data type adds @ref Field structures for relative vorticity @f$ \zeta(x,y,t) @f$, divergence @f$ \delta(x,y,t) @f$,
+!> the materially conserved absolute vorticity @f$ q(x_0,y_0) @f$, velocity @f$ \vec{u}(x,y,t) @f$ and the fluid depth @f$ h(x,y,t) @f$.
+!> Users may also specify bottom topography @f$ \eta_B(x,y) @f$.
+!> These variables are related by the equation
+!> @f{align}{
+!> 	q &= \frac{\zeta + f}{h}, \\
+!> \eta &= \eta_B + h,
+!> @f}
+!> where @f$ f = f_0 + \beta y(t) @f$ is the Coriolis parameter with constants @f$ f_0 @f$ and @f$ \beta @f$, and 
+!> @f$ \eta @f$ is the fluid surface height.
+!>
+!> 
+!> @image html SWEVariables.png "Illustration of variable definitions used in the shallow water equations."
+!> 
+!> We again use Green's function for the Poisson equation with free boundaries in the plane to solve the PDE.
+!> 
+!> Following a discretization by an LPM particle set, we have
+!> @f{align*}{
+!>  \vec{u}(\vec{x},t) &= \int_{\mathbb{R}^2} \left(\vec{K}_\zeta(\vec{x},\vec{y})\zeta(\vec{y}) + \vec{K}_\delta(\vec{x},\vec{y})\delta(\vec{y})\right)\, dA(\vec{y}), \\
+!>  \frac{d\vec{x}}{dt} &= \vec{u}(\vec{x},t), \\
+!>  \frac{d\zeta}{dt} &= -\beta \frac{dy}{dt} - (\zeta + f)\delta, \\
+!>  \frac{d\delta}{dt} &= f\zeta -\vec{u}\cdot(\nabla\times f\vec{k}) - \nabla\vec{u}:\nabla\vec{u} - g\nabla^2 \eta, \\
+!>  \frac{dh}{dt} &= -h\delta, \\
+!>  \frac{dA}{dt} &= \delta A,
+!> @f}
+!> where the kernels @f$ \vec{K}_\zeta = -\nabla \times G @f$ and @f$ \vec{K}_\delta = \nabla G @f$ result from 
+!> applying the appropriate differential operators to the free space Green's function
+!> @f[
+!>	G(\vec{x},\vec{y}) = \frac{1}{4\pi}\log( |\vec{x}-\vec{y}|^2).
+!> @f]
+!> The double dot product @f$ \nabla\vec{u}:\nabla\vec{u}@f$ is evaluated by again differentiating the kernels @f$ \vec{K}_\zeta @f$
+!> and @f$ \vec{K}_\delta @f$. @n
+!> The Laplacian of the fluid surface is evaluated on the particles using Particle Strength Exchange (PSE).
+!> See @ref PSEDirectSum for additional details.
+!>  
+!>
+!> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -89,6 +136,17 @@ contains
 !----------------
 !
 
+!> @brief Allocates memory and initializes a planar mesh for solving the shallow water equations.
+!> 
+!> @param[out] self new SWE mesh
+!> @param[in] meshSeed mesh seed integer, as defined in @ref NumberKinds
+!> @param[in] initNest initial level of uniform refinement
+!> @param[in] maxNest maximum level of uniform refinment
+!> @param[in] amrLimit maximum number of times an individual face can be divided beyond initNest
+!> @param[in] meshRadius maximum extent of mesh from the origin
+!> @param[in] f0 constant for Coriolis approximation with the beta plane
+!> @param[in] beta constant for Coriolis approximation with the beta plane
+!> @param[in] g gravitational constant
 subroutine newPrivate(self, meshSeed, initNest, maxNest, amrLimit, meshRadius, f0, beta, g )
 	type(SWEMesh), intent(out) :: self
 	integer(kint), intent(in) :: meshSeed
@@ -120,6 +178,39 @@ subroutine newPrivate(self, meshSeed, initNest, maxNest, amrLimit, meshRadius, f
 	self%g = g
 end subroutine
 
+!> @brief Performs a deep copy of a SWE mesh
+!> @todo This subroutine is incomplete.  
+!> @warning Cannot do remesh/remap until it is done.
+subroutine copyPrivate(self, other)
+	type(SWEMesh), intent(inout) :: self
+	type(SWEMesh), intent(in) :: other
+end subroutine
+
+!> @brief Deletes and frees memory associated with a SWEMesh
+!> @param[inout] self SWEMesh
+subroutine deletePrivate(self)
+	type(SWEMesh), intent(inout) :: self
+	!
+	integer(kint) :: i
+	
+	call Delete(self%mpiParticles)
+	call Delete(self%hBottom)
+	call Delete(self%relVort)
+	call Delete(self%potVort)
+	call Delete(self%divergence)
+	call Delete(self%velocity)
+	call Delete(self%h)
+	call Delete(self%mesh)
+	if ( associated(self%tracers)) then
+		do i = 1, size(self%tracers)
+			call Delete(self%tracers(i))
+		enddo
+		deallocate(self%tracers)
+	endif
+end subroutine
+
+!> @brief Computes the fluid velocity at each particle in parallel using direct summation.
+!> @todo Verify whether or not this subroutine is ever used.  
 subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 	type(SWEMesh), intent(inout) :: self
 	type(Field), intent(inout) :: velocity
@@ -149,32 +240,6 @@ subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 		call MPI_BCAST(velocity%yComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 				self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)				
 	enddo
-end subroutine
-
-subroutine copyPrivate(self, other)
-	type(SWEMesh), intent(inout) :: self
-	type(SWEMesh), intent(in) :: other
-end subroutine
-
-subroutine deletePrivate(self)
-	type(SWEMesh), intent(inout) :: self
-	!
-	integer(kint) :: i
-	
-	call Delete(self%mpiParticles)
-	call Delete(self%hBottom)
-	call Delete(self%relVort)
-	call Delete(self%potVort)
-	call Delete(self%divergence)
-	call Delete(self%velocity)
-	call Delete(self%h)
-	call Delete(self%mesh)
-	if ( associated(self%tracers)) then
-		do i = 1, size(self%tracers)
-			call Delete(self%tracers(i))
-		enddo
-		deallocate(self%tracers)
-	endif
 end subroutine
 
 subroutine logStatsPrivate(self, aLog)
@@ -366,4 +431,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

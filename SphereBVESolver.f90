@@ -5,7 +5,8 @@ module SphereBVESolverModule
 !> 
 !>
 !> @defgroup SphereBVESolver SphereBVESolver
-!> Data structure for solving the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere
+!> Data structure for solving the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere.
+!> Used with the @ref SphereBVE module.
 !> 
 !> @{
 
