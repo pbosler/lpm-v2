@@ -236,8 +236,8 @@ end subroutine
 !> @param self Target field object
 !> @param aParticles particlesmodule::particles object associated with this field
 !> @return @f$ \frac{1}{A} \int f(x)\, dA $ @f
-function ScalarAreaAverage(self, aParticles )
-	real(kreal) :: ScalarAreaAverage
+function ScalarAverage(self, aParticles )
+	real(kreal) :: ScalarAverage
 	type(Field), intent(in) :: self
 	type(Particles), intent(in) :: aParticles
 	ScalarAverage = sum( self%scalar(1:self%N) * aParticles%area(1:self%N), MASK=aParticles%isActive(1:self%N)) / &
