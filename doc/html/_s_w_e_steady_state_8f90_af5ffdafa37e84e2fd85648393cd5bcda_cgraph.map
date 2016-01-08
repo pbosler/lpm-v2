@@ -1,3 +1,5 @@
 <map id="inith" name="inith">
 <area shape="rect" id="node2" href="$_s_w_e_steady_state_8f90.html#a5c18a06dd245e271899ed0d4b6ca925b" title="bottomtopography" alt="" coords="100,5,229,32"/>
+<area shape="rect" id="node3" href="$_nitsche_strickland_8f90.html#a4a6438fc336ae89d90d95ba2bc59773e" title="Defines the initial fluid depth. " alt="" coords="141,56,188,83"/>
+<area shape="rect" id="node4" href="$_nitsche_strickland_8f90.html#ad1a68b9430c623ac88780cf50d0bbc5d" title="Defines the bottom topography. " alt="" coords="277,56,367,83"/>
 </map>

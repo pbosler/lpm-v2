@@ -1,4 +1,6 @@
 <map id="bessj" name="bessj">
-<area shape="rect" id="node2" href="$group___s_t_d_int_vector.html#ga1b0a58f39e5b70fbd776fd63d2ba7d44" title="stdintvectormodule\l::stdintvector::int" alt="" coords="107,5,240,47"/>
-<area shape="rect" id="node3" href="$group___s_t_d_int_vector.html#gac9b58809dfdbc98ef87a4992e441b5fb" title="stdintvectormodule\l::stdintvector::print" alt="" coords="107,71,240,112"/>
+<area shape="rect" id="node2" href="$_colliding_dipoles_8f90.html#a70831e8e544a234d3dfbf5d7387626ef" title="This function calculates the First Kind Bessel Function of order 0, for any real number X..." alt="" coords="143,5,203,32"/>
+<area shape="rect" id="node3" href="$_colliding_dipoles_8f90.html#a2aef5eab222a588450d9931334f31a95" title="This function calculates the First Kind Bessel Function of order 1, for any real number X..." alt="" coords="143,56,203,83"/>
+<area shape="rect" id="node4" href="$group___s_t_d_int_vector.html#ga1b0a58f39e5b70fbd776fd63d2ba7d44" title="stdintvectormodule\l::stdintvector::int" alt="" coords="107,107,240,149"/>
+<area shape="rect" id="node5" href="$group___s_t_d_int_vector.html#gac9b58809dfdbc98ef87a4992e441b5fb" title="stdintvectormodule\l::stdintvector::print" alt="" coords="107,173,240,214"/>
 </map>

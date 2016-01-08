@@ -1,3 +1,7 @@
 <map id="intrc0" name="intrc0">
-<area shape="rect" id="node2" href="$stripack_8f.html#a281e7e9b41cb9fd4b67ac1f9d60011c3" title="trfind" alt="" coords="108,5,160,32"/>
+<area shape="rect" id="node2" href="$stripack_8f.html#a281e7e9b41cb9fd4b67ac1f9d60011c3" title="trfind" alt="" coords="108,63,160,90"/>
+<area shape="rect" id="node3" href="$stripack_8f.html#aac9c0b11b84daa31f97a1b25659e3f26" title="jrand" alt="" coords="208,13,260,39"/>
+<area shape="rect" id="node5" href="$stripack_8f.html#a64b8e3b418c1277fd84265174362f292" title="store" alt="" coords="208,63,260,90"/>
+<area shape="rect" id="node6" href="$stripack_8f.html#af20d3c39d61b9a12b2e9058d44a48ea9" title="lstptr" alt="" coords="209,114,259,141"/>
+<area shape="rect" id="node4" href="$group___s_t_d_int_vector.html#ga1b0a58f39e5b70fbd776fd63d2ba7d44" title="stdintvectormodule\l::stdintvector::int" alt="" coords="308,5,441,47"/>
 </map>

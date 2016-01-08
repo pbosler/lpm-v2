@@ -1,5 +1,6 @@
 <map id="sweplanesolvermodule::timestepprivate" name="sweplanesolvermodule::timestepprivate">
-<area shape="rect" id="node2" href="$group___planar_s_w_e.html#ga28474cc7430b87232a1b3824d5de209b" title="planarswemodule::setbottomheightonmesh" alt="" coords="211,5,487,32"/>
-<area shape="rect" id="node3" href="$group___s_w_e_plane_solver.html#ga36a5db49673dfb47db09422d72713222" title="Computes the integral expressions on the right&#45;hand side of the set of ODEs from a Lagrangian method ..." alt="" coords="270,57,427,98"/>
-<area shape="rect" id="node4" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="535,57,711,98"/>
+<area shape="rect" id="node2" href="$group___number_kinds.html#ga95dce36a1e83e706460481f352159df7" title="numberkindsmodule::\lscalarFnOf2DSpace::scalarfnof2dspace" alt="" coords="535,14,792,55"/>
+<area shape="rect" id="node3" href="$group___planar_s_w_e.html#ga28474cc7430b87232a1b3824d5de209b" title="planarswemodule::setbottomheightonmesh" alt="" coords="211,25,487,52"/>
+<area shape="rect" id="node4" href="$group___s_w_e_plane_solver.html#ga36a5db49673dfb47db09422d72713222" title="Computes the integral expressions on the right&#45;hand side of the set of ODEs from a Lagrangian method ..." alt="" coords="270,76,427,118"/>
+<area shape="rect" id="node5" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="575,79,751,120"/>
 </map>
