@@ -15,6 +15,9 @@ Code associated with
 
 > P. Bosler, "Particle Methods for Geophysical Flow on the Sphere," PhD Thesis, University of Michigan, 2013.
 
+The code may be downloaded from [GitHub](https://github.com/pbosler/lpm-v2). @n
+The code's documentation is produced with [Doxygen](http://www.stack.nl/~dimitri/doxygen/), an html version may be found at [my website](http://www-personal.umich.edu/~pbosler/research/software-development.html).
+
 Design / Use
 =========
 
