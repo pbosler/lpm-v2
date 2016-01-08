@@ -1,0 +1,6 @@
+<map id="facesmodule::facearea" name="facesmodule::facearea">
+<area shape="rect" id="node2" href="$group___edges.html#gaa2cefbb378d49a8b75b4caf4d26c7a49" title="Computes the area represented by the triangles connecting the vertices of an edge&#39;s child particles a..." alt="" coords="226,31,446,57"/>
+<area shape="rect" id="node5" href="$group___edges.html#ga1d52efbbd14af28e7b9d83606cd664ce" title="Builds a STDIntVector containing the indices of all of an edge&#39;s children. " alt="" coords="211,81,461,108"/>
+<area shape="rect" id="node3" href="$group___particles.html#ga2d7dd758e03af6213d9b451bea2cd9cd" title="Returns a particle&#39;s physical coordinate vector. " alt="" coords="509,5,693,32"/>
+<area shape="rect" id="node4" href="$group___plane_geom.html#ga10de84dcd9fcf09d86cb544d7bdd4f9f" title="area of a planar triangle whose vertices are the input vectors " alt="" coords="513,56,690,83"/>
+</map>

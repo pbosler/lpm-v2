@@ -1,0 +1,12 @@
+<map id="ssrfpackinterfacemodule::setsigmaflag" name="ssrfpackinterfacemodule::setsigmaflag">
+<area shape="rect" id="node2" href="$stripack_8f.html#a72d47c06df7e0755a2cf02a5fda2d2d8" title="trmesh" alt="" coords="220,148,283,175"/>
+<area shape="rect" id="node3" href="$stripack_8f.html#abeb97081337b4be18ec3c8a3fc544218" title="addnod" alt="" coords="331,148,397,175"/>
+<area shape="rect" id="node4" href="$stripack_8f.html#a281e7e9b41cb9fd4b67ac1f9d60011c3" title="trfind" alt="" coords="486,5,538,32"/>
+<area shape="rect" id="node5" href="$group___s_t_d_int_vector.html#gac9b58809dfdbc98ef87a4992e441b5fb" title="stdintvectormodule\l::stdintvector::print" alt="" coords="445,57,579,98"/>
+<area shape="rect" id="node7" href="$stripack_8f.html#aee4a57d9a90fd0daab3dbb88afe5c7fc" title="intadd" alt="" coords="483,123,541,149"/>
+<area shape="rect" id="node9" href="$stripack_8f.html#adb777ec06721f35643c8a11de174a113" title="bdyadd" alt="" coords="479,173,545,200"/>
+<area shape="rect" id="node10" href="$stripack_8f.html#a714ca9e379aed630c81c51ac99f6a43d" title="covsph" alt="" coords="480,224,544,251"/>
+<area shape="rect" id="node11" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="485,275,539,301"/>
+<area shape="rect" id="node6" href="$group___s_t_d_int_vector.html#ga3e6437f0f6a6a9e224a2f297c5f8cb42" title="stdintvectormodule\l::stdintvector::pushback" alt="" coords="627,57,789,98"/>
+<area shape="rect" id="node8" href="$stripack_8f.html#a230a1fd1fd5a8d7f74fa6debf1ecab4a" title="insert" alt="" coords="681,173,735,200"/>
+</map>

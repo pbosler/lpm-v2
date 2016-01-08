@@ -1,0 +1,7 @@
+<map id="psedirectsummodule::newprivate" name="psedirectsummodule::newprivate">
+<area shape="rect" id="node2" href="$_beta_plane_gaussian_vortex_8f90.html#ae520c3b11d9e6c51c35d5cd67b503523" title="initlogger" alt="" coords="261,5,337,32"/>
+<area shape="rect" id="node3" href="$group___edges.html#gae1df14f49a6c66b9c7383b4b591f0f43" title="Computes the maximum edge length amongst all leaf edges. " alt="" coords="199,56,399,83"/>
+<area shape="rect" id="node4" href="$group___edges.html#gaa3e2e2c31239ebd1a54ffa7ac2107c9e" title="Computes the length of the edge at edgeIndex. " alt="" coords="447,56,623,83"/>
+<area shape="rect" id="node5" href="$group___sphere_geom.html#ga842d3856281acd8492c9b00a4804f67b" title="Euclidean distance between two points on the sphere. " alt="" coords="671,31,901,57"/>
+<area shape="rect" id="node6" href="$group___particles.html#ga2d7dd758e03af6213d9b451bea2cd9cd" title="Returns a particle&#39;s physical coordinate vector. " alt="" coords="694,81,878,108"/>
+</map>

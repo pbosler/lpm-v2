@@ -1,0 +1,5 @@
+<map id="edgesmodule::maxedgelength" name="edgesmodule::maxedgelength">
+<area shape="rect" id="node2" href="$group___edges.html#gaa3e2e2c31239ebd1a54ffa7ac2107c9e" title="Computes the length of the edge at edgeIndex. " alt="" coords="253,31,429,57"/>
+<area shape="rect" id="node3" href="$group___sphere_geom.html#ga842d3856281acd8492c9b00a4804f67b" title="Euclidean distance between two points on the sphere. " alt="" coords="477,5,708,32"/>
+<area shape="rect" id="node4" href="$group___particles.html#ga2d7dd758e03af6213d9b451bea2cd9cd" title="Returns a particle&#39;s physical coordinate vector. " alt="" coords="501,56,685,83"/>
+</map>

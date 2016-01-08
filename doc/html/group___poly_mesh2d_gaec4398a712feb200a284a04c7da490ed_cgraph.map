@@ -1,0 +1,5 @@
+<map id="polymesh2dmodule::ccwverticesaroundface" name="polymesh2dmodule::ccwverticesaroundface">
+<area shape="rect" id="node2" href="$group___poly_mesh2d.html#ga1117b877c1ee6f1d5f023adafdd9c4fc" title="Returns an STDIntVector containing indices of Edges around a face, listed in counter&#45;clockwise order..." alt="" coords="333,5,604,32"/>
+<area shape="rect" id="node4" href="$group___edges.html#ga03cc8cee87e4a23dbab6d7c95def2a4e" title="Returns .TRUE. if an edge has positive orientation relative to the selected face. ..." alt="" coords="377,56,561,83"/>
+<area shape="rect" id="node3" href="$group___edges.html#ga1d52efbbd14af28e7b9d83606cd664ce" title="Builds a STDIntVector containing the indices of all of an edge&#39;s children. " alt="" coords="652,5,903,32"/>
+</map>

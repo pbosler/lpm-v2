@@ -1,0 +1,19 @@
+<map id="polymesh2dmodule::ccwfacesaroundvertex" name="polymesh2dmodule::ccwfacesaroundvertex">
+<area shape="rect" id="node2" href="$group___faces.html#gaf6e475859ade30ee3b9481340bf46241" title="facesmodule::facecentroid" alt="" coords="383,5,560,32"/>
+<area shape="rect" id="node3" href="$group___poly_mesh2d.html#gafea011e46aebdf0fe0d921c625d66ee5" title="polymesh2dmodule::ccwadjacentfaces" alt="" coords="346,56,597,83"/>
+<area shape="rect" id="node7" href="$group___sphere_geom.html#ga84b61f121a82f260ac48915a6826663f" title="Finds the centroid of a spherical triangle defined by three vertices. " alt="" coords="353,107,589,133"/>
+<area shape="rect" id="node8" href="$group___particles.html#gaf5dfbd586cef1f9579376c4624c65b02" title="Inserts a single particle into a particles object. " alt="" coords="372,157,571,184"/>
+<area shape="rect" id="node9" href="$group___edges.html#ga8102d56956d485a8dff75cb6d44d9195" title="edgesmodule::insertedge" alt="" coords="385,208,557,235"/>
+<area shape="rect" id="node12" href="$group___faces.html#gabe57e9083f933fd8fde83ca63c10ed27" title="facesmodule::insertface" alt="" coords="390,259,553,285"/>
+<area shape="rect" id="node13" href="$group___particles.html#ga97eb338e7996e4802d747fd46ae6a298" title="Changes a passive particle to an active particle. Area/volume must be set separately. " alt="" coords="355,309,588,336"/>
+<area shape="rect" id="node14" href="$group___faces.html#gacf7e3c70546c5d562a5a2de19f8553df" title="facesmodule::trifacearea" alt="" coords="387,360,555,387"/>
+<area shape="rect" id="node17" href="$group___faces.html#ga6a872b75ce2c75e9f4d39c2ec44a367e" title="facesmodule::quadfacearea" alt="" coords="378,411,565,437"/>
+<area shape="rect" id="node18" href="$group___particles.html#ga550e2ee3c6c4a9cc0e1c27cfb1071571" title="Sorts the incident edges at a particle into counter&#45;clockwise order using a bubble&#45;sort algorithm..." alt="" coords="331,461,612,488"/>
+<area shape="rect" id="node4" href="$group___poly_mesh2d.html#ga1117b877c1ee6f1d5f023adafdd9c4fc" title="polymesh2dmodule::ccwedgesaroundface" alt="" coords="667,81,937,108"/>
+<area shape="rect" id="node6" href="$group___edges.html#ga03cc8cee87e4a23dbab6d7c95def2a4e" title="edgesmodule::positiveedge" alt="" coords="710,31,894,57"/>
+<area shape="rect" id="node5" href="$group___edges.html#ga1d52efbbd14af28e7b9d83606cd664ce" title="edgesmodule::getleafedgesfromparent" alt="" coords="992,81,1243,108"/>
+<area shape="rect" id="node10" href="$group___edges.html#gaa19f8588f987ef9300c94d5d464e0897" title="edgesmodule::recordincidentedgeatparticles" alt="" coords="660,208,944,235"/>
+<area shape="rect" id="node11" href="$group___sphere_geom.html#gae761eafa99d3fb63198828714880743d" title="Computes a vector cross product. " alt="" coords="1005,208,1229,235"/>
+<area shape="rect" id="node15" href="$group___particles.html#ga2d7dd758e03af6213d9b451bea2cd9cd" title="Returns a particle&#39;s physical coordinate vector. " alt="" coords="710,411,894,437"/>
+<area shape="rect" id="node16" href="$group___plane_geom.html#ga10de84dcd9fcf09d86cb544d7bdd4f9f" title="area of a planar triangle whose vertices are the input vectors " alt="" coords="713,360,891,387"/>
+</map>
