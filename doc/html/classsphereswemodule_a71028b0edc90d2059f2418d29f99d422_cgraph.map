@@ -1,4 +1,3 @@
 <map id="sphereswemodule::setinitialrelvortonmesh" name="sphereswemodule::setinitialrelvortonmesh">
-<area shape="rect" id="node2" href="$group___field.html#gaf9b72fbda45ef4842693b87e0880c260" title="Inserts a scalar value to a preallocated Field object. " alt="" coords="352,5,553,32"/>
-<area shape="rect" id="node3" href="$group___number_kinds.html#ga611e69a5bb7d79f98f8919c738da4f67" title="numberkindsmodule::\lscalarFnOf3DSpace::scalarfnof3dspace" alt="" coords="324,57,581,98"/>
+<area shape="rect" id="node2" href="$group___field.html#gaf9b72fbda45ef4842693b87e0880c260" title="Inserts a scalar value to a preallocated Field object. " alt="" coords="324,5,525,32"/>
 </map>

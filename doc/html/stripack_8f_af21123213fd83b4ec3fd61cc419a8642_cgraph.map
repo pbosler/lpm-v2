@@ -1,9 +1,5 @@
 <map id="delnod" name="delnod">
 <area shape="rect" id="node2" href="$stripack_8f.html#a3e279c86a8f8a5d42a9c466c9eb8e8de" title="delnb" alt="" coords="116,5,171,32"/>
-<area shape="rect" id="node3" href="$stripack_8f.html#aa62f0f16f1f1c00daf8edf8568426b5d" title="left" alt="" coords="123,56,163,83"/>
-<area shape="rect" id="node4" href="$stripack_8f.html#af20d3c39d61b9a12b2e9058d44a48ea9" title="lstptr" alt="" coords="327,171,377,197"/>
-<area shape="rect" id="node5" href="$stripack_8f.html#ac6462118b76690f96b213cdd9c4c35bd" title="nbcnt" alt="" coords="116,157,171,184"/>
-<area shape="rect" id="node6" href="$stripack_8f.html#a28925529c560aedb239ff8fbc92aae6e" title="optim" alt="" coords="116,208,171,235"/>
-<area shape="rect" id="node8" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="222,233,275,260"/>
-<area shape="rect" id="node7" href="$stripack_8f.html#a0fecdb27ac582e887146b1f10fb57644" title="swptst" alt="" coords="219,183,279,209"/>
+<area shape="rect" id="node3" href="$stripack_8f.html#a28925529c560aedb239ff8fbc92aae6e" title="optim" alt="" coords="116,56,171,83"/>
+<area shape="rect" id="node4" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="219,81,272,108"/>
 </map>

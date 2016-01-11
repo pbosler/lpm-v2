@@ -32,15 +32,15 @@ LPM provides a small library of fundamental modules that are used by the rest of
 
 * The @ref NumberKinds module defines constants used by the rest of the code, including variable kind definitions and physical constants.
 * The @ref OutputWriter class defines methods for formatting output either for the console or ASCII files.  
-* The @ref Logger class provides objects and methods for outputting to the console various types of messages from the rest of the LPM code in a parallel computing environment.  
-* The @ref SphereGeom and @ref PlaneGeom modules define geometric formulas for distance and areas. 
+* The @ref Logger class provides objects and methods for outputting to the console various types of messages in a parallel computing environment.  
+* The @ref SphereGeom and @ref PlaneGeom modules define geometric formulas (e.g., distance and area). 
 * The @ref MPISetup module provides a type and methods for distribution other objects across MPI ranks. 
 * The @ref STDIntVector module provides a data type that mimics the C++ `std::vector<int>` class to dynamically allocate and resize integer arrays of rank 1
 
 Particles and Fields
 --------------------
-The primary computing objects used by LPM are the Lagrangian particles, defined in the particles module, and the fields, defined in the field module. 
-* @ref Particles provide the spatial discretization of a domain and have both physical and Lagrangian coordinates.  
+The primary computing objects used by LPM are the Lagrangian particles, defined in the @ref Particles module, and the fields, defined in the @ref Field module. 
+* @ref Particles provide the spatial discretization of a domain and have both physical @f$( x(t), y(t), z(t) ) @f$ and Lagrangian coordinates @f$ ( x_0, y_0, z_0 ) @f$.  
 * A @ref Field may be either a scalar or vector field defined on a set of particles; fields are used to store variables (e.g., vorticity, temperature, etc.) on a set of particles.  
 
 
@@ -68,12 +68,12 @@ Other methods for scattered data approximation are under development.
 PDE types and Solver objects
 --------------
 PDEs are solved using a ''method of lines'' discretization. 
-A mesh is connected to its relevant variables by a PDE type, e.g., an SWEMesh or a @ref SphereBVE BVEMesh object.
+A mesh is connected to its relevant variables by a PDE type, e.g., a @ref PlanarSWE SWEMesh or a @ref SphereBVE BVEMesh object.
 These objects combine a PolyMesh2d for the spatial discretization with the various Fields (e.g., vorticity, temperature) 
 appropriate to the chosen PDE.
 
-Following the spatial discretization given by the particles, the time-ODEs are integrated explicity with 4th order Runge-Kutta by a Solver
-(e.g., @ref SphereBVESolver) object appropriate to a particular application, e.g., SWEPlaneSolver or SphereBVESolver.  
+Following the spatial discretization given by the particles, the time ODEs are integrated explicity with 4th order Runge-Kutta by a Solver objectobject
+(e.g., @ref SphereBVESolver) appropriate to a particular application. 
 
 * Planar, inviscid, incompressible flow: See @ref PlanarIncompressible, @ref PlanarIncompressibleSolver, and CollidingDipoles.f90
 * Rotating planar, inviscid, incompressible flow: See @ref BetaPlane, @ref BetaPlaneSolver
@@ -83,13 +83,15 @@ Following the spatial discretization given by the particles, the time-ODEs are i
 Application Drivers
 --------
 Finally, all of the above objects are assembled by a driver program that solves a specific problem.  
-Within the driver program all initial conditions must be defined.
+Within the driver program all initial conditions must be defined, and it is within these driver programs that the timestepping loop and remeshing procedures are called.
 
-Run-time user input to driver programs is handled via namelist file, that is typically supplied as the first argument on the command line.
+For examples, see
+* CollidingDipoles.f90
+* BVESingleGaussianVortex.f90
+* NitscheStrickland.f90
+
+Run-time user input to driver programs is handled via a namelist file that is typically supplied as the first argument on the command line.
 See below for more discussion.
-
-It is within these driver programs that the timestepping loop and remeshing procedures are called.
-See PlaneSWEGravityWaves.f90 or CollidingDipoles.f90 for examples.
 
 
 Build / Install
@@ -107,14 +109,17 @@ For example, using the bash shell, these variables are set with
     export FC=mpifort
     
 LPM is configured in the same shell by navigating to the lpm-v2 root directory and typing 
+
     mkdir build
     cd build
     cmake ..
-This configures the build for the your compiler version and MPI.  Build the LPM software next by typing
+    
+This configures the build for the your compiler version and MPI by generating Makefiles.  
+Build the LPM software next by typing
 
     make
     
-then
+then (optionally)
 
     make test
     

@@ -1,6 +1,5 @@
 <map id="sphereswesolvermodule::newprivate" name="sphereswesolvermodule::newprivate">
 <area shape="rect" id="node2" href="$_beta_plane_gaussian_vortex_8f90.html#ae520c3b11d9e6c51c35d5cd67b503523" title="initlogger" alt="" coords="263,5,339,32"/>
-<area shape="rect" id="node3" href="$group___number_kinds.html#ga611e69a5bb7d79f98f8919c738da4f67" title="numberkindsmodule::\lscalarFnOf3DSpace::scalarfnof3dspace" alt="" coords="432,49,689,90"/>
-<area shape="rect" id="node4" href="$classsphereswesolvermodule.html#afbc758f31ad93cec78584707d82582c3" title="sphereswesolvermodule\l::swesphererhsintegrals" alt="" coords="219,107,384,149"/>
-<area shape="rect" id="node5" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="473,114,649,155"/>
+<area shape="rect" id="node3" href="$classsphereswesolvermodule.html#afbc758f31ad93cec78584707d82582c3" title="sphereswesolvermodule\l::swesphererhsintegrals" alt="" coords="219,57,384,98"/>
+<area shape="rect" id="node4" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="432,57,608,98"/>
 </map>

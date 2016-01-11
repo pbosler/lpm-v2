@@ -1,7 +1,4 @@
 <map id="edge" name="edge">
-<area shape="rect" id="node2" href="$stripack_8f.html#aa62f0f16f1f1c00daf8edf8568426b5d" title="left" alt="" coords="113,5,153,32"/>
-<area shape="rect" id="node3" href="$stripack_8f.html#a28925529c560aedb239ff8fbc92aae6e" title="optim" alt="" coords="105,56,160,83"/>
-<area shape="rect" id="node5" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="211,107,265,133"/>
-<area shape="rect" id="node4" href="$stripack_8f.html#a0fecdb27ac582e887146b1f10fb57644" title="swptst" alt="" coords="208,56,268,83"/>
-<area shape="rect" id="node6" href="$stripack_8f.html#af20d3c39d61b9a12b2e9058d44a48ea9" title="lstptr" alt="" coords="316,107,367,133"/>
+<area shape="rect" id="node2" href="$stripack_8f.html#a28925529c560aedb239ff8fbc92aae6e" title="optim" alt="" coords="105,5,160,32"/>
+<area shape="rect" id="node3" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="208,31,261,57"/>
 </map>

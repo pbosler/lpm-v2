@@ -1,17 +1,11 @@
 <map id="ssrfpackinterfacemodule::builddelaunaytriangulation" name="ssrfpackinterfacemodule::builddelaunaytriangulation">
-<area shape="rect" id="node2" href="$stripack_8f.html#a72d47c06df7e0755a2cf02a5fda2d2d8" title="trmesh" alt="" coords="237,212,300,239"/>
-<area shape="rect" id="node3" href="$stripack_8f.html#abeb97081337b4be18ec3c8a3fc544218" title="addnod" alt="" coords="348,187,415,213"/>
-<area shape="rect" id="node16" href="$stripack_8f.html#aa62f0f16f1f1c00daf8edf8568426b5d" title="left" alt="" coords="361,237,401,264"/>
+<area shape="rect" id="node2" href="$stripack_8f.html#a72d47c06df7e0755a2cf02a5fda2d2d8" title="trmesh" alt="" coords="237,136,300,163"/>
+<area shape="rect" id="node3" href="$stripack_8f.html#abeb97081337b4be18ec3c8a3fc544218" title="addnod" alt="" coords="348,136,415,163"/>
 <area shape="rect" id="node4" href="$stripack_8f.html#adb777ec06721f35643c8a11de174a113" title="bdyadd" alt="" coords="497,5,562,32"/>
 <area shape="rect" id="node6" href="$stripack_8f.html#a714ca9e379aed630c81c51ac99f6a43d" title="covsph" alt="" coords="497,56,561,83"/>
 <area shape="rect" id="node7" href="$stripack_8f.html#aee4a57d9a90fd0daab3dbb88afe5c7fc" title="intadd" alt="" coords="500,107,559,133"/>
-<area shape="rect" id="node8" href="$stripack_8f.html#af20d3c39d61b9a12b2e9058d44a48ea9" title="lstptr" alt="" coords="646,216,697,243"/>
-<area shape="rect" id="node9" href="$group___s_t_d_int_vector.html#gac9b58809dfdbc98ef87a4992e441b5fb" title="stdintvectormodule\l::stdintvector::print" alt="" coords="463,209,596,250"/>
-<area shape="rect" id="node10" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="503,275,556,301"/>
-<area shape="rect" id="node11" href="$stripack_8f.html#a0fecdb27ac582e887146b1f10fb57644" title="swptst" alt="" coords="499,325,559,352"/>
-<area shape="rect" id="node12" href="$stripack_8f.html#a281e7e9b41cb9fd4b67ac1f9d60011c3" title="trfind" alt="" coords="503,376,555,403"/>
+<area shape="rect" id="node8" href="$group___s_t_d_int_vector.html#gac9b58809dfdbc98ef87a4992e441b5fb" title="stdintvectormodule\l::stdintvector::print" alt="" coords="463,158,596,199"/>
+<area shape="rect" id="node9" href="$stripack_8f.html#ad2521b0b4f89e87a232e4d9b4b103c57" title="swap" alt="" coords="503,224,556,251"/>
+<area shape="rect" id="node10" href="$stripack_8f.html#a281e7e9b41cb9fd4b67ac1f9d60011c3" title="trfind" alt="" coords="503,275,555,301"/>
 <area shape="rect" id="node5" href="$stripack_8f.html#a230a1fd1fd5a8d7f74fa6debf1ecab4a" title="insert" alt="" coords="644,56,699,83"/>
-<area shape="rect" id="node13" href="$stripack_8f.html#aac9c0b11b84daa31f97a1b25659e3f26" title="jrand" alt="" coords="645,351,697,377"/>
-<area shape="rect" id="node15" href="$stripack_8f.html#a64b8e3b418c1277fd84265174362f292" title="store" alt="" coords="645,401,697,428"/>
-<area shape="rect" id="node14" href="$group___s_t_d_int_vector.html#ga1b0a58f39e5b70fbd776fd63d2ba7d44" title="stdintvectormodule\l::stdintvector::int" alt="" coords="747,343,880,385"/>
 </map>

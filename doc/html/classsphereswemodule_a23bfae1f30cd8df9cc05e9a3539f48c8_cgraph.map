@@ -1,4 +1,3 @@
 <map id="sphereswemodule::setinitialvelocityonmesh" name="sphereswemodule::setinitialvelocityonmesh">
-<area shape="rect" id="node2" href="$group___field.html#gac59ef7dd23d55cce6164b115412147c8" title="Inserts a vector value to a preallocated Field object. " alt="" coords="359,5,561,32"/>
-<area shape="rect" id="node3" href="$group___number_kinds.html#gaab0323a7bd44e278f4473e33421494c5" title="numberkindsmodule::\lvectorFnOf3DSpace::vectorfnof3dspace" alt="" coords="331,57,589,98"/>
+<area shape="rect" id="node2" href="$group___field.html#gac59ef7dd23d55cce6164b115412147c8" title="Inserts a vector value to a preallocated Field object. " alt="" coords="331,5,533,32"/>
 </map>

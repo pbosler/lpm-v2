@@ -1,7 +1,5 @@
 <map id="sphereswesolvermodule::timestepprivate" name="sphereswesolvermodule::timestepprivate">
-<area shape="rect" id="node2" href="$group___number_kinds.html#ga611e69a5bb7d79f98f8919c738da4f67" title="numberkindsmodule::\lscalarFnOf3DSpace::scalarfnof3dspace" alt="" coords="543,71,800,112"/>
-<area shape="rect" id="node3" href="$group___planar_s_w_e.html#ga28474cc7430b87232a1b3824d5de209b" title="planarswemodule::setbottomheightonmesh" alt="" coords="219,17,495,43"/>
-<area shape="rect" id="node5" href="$classsphereswesolvermodule.html#afbc758f31ad93cec78584707d82582c3" title="sphereswesolvermodule\l::swesphererhsintegrals" alt="" coords="274,125,439,167"/>
-<area shape="rect" id="node4" href="$group___number_kinds.html#ga95dce36a1e83e706460481f352159df7" title="numberkindsmodule::\lscalarFnOf2DSpace::scalarfnof2dspace" alt="" coords="543,5,800,47"/>
-<area shape="rect" id="node6" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="583,136,759,177"/>
+<area shape="rect" id="node2" href="$group___planar_s_w_e.html#ga28474cc7430b87232a1b3824d5de209b" title="planarswemodule::setbottomheightonmesh" alt="" coords="219,5,495,32"/>
+<area shape="rect" id="node3" href="$classsphereswesolvermodule.html#afbc758f31ad93cec78584707d82582c3" title="sphereswesolvermodule\l::swesphererhsintegrals" alt="" coords="274,57,439,98"/>
+<area shape="rect" id="node4" href="$group___p_s_e_direct_sum.html#ga6335d4e397ce904646b762e679882613" title="Computes the value of a kernel that approximates the Laplacian on &#160;to 8th order accuracy. " alt="" coords="543,57,719,98"/>
 </map>
