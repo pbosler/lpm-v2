@@ -1,7 +1,7 @@
 <map id="polymesh2dmodule::logstatsprivate" name="polymesh2dmodule::logstatsprivate">
 <area shape="rect" id="node2" href="$group___edges.html#ga8d513bf915a852368881033ffc2d6e8c" title="Computes the average edge length amongst all leaf edges. " alt="" coords="305,5,502,32"/>
 <area shape="rect" id="node6" href="$group___edges.html#gae1df14f49a6c66b9c7383b4b591f0f43" title="Computes the maximum edge length amongst all leaf edges. " alt="" coords="303,56,503,83"/>
-<area shape="rect" id="node7" href="$classpolymesh2dmodule.html#abe5ac653e50883a2ef9882c4a71db4e3" title="polymesh2dmodule::meshseedstring" alt="" coords="284,107,523,133"/>
+<area shape="rect" id="node7" href="$classpolymesh2dmodule.html#abe5ac653e50883a2ef9882c4a71db4e3" title="Converts the integer definitions of mesh seeds (from NumberKinds) to their corresponding strings..." alt="" coords="284,107,523,133"/>
 <area shape="rect" id="node8" href="$group___edges.html#gad2d36ea3105ac6652300c5a35f451978" title="Computes the minimum edge length amongst all leaf edges. " alt="" coords="305,157,502,184"/>
 <area shape="rect" id="node3" href="$group___edges.html#gaa3e2e2c31239ebd1a54ffa7ac2107c9e" title="Computes the length of the edge at edgeIndex. " alt="" coords="571,56,747,83"/>
 <area shape="rect" id="node4" href="$group___sphere_geom.html#ga842d3856281acd8492c9b00a4804f67b" title="Euclidean distance between two points on the sphere. " alt="" coords="795,31,1025,57"/>

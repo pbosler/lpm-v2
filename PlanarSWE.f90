@@ -70,20 +70,21 @@ public OutputToVTKFile
 public SetBottomHeightOnMesh, SetInitialDivergenceOnMesh, SetInitialHOnMesh, SetInitialPotVortOnMesh
 public SetInitialVelocityOnMesh, SetInitialVorticityOnMesh
 
+!> @brief Defines a mesh (via @ref PolyMesh2d) and data fields (via @ref Field) suitable for solving the planar Shallow Water Equations (SWE).
 type SWEMesh
-	type(PolyMesh2d) :: mesh
-	type(Field) :: relVort
-	type(Field) :: potVort
-	type(Field) :: divergence
-	type(Field) :: velocity
-	type(Field) :: h
-	type(Field) :: hBottom
-	type(Field), pointer :: tracers(:) => null()
-	real(kreal) :: f0 = 0.0_kreal
-	real(kreal) :: beta = 0.0_kreal
-	real(kreal) :: g = 0.0_kreal
-	real(kreal) :: pseEps = 0.0_kreal
-	type(MPISetup) :: mpiParticles
+	type(PolyMesh2d) :: mesh !< Planar mesh
+	type(Field) :: relVort !< relative vorticity at each particle
+	type(Field) :: potVort !< potential vorticity carried by each particle
+	type(Field) :: divergence !< divergence of the fluid velocity at each particle
+	type(Field) :: velocity !< velocity of each particle
+	type(Field) :: h !< fluid depth at each particle
+	type(Field) :: hBottom !< bottom height at each particle
+	type(Field), pointer :: tracers(:) => null() !< Tracers carried by each particle
+	real(kreal) :: f0 = 0.0_kreal !< beta plane parameter
+	real(kreal) :: beta = 0.0_kreal !< beta plane parameter
+	real(kreal) :: g = 0.0_kreal !< gravitational constant
+	real(kreal) :: pseEps = 0.0_kreal !< Regularization parameter for Particle Strength Exchange 
+	type(MPISetup) :: mpiParticles !< Distributes work on particles across available MPI ranks
 	contains
 		final :: deletePrivate	
 end type

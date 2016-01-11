@@ -96,15 +96,17 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a href="#details">More...</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Each polygonal mesh is made up of <a class="el" href="group___particles.html">Particles</a>, <a class="el" href="group___edges.html">Edges</a>, and <a class="el" href="group___faces.html">Faces</a>. </p>
-<p>Point-location queries are provided that use a tree search to accelerate a walk search.</p>
-<p>Current implementation for <b>planar meshes</b> includes a mesh of quadrilateral faces from a square or a mesh of triangular faces from a hexagon, with free boundaries. Users choose the initial mesh from one of the predefined "seeds," defined to approximately cover the domain \( D = \{ (x,y) : x,y\in [-1,1] \} \), depending on the chosen seed. The seed is then multiplied by a user-supplied scalar <code>maxR</code> to cover larger subsets of the plane.</p>
-<p>Implementations for <b>spherical meshes</b> include a mesh of quadrilaterals from the cubed sphere or a mesh of triangles from an icosahedral triangulation of the sphere. Users choose one of the spherical seeds (which discretize a unit sphere) and may choose a different radius.</p>
+<p>All meshes start with an initial "seed" that is recursively refined to generate the <a class="el" href="group___faces.html">Faces</a> quadtree, its <a class="el" href="group___edges.html">Edges</a>, and the associated <a class="el" href="group___particles.html">Particles</a>. Mesh seeds are supplied in <code>*Seed.dat</code> files.</p>
+<p>Current seeds for <b>planar meshes</b> include a mesh of quadrilateral faces from a square or a mesh of triangular faces from a hexagon, both with free boundaries, and a quadrilateral seed that is periodic in the x-direction and free in the y-direction. Users choose the initial mesh from one of the predefined seeds, defined to approximately cover the domain \( D = \{ (x,y) : x,y\in [-1,1] \} \), depending on the chosen seed. The seed is then multiplied by a user-supplied scalar <code>maxR</code> to cover larger subsets of the plane.</p>
+<p>Seeds for <b>spherical meshes</b> include a mesh of quadrilaterals from the cubed sphere or a mesh of triangles from an icosahedral triangulation of the sphere. Users choose one of the spherical seeds (which discretize a unit sphere) and may choose a different radius.</p>
+<p>Seeds are specified in the code by using the correct identifying integer parameter defined in <a class="el" href="group___number_kinds.html">NumberKinds</a>.</p>
 <p>The mesh seed is recursively refined until a user-supplied initial depth is achieved in the <a class="el" href="group___faces.html">Faces</a> quadtree. This refinement increases spatial resolution.</p>
 <p>Adaptive refinement depends on the context of each problem and is handled by subclasses that include relevant <a class="el" href="group___field.html">Field</a> objects for storing and handling physical data. These methods are provided in the <a class="el" href="group___refinement.html">Refinement</a> module.</p>
 <p>Some currently implemented mesh seeds are illustrated below. <br />
  Particles are drawn as circles and annotated by \(p_i\) where the subscript i indicates the index of that particle in the Particles structure.<br />
  Edges are illustrated as arrows \( e_i \) and Faces by \( F_i \).</p>
 <p>Seeds are recursively refined by either <a class="el" href="group___faces.html#ga6bb2ead1ad72a0789a4eef0de7d2ac02" title="This is a primary subroutine used by any triangular mesh (spherical or planar). It divides a triangul...">facesmodule::dividetriface</a> or <a class="el" href="group___faces.html#gaee6c673285b09641f5a63f1f273f92f2" title="This is a primary subroutine used by any quadrilateral mesh (spherical or planar). It divides a quadrilateral face into 4 children, adding a 4 leaves to the faces quadtree. It creates new particles and new edges. It replaces divided edges with their appropriate children. ">facesmodule::dividequadface</a> until a desired spatial resolution is achieved.</p>
+<p>Point-location queries are provided that use a tree search to accelerate a walk search using the <a class="el" href="group___poly_mesh2d.html#ga319d43beccd27ec88cfed64503140304" title="Locates the face containing an arbitrary query point. This function assumes faces are convex polygons...">polymesh2dmodule::locatefacecontainingpoint</a> function.</p>
 <div class="image">
 <img src="QuadRectSeed.png" alt="QuadRectSeed.png"/>
 <div class="caption">
@@ -320,9 +322,9 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00463">463</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00471">471</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00328">polymesh2dmodule::ccwedgesaroundface()</a>, and <a class="el" href="_edges_8f90_source.html#l00668">edgesmodule::positiveedge()</a>.</p>
+<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00336">polymesh2dmodule::ccwedgesaroundface()</a>, and <a class="el" href="_edges_8f90_source.html#l00667">edgesmodule::positiveedge()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -375,9 +377,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00328">328</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00336">336</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_edges_8f90_source.html#l00692">edgesmodule::getleafedgesfromparent()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
+<p>References <a class="el" href="_edges_8f90_source.html#l00691">edgesmodule::getleafedgesfromparent()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -431,7 +433,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00492">492</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00500">500</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_beta_plane_8f90_source.html#l00098">betaplanemeshmodule::logstring</a>.</p>
 
@@ -477,9 +479,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00361">361</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00369">369</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00328">polymesh2dmodule::ccwedgesaroundface()</a>, and <a class="el" href="_edges_8f90_source.html#l00668">edgesmodule::positiveedge()</a>.</p>
+<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00336">polymesh2dmodule::ccwedgesaroundface()</a>, and <a class="el" href="_edges_8f90_source.html#l00667">edgesmodule::positiveedge()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -533,7 +535,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00207">207</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00215">215</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -578,7 +580,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00207">207</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00215">215</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -612,7 +614,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00191">191</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00199">199</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -637,7 +639,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00088">88</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00096">96</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_beta_plane_8f90_source.html#l00055">betaplanemeshmodule::betaplanemesh::deleteprivate()</a>.</p>
 
@@ -682,7 +684,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00191">191</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00199">199</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -717,7 +719,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>faceKind as defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00575">575</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00583">583</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
 
@@ -754,7 +756,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>geomKind as defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00590">590</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00598">598</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00052">numberkindsmodule::planar_geom</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>.</p>
 
@@ -801,9 +803,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00787">787</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00795">795</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_edges_8f90_source.html#l00205">edgesmodule::insertedge()</a>, <a class="el" href="_faces_8f90_source.html#l00891">facesmodule::insertface()</a>, <a class="el" href="_particles_8f90_source.html#l00451">particlesmodule::insertparticle()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_beta_plane_8f90_source.html#l00098">betaplanemeshmodule::logstring</a>, <a class="el" href="_particles_8f90_source.html#l00477">particlesmodule::makeparticleactive()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, <a class="el" href="_faces_8f90_source.html#l00917">facesmodule::quadfacearea()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00948">polymesh2dmodule::readseedfile()</a>, <a class="el" href="_particles_8f90_source.html#l00542">particlesmodule::sortincidentedgesatparticle()</a>, <a class="el" href="_sphere_geometry_8f90_source.html#l00280">spheregeommodule::spheretricenter()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>, <a class="el" href="_faces_8f90_source.html#l00950">facesmodule::trifacearea()</a>, and <a class="el" href="_logger_8f90_source.html#l00044">loggermodule::warning_logging_level</a>.</p>
+<p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_edges_8f90_source.html#l00204">edgesmodule::insertedge()</a>, <a class="el" href="_faces_8f90_source.html#l00891">facesmodule::insertface()</a>, <a class="el" href="_particles_8f90_source.html#l00453">particlesmodule::insertparticle()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_beta_plane_8f90_source.html#l00098">betaplanemeshmodule::logstring</a>, <a class="el" href="_particles_8f90_source.html#l00479">particlesmodule::makeparticleactive()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, <a class="el" href="_faces_8f90_source.html#l00917">facesmodule::quadfacearea()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00956">polymesh2dmodule::readseedfile()</a>, <a class="el" href="_particles_8f90_source.html#l00544">particlesmodule::sortincidentedgesatparticle()</a>, <a class="el" href="_sphere_geometry_8f90_source.html#l00280">spheregeommodule::spheretricenter()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>, <a class="el" href="_faces_8f90_source.html#l00950">facesmodule::trifacearea()</a>, and <a class="el" href="_logger_8f90_source.html#l00044">loggermodule::warning_logging_level</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -857,7 +859,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01149">1149</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01157">1157</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_beta_plane_8f90_source.html#l00094">betaplanemeshmodule::loginit</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_beta_plane_8f90_source.html#l00097">betaplanemeshmodule::loglevel</a>.</p>
 
@@ -898,9 +900,9 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integer index of face (in a <a class="el" href="group___faces.html">Faces</a> object) containing the query point. </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00265">265</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00273">273</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00610">polymesh2dmodule::locatepointtreesearch()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00652">polymesh2dmodule::locatepointwalksearch()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_poly_mesh2d_8f90_source.html#l00527">polymesh2dmodule::nearestrootface()</a>.</p>
+<p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00618">polymesh2dmodule::locatepointtreesearch()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00660">polymesh2dmodule::locatepointwalksearch()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_poly_mesh2d_8f90_source.html#l00535">polymesh2dmodule::nearestrootface()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -962,7 +964,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>faceIndex index of face containing query point, as determined by a tree search. Note that child particles may move outside the boundaries of their parent faces, so this result may sometimes be incorrect. A walk search provides the correct result always. </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00610">610</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00618">618</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
 
@@ -1026,9 +1028,9 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>faceIndex index of face containing query point </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00652">652</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00660">660</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00463">polymesh2dmodule::ccwadjacentfaces()</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
+<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00471">polymesh2dmodule::ccwadjacentfaces()</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1082,9 +1084,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01053">1053</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01061">1061</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_edges_8f90_source.html#l00318">edgesmodule::avgedgelength()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00054">numberkindsmodule::euclidean_3d</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_beta_plane_8f90_source.html#l00098">betaplanemeshmodule::logstring</a>, <a class="el" href="_edges_8f90_source.html#l00254">edgesmodule::maxedgelength()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l01121">polymesh2dmodule::meshseedstring()</a>, <a class="el" href="_edges_8f90_source.html#l00297">edgesmodule::minedgelength()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00052">numberkindsmodule::planar_geom</a>, <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>, and <a class="el" href="_logger_8f90_source.html#l00043">loggermodule::trace_logging_level</a>.</p>
+<p>References <a class="el" href="_edges_8f90_source.html#l00317">edgesmodule::avgedgelength()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00054">numberkindsmodule::euclidean_3d</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_beta_plane_8f90_source.html#l00098">betaplanemeshmodule::logstring</a>, <a class="el" href="_edges_8f90_source.html#l00253">edgesmodule::maxedgelength()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l01129">polymesh2dmodule::meshseedstring()</a>, <a class="el" href="_edges_8f90_source.html#l00296">edgesmodule::minedgelength()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00052">numberkindsmodule::planar_geom</a>, <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>, and <a class="el" href="_logger_8f90_source.html#l00043">loggermodule::trace_logging_level</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1138,7 +1140,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01053">1053</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01061">1061</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -1165,9 +1167,9 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Maximum over all faces of the variation of the Lagrangian parameter per face </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00223">223</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00231">231</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_particles_8f90_source.html#l00616">particlesmodule::lagcoord()</a>.</p>
+<p>References <a class="el" href="_particles_8f90_source.html#l00618">particlesmodule::lagcoord()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1213,7 +1215,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01121">1121</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01129">1129</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>.</p>
 
@@ -1254,9 +1256,9 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Integer index of particle (in a <a class="el" href="group___particles.html">Particles</a> object) closest to the query point. </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00288">288</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00296">296</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00361">polymesh2dmodule::ccwverticesaroundface()</a>, <a class="el" href="_sphere_geometry_8f90_source.html#l00066">spheregeommodule::chorddistance()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00265">polymesh2dmodule::locatefacecontainingpoint()</a>, <a class="el" href="_particles_8f90_source.html#l00602">particlesmodule::physcoord()</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
+<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00369">polymesh2dmodule::ccwverticesaroundface()</a>, <a class="el" href="_sphere_geometry_8f90_source.html#l00066">spheregeommodule::chorddistance()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00273">polymesh2dmodule::locatefacecontainingpoint()</a>, <a class="el" href="_particles_8f90_source.html#l00604">particlesmodule::physcoord()</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1311,7 +1313,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Index to <a class="el" href="group___faces.html">Faces</a> of nearest root face </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00527">527</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00535">535</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00065">numberkindsmodule::polar_disc_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>.</p>
 
@@ -1375,7 +1377,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of edges in a mesh </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00766">766</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00774">774</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00052">numberkindsmodule::planar_geom</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
 
@@ -1439,9 +1441,9 @@ Here is the call graph for this function:</div>
 
 <p>Allocates memory for a new mesh (<a class="el" href="group___particles.html">Particles</a>, <a class="el" href="group___edges.html">Edges</a>, and <a class="el" href="group___faces.html">Faces</a>). Initializes a new mesh using a "mesh seed," which is recursively refined until a desired spatial resolution is achieved. The recursive refinement defines the <a class="el" href="group___faces.html">Faces</a> quadtree and the <a class="el" href="group___edges.html">Edges</a> binary tree. </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00127">127</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00135">135</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_faces_8f90_source.html#l00529">facesmodule::dividequadface()</a>, <a class="el" href="_faces_8f90_source.html#l00701">facesmodule::dividetriface()</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00575">polymesh2dmodule::facekindfromseed()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00590">polymesh2dmodule::geomkindfromseed()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00787">polymesh2dmodule::initializemeshfromseed()</a>, <a class="el" href="_beta_plane_gaussian_vortex_8f90_source.html#l00323">initlogger()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00094">betaplanemeshmodule::loginit</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00766">polymesh2dmodule::nedgesinmesh()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00742">polymesh2dmodule::nfacesinmesh()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00709">polymesh2dmodule::nverticesinmesh()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00073">numberkindsmodule::procrank</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_particles_8f90_source.html#l00542">particlesmodule::sortincidentedgesatparticle()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
+<p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_faces_8f90_source.html#l00529">facesmodule::dividequadface()</a>, <a class="el" href="_faces_8f90_source.html#l00701">facesmodule::dividetriface()</a>, <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00583">polymesh2dmodule::facekindfromseed()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00598">polymesh2dmodule::geomkindfromseed()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00795">polymesh2dmodule::initializemeshfromseed()</a>, <a class="el" href="_beta_plane_gaussian_vortex_8f90_source.html#l00323">initlogger()</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00094">betaplanemeshmodule::loginit</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00774">polymesh2dmodule::nedgesinmesh()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00750">polymesh2dmodule::nfacesinmesh()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00717">polymesh2dmodule::nverticesinmesh()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00073">numberkindsmodule::procrank</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_particles_8f90_source.html#l00544">particlesmodule::sortincidentedgesatparticle()</a>, <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1512,7 +1514,7 @@ Here is the call graph for this function:</div>
 
 <p>Allocates memory for a new mesh (<a class="el" href="group___particles.html">Particles</a>, <a class="el" href="group___edges.html">Edges</a>, and <a class="el" href="group___faces.html">Faces</a>). Initializes a new mesh using a "mesh seed," which is recursively refined until a desired spatial resolution is achieved. The recursive refinement defines the <a class="el" href="group___faces.html">Faces</a> quadtree and the <a class="el" href="group___edges.html">Edges</a> binary tree. </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00127">127</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00135">135</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -1558,7 +1560,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of faces in a mesh </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00742">742</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00750">750</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>.</p>
 
@@ -1606,7 +1608,7 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of vertices in a mesh </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00709">709</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00717">717</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_number_kinds_8f90_source.html#l00069">numberkindsmodule::beta_plane_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00068">numberkindsmodule::cubed_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00066">numberkindsmodule::quad_rect_periodic_seed</a>, <a class="el" href="_number_kinds_8f90_source.html#l00064">numberkindsmodule::quad_rect_seed</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00063">numberkindsmodule::tri_hex_seed</a>.</p>
 
@@ -1646,9 +1648,9 @@ Here is the call graph for this function:</div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>.TRUE. if query point is outside mesh boundaries </dd></dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00412">412</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00420">420</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00328">polymesh2dmodule::ccwedgesaroundface()</a>, <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00265">polymesh2dmodule::locatefacecontainingpoint()</a>, <a class="el" href="_edges_8f90_source.html#l00680">edgesmodule::onboundary()</a>, and <a class="el" href="_particles_8f90_source.html#l00602">particlesmodule::physcoord()</a>.</p>
+<p>References <a class="el" href="_poly_mesh2d_8f90_source.html#l00336">polymesh2dmodule::ccwedgesaroundface()</a>, <a class="el" href="_faces_8f90_source.html#l00982">facesmodule::facecentroid()</a>, <a class="el" href="_poly_mesh2d_8f90_source.html#l00273">polymesh2dmodule::locatefacecontainingpoint()</a>, <a class="el" href="_edges_8f90_source.html#l00679">edgesmodule::onboundary()</a>, and <a class="el" href="_particles_8f90_source.html#l00604">particlesmodule::physcoord()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1691,7 +1693,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01106">1106</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01114">1114</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_s_t_d_int_vector_8f90_source.html#l00033">stdintvectormodule::stdintvector::print()</a>.</p>
 
@@ -1736,7 +1738,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01106">1106</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01114">1114</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -1773,7 +1775,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00387">387</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00395">395</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00053">numberkindsmodule::sphere_geom</a>.</p>
 
@@ -1897,7 +1899,7 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00948">948</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00956">956</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 <p>References <a class="el" href="_logger_8f90_source.html#l00045">loggermodule::error_logging_level</a>, <a class="el" href="_number_kinds_8f90_source.html#l00067">numberkindsmodule::icos_tri_sphere_seed</a>, <a class="el" href="_beta_plane_8f90_source.html#l00095">betaplanemeshmodule::log</a>, <a class="el" href="_beta_plane_8f90_source.html#l00096">betaplanemeshmodule::logkey</a>, <a class="el" href="_number_kinds_8f90_source.html#l00052">numberkindsmodule::planar_geom</a>, <a class="el" href="_number_kinds_8f90_source.html#l00050">numberkindsmodule::quad_panel</a>, <a class="el" href="_number_kinds_8f90_source.html#l00044">numberkindsmodule::read_unit</a>, and <a class="el" href="_number_kinds_8f90_source.html#l00051">numberkindsmodule::tri_panel</a>.</p>
 
@@ -1936,9 +1938,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01041">1041</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01049">1049</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_edges_8f90_source.html#l00339">edgesmodule::writeedgestomatlab()</a>, <a class="el" href="_faces_8f90_source.html#l00447">facesmodule::writefacestomatlab()</a>, and <a class="el" href="_particles_8f90_source.html#l00648">particlesmodule::writeparticlestomatlab()</a>.</p>
+<p>References <a class="el" href="_edges_8f90_source.html#l00338">edgesmodule::writeedgestomatlab()</a>, <a class="el" href="_faces_8f90_source.html#l00447">facesmodule::writefacestomatlab()</a>, and <a class="el" href="_particles_8f90_source.html#l00650">particlesmodule::writeparticlestomatlab()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1991,9 +1993,9 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01085">1085</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l01093">1093</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
-<p>References <a class="el" href="_faces_8f90_source.html#l00418">facesmodule::writefaceareatovtkcelldata()</a>, <a class="el" href="_faces_8f90_source.html#l00388">facesmodule::writefacestovtkpolygons()</a>, <a class="el" href="_particles_8f90_source.html#l00392">particlesmodule::writevtklagcoords()</a>, <a class="el" href="_output_writer_8f90_source.html#l00265">outputwritermodule::writevtkpointdatasectionheader()</a>, and <a class="el" href="_particles_8f90_source.html#l00365">particlesmodule::writevtkpoints()</a>.</p>
+<p>References <a class="el" href="_faces_8f90_source.html#l00418">facesmodule::writefaceareatovtkcelldata()</a>, <a class="el" href="_faces_8f90_source.html#l00388">facesmodule::writefacestovtkpolygons()</a>, <a class="el" href="_particles_8f90_source.html#l00394">particlesmodule::writevtklagcoords()</a>, <a class="el" href="_output_writer_8f90_source.html#l00265">outputwritermodule::writevtkpointdatasectionheader()</a>, and <a class="el" href="_particles_8f90_source.html#l00367">particlesmodule::writevtkpoints()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -2027,7 +2029,7 @@ Here is the call graph for this function:</div>
 
 <p>Number of times a face may be divided beyond the initial refinement level. </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00084">84</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00092">92</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2051,7 +2053,7 @@ Here is the call graph for this function:</div>
 
 <p><a class="el" href="group___edges.html">Edges</a> connecting origin and destination particles for each edge, and each edge's left and right face </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00078">78</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00086">86</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2075,7 +2077,7 @@ Here is the call graph for this function:</div>
 
 <p>face kind (e.g., triangular or quadrilateral) as defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00080">80</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00088">88</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2099,7 +2101,7 @@ Here is the call graph for this function:</div>
 
 <p><a class="el" href="group___faces.html">Faces</a> </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00079">79</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00087">87</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2123,7 +2125,7 @@ Here is the call graph for this function:</div>
 
 <p>geometry kind (e.g., planar or spherical) as defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00081">81</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00089">89</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2147,7 +2149,7 @@ Here is the call graph for this function:</div>
 
 <p>initial refinement level (in terms of the <a class="el" href="group___faces.html">Faces</a> quadtree) for a mesh </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00083">83</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00091">91</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2169,7 +2171,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00117">117</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00125">125</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2191,7 +2193,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00116">116</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00124">124</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2213,7 +2215,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00118">118</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00126">126</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2235,7 +2237,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00119">119</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00127">127</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2257,7 +2259,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00120">120</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00128">128</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2281,7 +2283,7 @@ Here is the call graph for this function:</div>
 
 <p>mesh seed as defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00082">82</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00090">90</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2305,7 +2307,7 @@ Here is the call graph for this function:</div>
 
 <p><a class="el" href="group___particles.html">Particles</a> defining the centers and vertices of each mesh face </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00077">77</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00085">85</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
@@ -2329,14 +2331,14 @@ Here is the call graph for this function:</div>
 
 <p>time value represented by the mesh </p>
 
-<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00085">85</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
+<p>Definition at line <a class="el" href="_poly_mesh2d_8f90_source.html#l00093">93</a> of file <a class="el" href="_poly_mesh2d_8f90_source.html">PolyMesh2d.f90</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 15:01:00 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Jan 11 2016 16:40:09 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>

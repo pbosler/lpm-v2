@@ -45,9 +45,8 @@ public LogStats, PrintDebugInfo
 public WriteEdgesToMatlab
 public CountParents
 
-! > @class Edges
-! > @brief Edges know the indices (to Particles) of their origin and destination, and the indices (to Faces)
-! > of their left face and right face.
+!> @brief Edges know the indices (to @ref Particles) of their origin and destination, and the indices (to @ref Faces)
+!> of their left face and right face.
 type Edges
 	integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles 
 	integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles 

@@ -7,18 +7,23 @@ module PolyMesh2dModule
 !>
 !> @defgroup PolyMesh2d PolyMesh2d
 !> @brief Each polygonal mesh is made up of @ref Particles, @ref Edges, and @ref Faces. 
+!> 
+!> All meshes start with an initial "seed" that is recursively refined to generate the @ref Faces quadtree, its @ref Edges, 
+!> and the associated @ref Particles.
+!> Mesh seeds are supplied in  `*Seed.dat` files.
 !>
-!> Point-location queries are provided that use a tree search to accelerate a walk search.  
 !>
-!>  Current implementation for __planar meshes__ includes a mesh of quadrilateral faces from a square or a mesh of triangular faces from 
-!>	a hexagon, with free boundaries.
-!>	Users choose the initial mesh from one of the predefined "seeds," defined to approximately cover the domain
+!>  Current seeds for __planar meshes__ include a mesh of quadrilateral faces from a square or a mesh of triangular faces from 
+!>	a hexagon, both with free boundaries, and a quadrilateral seed that is periodic in the x-direction and free in the y-direction.
+!>	Users choose the initial mesh from one of the predefined seeds, defined to approximately cover the domain
 !>	@f$ D = \{ (x,y) : x,y\in [-1,1] \} @f$, depending on the chosen seed.  
 !>	The seed is then multiplied by a user-supplied scalar `maxR` to cover larger subsets of the plane.  
 !>
-!>  Implementations for __spherical meshes__ include a mesh of quadrilaterals from the cubed sphere or a mesh of triangles from
+!>  Seeds for __spherical meshes__ include a mesh of quadrilaterals from the cubed sphere or a mesh of triangles from
 !>	an icosahedral triangulation of the sphere.
 !>	Users choose one of the spherical seeds (which discretize a unit sphere) and may choose a different radius.
+!>
+!>  Seeds are specified in the code by using the correct identifying integer parameter defined in @ref NumberKinds.
 !>
 !>	The mesh seed is recursively refined until a user-supplied initial depth is achieved in the @ref Faces quadtree.  
 !>	This refinement increases spatial resolution.  
@@ -34,6 +39,8 @@ module PolyMesh2dModule
 !>	
 !>	Seeds are recursively refined by either facesmodule::dividetriface or facesmodule::dividequadface 
 !>	until a desired spatial resolution is achieved.
+!>
+!>  Point-location queries are provided that use a tree search to accelerate a walk search using the polymesh2dmodule::locatefacecontainingpoint function.
 !>	
 !>	@image html QuadRectSeed.png "Seed for an initially square mesh of quadrilateral faces."
 !>	@image latex QuadRectSeed.eps "Seed for an initially square mesh of quadrilateral faces." width=5in
@@ -73,6 +80,7 @@ public MeshSeedString
 public ProjectParticlesToSphere
 public MaxLagrangianVariationPerFace
 
+!> @brief Combines mesh primitives into one complete mesh object.
 type PolyMesh2d
 	type(Particles) :: particles !< @ref Particles defining the centers and vertices of each mesh face
 	type(Edges) :: edges !< @ref Edges connecting origin and destination particles for each edge, and each edge's left and right face

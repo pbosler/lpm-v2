@@ -67,6 +67,7 @@ public SetInitialVorticityOnMesh, SetVelocityOnMesh, SetStreamFunctionsOnMesh
 public TotalKE, TotalEnstrophy
 public MaxCirculationMagnitudePerFace
 
+!> @brief Defines a spherical mesh and the appropriate variables for solving the Barotropic Vorticity Equation (BVE) on a rotating sphere.
 type BVEMesh
 	type(PolyMesh2d) :: mesh !< @ref PolyMesh2d for spatial discretization
 	type(Field) :: absVort !< scalar @ref Field

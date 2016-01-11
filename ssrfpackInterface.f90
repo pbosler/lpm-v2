@@ -44,6 +44,7 @@ public InterpolateScalar, InterpolateVector, InterpolateLagParam
 public InterpolateScalarToUnifLatLonGrid, InterpolateVectorToUnifLatLonGrid
 public SetSigmaFlag
 
+!> @brief Storage for a STRIPACK (stripack.f) Delaunay triangulation of scattered spherical data points
 type DelaunayTriangulation
 	integer(kint), dimension(:), allocatable :: list !< Stripack data structure, see stripack.f for more details
 	integer(kint), dimension(:), allocatable :: lptr !< Stripack data structure, see stripack.f for more details
@@ -54,6 +55,7 @@ type DelaunayTriangulation
 		final :: deleteDelTri
 end type
 
+!> @brief Consolidated interface for interpolation of one data field, scalar or vector, from a set of LPM particles on a sphere
 type SSRFPACKInterface
 	real(kreal), dimension(:,:), allocatable :: grad1 !< Storage for estimated gradient vectors
 	real(kreal), dimension(:,:), allocatable :: grad2 !< Storage for estimated gradient vectors
@@ -67,8 +69,8 @@ type SSRFPACKInterface
 		final :: deletePrivate
 end type
 
-integer(kint), save :: SIGMA_FLAG = 0
-integer(kint), parameter :: GRAD_FLAG = 1
+integer(kint), save :: SIGMA_FLAG = 0 !< Determines type of tension factors to use, see ssrfpack.f for more details
+integer(kint), parameter :: GRAD_FLAG = 1 !< Indicates that gradient estimation is performed explicitly by the LPM routines
 integer(kint), save :: startTriangle = 1
 real(kreal), save :: sigmaTol = 0.01_kreal
 

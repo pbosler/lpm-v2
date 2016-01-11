@@ -102,9 +102,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">planarswemodule::swemesh Type Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Defines a mesh (via <a class="el" href="group___poly_mesh2d.html">PolyMesh2d</a>) and data fields (via <a class="el" href="group___field.html">Field</a>) suitable for solving the planar Shallow Water Equations (SWE).  
+ <a href="structplanarswemodule_1_1swemesh.html#details">More...</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
-<p>Definition at line <a class="el" href="_planar_s_w_e_8f90_source.html#l00073">73</a> of file <a class="el" href="_planar_s_w_e_8f90_source.html">PlanarSWE.f90</a>.</p>
+<div class="textblock"><p>Defines a mesh (via <a class="el" href="group___poly_mesh2d.html">PolyMesh2d</a>) and data fields (via <a class="el" href="group___field.html">Field</a>) suitable for solving the planar Shallow Water Equations (SWE). </p>
+
+<p>Definition at line <a class="el" href="_planar_s_w_e_8f90_source.html#l00074">74</a> of file <a class="el" href="_planar_s_w_e_8f90_source.html">PlanarSWE.f90</a>.</p>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -114,30 +118,43 @@ Private Member Functions</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
 <tr class="memitem:gaf5c4ae015a355c593e9fa8615ceec960"><td class="memItemLeft" align="right" valign="top">type(polymesh2d)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#gaf5c4ae015a355c593e9fa8615ceec960">mesh</a></td></tr>
+<tr class="memdesc:gaf5c4ae015a355c593e9fa8615ceec960"><td class="mdescLeft">&#160;</td><td class="mdescRight">Planar mesh.  <a href="group___planar_s_w_e.html#gaf5c4ae015a355c593e9fa8615ceec960">More...</a><br /></td></tr>
 <tr class="separator:gaf5c4ae015a355c593e9fa8615ceec960"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa015023ceff15dd17c713825491bccdb"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#gaa015023ceff15dd17c713825491bccdb">relvort</a></td></tr>
+<tr class="memdesc:gaa015023ceff15dd17c713825491bccdb"><td class="mdescLeft">&#160;</td><td class="mdescRight">relative vorticity at each particle  <a href="group___planar_s_w_e.html#gaa015023ceff15dd17c713825491bccdb">More...</a><br /></td></tr>
 <tr class="separator:gaa015023ceff15dd17c713825491bccdb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga6050fda6c66d24779d68712d94726f6c"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga6050fda6c66d24779d68712d94726f6c">potvort</a></td></tr>
+<tr class="memdesc:ga6050fda6c66d24779d68712d94726f6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">potential vorticity carried by each particle  <a href="group___planar_s_w_e.html#ga6050fda6c66d24779d68712d94726f6c">More...</a><br /></td></tr>
 <tr class="separator:ga6050fda6c66d24779d68712d94726f6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga12b07dfa5f66052d2d5d21bbf2e451ee"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga12b07dfa5f66052d2d5d21bbf2e451ee">divergence</a></td></tr>
+<tr class="memdesc:ga12b07dfa5f66052d2d5d21bbf2e451ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">divergence of the fluid velocity at each particle  <a href="group___planar_s_w_e.html#ga12b07dfa5f66052d2d5d21bbf2e451ee">More...</a><br /></td></tr>
 <tr class="separator:ga12b07dfa5f66052d2d5d21bbf2e451ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga00a7217301a16bb7b51c72ca1b0a8a4a"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga00a7217301a16bb7b51c72ca1b0a8a4a">velocity</a></td></tr>
+<tr class="memdesc:ga00a7217301a16bb7b51c72ca1b0a8a4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">velocity of each particle  <a href="group___planar_s_w_e.html#ga00a7217301a16bb7b51c72ca1b0a8a4a">More...</a><br /></td></tr>
 <tr class="separator:ga00a7217301a16bb7b51c72ca1b0a8a4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa6ef711c3ea8beccc0036cddc520bc22"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#gaa6ef711c3ea8beccc0036cddc520bc22">h</a></td></tr>
+<tr class="memdesc:gaa6ef711c3ea8beccc0036cddc520bc22"><td class="mdescLeft">&#160;</td><td class="mdescRight">fluid depth at each particle  <a href="group___planar_s_w_e.html#gaa6ef711c3ea8beccc0036cddc520bc22">More...</a><br /></td></tr>
 <tr class="separator:gaa6ef711c3ea8beccc0036cddc520bc22"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga87efdaaff5515b004dc8e24cc5aa488b"><td class="memItemLeft" align="right" valign="top">type(field)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga87efdaaff5515b004dc8e24cc5aa488b">hbottom</a></td></tr>
+<tr class="memdesc:ga87efdaaff5515b004dc8e24cc5aa488b"><td class="mdescLeft">&#160;</td><td class="mdescRight">bottom height at each particle  <a href="group___planar_s_w_e.html#ga87efdaaff5515b004dc8e24cc5aa488b">More...</a><br /></td></tr>
 <tr class="separator:ga87efdaaff5515b004dc8e24cc5aa488b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga61fad11a548eb361f281cc9266d8062b"><td class="memItemLeft" align="right" valign="top">type(field), dimension(:), pointer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga61fad11a548eb361f281cc9266d8062b">tracers</a> =&gt; null()</td></tr>
+<tr class="memdesc:ga61fad11a548eb361f281cc9266d8062b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tracers carried by each particle.  <a href="group___planar_s_w_e.html#ga61fad11a548eb361f281cc9266d8062b">More...</a><br /></td></tr>
 <tr class="separator:ga61fad11a548eb361f281cc9266d8062b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gabc9ed0e2765dbc06abbdf5bcdcc69823"><td class="memItemLeft" align="right" valign="top">real(kreal)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#gabc9ed0e2765dbc06abbdf5bcdcc69823">f0</a> = 0.0_kreal</td></tr>
+<tr class="memdesc:gabc9ed0e2765dbc06abbdf5bcdcc69823"><td class="mdescLeft">&#160;</td><td class="mdescRight">beta plane parameter  <a href="group___planar_s_w_e.html#gabc9ed0e2765dbc06abbdf5bcdcc69823">More...</a><br /></td></tr>
 <tr class="separator:gabc9ed0e2765dbc06abbdf5bcdcc69823"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga9156f474ad2bd20e9c7ddcf5f4906fd2"><td class="memItemLeft" align="right" valign="top">real(kreal)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga9156f474ad2bd20e9c7ddcf5f4906fd2">beta</a> = 0.0_kreal</td></tr>
+<tr class="memdesc:ga9156f474ad2bd20e9c7ddcf5f4906fd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">beta plane parameter  <a href="group___planar_s_w_e.html#ga9156f474ad2bd20e9c7ddcf5f4906fd2">More...</a><br /></td></tr>
 <tr class="separator:ga9156f474ad2bd20e9c7ddcf5f4906fd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga2816e43375a1e165eedb804179b482bb"><td class="memItemLeft" align="right" valign="top">real(kreal)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga2816e43375a1e165eedb804179b482bb">g</a> = 0.0_kreal</td></tr>
+<tr class="memdesc:ga2816e43375a1e165eedb804179b482bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">gravitational constant  <a href="group___planar_s_w_e.html#ga2816e43375a1e165eedb804179b482bb">More...</a><br /></td></tr>
 <tr class="separator:ga2816e43375a1e165eedb804179b482bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab8950a02f73301e589f9c2c5f459e0c9"><td class="memItemLeft" align="right" valign="top">real(kreal)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#gab8950a02f73301e589f9c2c5f459e0c9">pseeps</a> = 0.0_kreal</td></tr>
+<tr class="memdesc:gab8950a02f73301e589f9c2c5f459e0c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Regularization parameter for Particle Strength Exchange.  <a href="group___planar_s_w_e.html#gab8950a02f73301e589f9c2c5f459e0c9">More...</a><br /></td></tr>
 <tr class="separator:gab8950a02f73301e589f9c2c5f459e0c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga993e5ec39d2d2c553752b1b3dc2e2e83"><td class="memItemLeft" align="right" valign="top">type(mpisetup)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___planar_s_w_e.html#ga993e5ec39d2d2c553752b1b3dc2e2e83">mpiparticles</a></td></tr>
+<tr class="memdesc:ga993e5ec39d2d2c553752b1b3dc2e2e83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distributes work on particles across available MPI ranks.  <a href="group___planar_s_w_e.html#ga993e5ec39d2d2c553752b1b3dc2e2e83">More...</a><br /></td></tr>
 <tr class="separator:ga993e5ec39d2d2c553752b1b3dc2e2e83"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this type was generated from the following file:<ul>
@@ -146,7 +163,7 @@ Private Attributes</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 15:01:00 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Jan 11 2016 16:40:10 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>

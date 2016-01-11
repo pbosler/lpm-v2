@@ -41,11 +41,11 @@ public LogStats, PrintDebugInfo
 public SharedEdge, ParticleOppositeTriEdge
 public CountParents
 
-! > @class Faces
-! > @brief Designed to accomodate quadrilateral and triangular faces.  
-! > Each faces knows the indices (to a Particles object) of its vertices and center and the indices (to an Edges object)
-! > of its edges.  
-! > Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
+!> @brief Each faces knows the indices (to @ref Particles) of its vertices and center and the indices (to @ref Edges)
+!> of its edges.  
+!> 
+!> Designed to accomodate quadrilateral and triangular faces.  
+!> Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
 !>
 type Faces
 	integer(kint), allocatable :: centerParticle(:) !< indices to faces' center particles in a particlesmodule::particles object

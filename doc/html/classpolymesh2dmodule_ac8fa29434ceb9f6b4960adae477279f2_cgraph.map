@@ -1,14 +1,14 @@
 <map id="polymesh2dmodule::newprivate" name="polymesh2dmodule::newprivate">
 <area shape="rect" id="node2" href="$group___faces.html#gaee6c673285b09641f5a63f1f273f92f2" title="This is a primary subroutine used by any quadrilateral mesh (spherical or planar). It divides a quadrilateral face into 4 children, adding a 4 leaves to the faces quadtree. It creates new particles and new edges. It replaces divided edges with their appropriate children. " alt="" coords="305,337,500,363"/>
 <area shape="rect" id="node22" href="$group___faces.html#ga6bb2ead1ad72a0789a4eef0de7d2ac02" title="This is a primary subroutine used by any triangular mesh (spherical or planar). It divides a triangul..." alt="" coords="315,565,491,591"/>
-<area shape="rect" id="node26" href="$classpolymesh2dmodule.html#afeeb682c17d2f3569c60dc52f8ef3cea" title="polymesh2dmodule::facekindfromseed" alt="" coords="277,894,528,921"/>
-<area shape="rect" id="node27" href="$classpolymesh2dmodule.html#a9e3a8f08670e896630624fae230a6073" title="polymesh2dmodule::geomkindfromseed" alt="" coords="273,945,532,971"/>
-<area shape="rect" id="node28" href="$classpolymesh2dmodule.html#a3afe4155924faf7adf8d9bcadd5dc942" title="polymesh2dmodule::initializemeshfromseed" alt="" coords="263,793,543,819"/>
+<area shape="rect" id="node26" href="$classpolymesh2dmodule.html#afeeb682c17d2f3569c60dc52f8ef3cea" title="Determines the appropriate value of faceKind (as defined by NumberKinds) based on a specified mesh se..." alt="" coords="277,894,528,921"/>
+<area shape="rect" id="node27" href="$classpolymesh2dmodule.html#a9e3a8f08670e896630624fae230a6073" title="Determines the geometry (as defined by NumberKinds) based on a specified mesh seed. " alt="" coords="273,945,532,971"/>
+<area shape="rect" id="node28" href="$classpolymesh2dmodule.html#a3afe4155924faf7adf8d9bcadd5dc942" title="Initializes a mesh using a mesh seed .dat file to define the root set of Particles, Edges, and Faces. Mesh seeds are defined in both NumberKinds and via the corresponding .dat file. Multiplies particle postions by a specified amount to change the spatial domain (all mesh seeds approximately cover the unit sphere of their embedded space). " alt="" coords="263,793,543,819"/>
 <area shape="rect" id="node31" href="$group___particles.html#ga550e2ee3c6c4a9cc0e1c27cfb1071571" title="Sorts the incident edges at a particle into counter&#45;clockwise order using a bubble&#45;sort algorithm..." alt="" coords="591,1021,872,1047"/>
 <area shape="rect" id="node33" href="$_beta_plane_gaussian_vortex_8f90.html#ae520c3b11d9e6c51c35d5cd67b503523" title="initlogger" alt="" coords="365,995,441,1022"/>
-<area shape="rect" id="node34" href="$classpolymesh2dmodule.html#a515332a3f22d9fb7b09f408594eec185" title="polymesh2dmodule::nedgesinmesh" alt="" coords="287,1046,519,1073"/>
-<area shape="rect" id="node35" href="$classpolymesh2dmodule.html#a18991ddade171ee044e7d7dfb2694979" title="polymesh2dmodule::nfacesinmesh" alt="" coords="289,1097,516,1123"/>
-<area shape="rect" id="node36" href="$classpolymesh2dmodule.html#acb9154c9633d010075c5c7827de64288" title="polymesh2dmodule::nverticesinmesh" alt="" coords="282,1147,523,1174"/>
+<area shape="rect" id="node34" href="$classpolymesh2dmodule.html#a515332a3f22d9fb7b09f408594eec185" title="Uses the number of vertices and the number of faces (via Euler&#39;s formulas) to determine the the numbe..." alt="" coords="287,1046,519,1073"/>
+<area shape="rect" id="node35" href="$classpolymesh2dmodule.html#a18991ddade171ee044e7d7dfb2694979" title="Computes the number of faces in a uniformly refined mesh. Used to compute memory allocation requireme..." alt="" coords="289,1097,516,1123"/>
+<area shape="rect" id="node36" href="$classpolymesh2dmodule.html#acb9154c9633d010075c5c7827de64288" title="Computes the number of vertices in a uniformly refined mesh. Used to compute memory allocation requir..." alt="" coords="282,1147,523,1174"/>
 <area shape="rect" id="node3" href="$group___edges.html#ga7a0ad0d98da890af43aa04a3d88f6eee" title="Divides a parent edge, creating two child edges with the same orientation. " alt="" coords="645,261,818,287"/>
 <area shape="rect" id="node4" href="$group___particles.html#gaf5dfbd586cef1f9579376c4624c65b02" title="Inserts a single particle into a particles object. " alt="" coords="963,527,1161,554"/>
 <area shape="rect" id="node5" href="$group___particles.html#gad4afc4ad448d5d077be29dd1a7d1cc21" title="Returns a particle&#39;s Lagrangian coordinate vector. " alt="" coords="975,210,1149,237"/>
@@ -32,6 +32,6 @@
 <area shape="rect" id="node24" href="$group___plane_geom.html#ga64416ed494b2dc90ab24f1712db4154b" title="Cetroid of a triangle created by three points in the plane. " alt="" coords="633,463,830,490"/>
 <area shape="rect" id="node25" href="$group___faces.html#gacf7e3c70546c5d562a5a2de19f8553df" title="Determines the area of a triangular face. Assumes the face has exactly 3 edges (Does not account for ..." alt="" coords="647,818,815,845"/>
 <area shape="rect" id="node29" href="$group___faces.html#gabe57e9083f933fd8fde83ca63c10ed27" title="Inserts a new face into the faces data structure. Increases faces.N by 1. " alt="" coords="650,970,813,997"/>
-<area shape="rect" id="node30" href="$classpolymesh2dmodule.html#a12657c955905ee8e5450ba9861b3ae38" title="polymesh2dmodule::readseedfile" alt="" coords="623,919,840,946"/>
+<area shape="rect" id="node30" href="$classpolymesh2dmodule.html#a12657c955905ee8e5450ba9861b3ae38" title="Reads data from a mesh seed .dat file. " alt="" coords="623,919,840,946"/>
 <area shape="rect" id="node32" href="$group___particles.html#gad0ac94d4660c0de852cae80cd9436cf0" title="particlesmodule::orderedgepair" alt="" coords="959,1021,1165,1047"/>
 </map>

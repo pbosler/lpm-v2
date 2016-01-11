@@ -4,7 +4,7 @@
 <area shape="rect" id="node9" href="$group___particles.html#gaf5dfbd586cef1f9579376c4624c65b02" title="Inserts a single particle into a particles object. " alt="" coords="375,132,573,159"/>
 <area shape="rect" id="node10" href="$group___particles.html#ga97eb338e7996e4802d747fd46ae6a298" title="Changes a passive particle to an active particle. Area/volume must be set separately. " alt="" coords="357,183,591,209"/>
 <area shape="rect" id="node11" href="$group___faces.html#ga6a872b75ce2c75e9f4d39c2ec44a367e" title="Determines the area of a quadrilateral face. Assumes the face has exactly 4 edges (Does not account f..." alt="" coords="381,284,567,311"/>
-<area shape="rect" id="node14" href="$classpolymesh2dmodule.html#a12657c955905ee8e5450ba9861b3ae38" title="polymesh2dmodule::readseedfile" alt="" coords="365,335,583,361"/>
+<area shape="rect" id="node14" href="$classpolymesh2dmodule.html#a12657c955905ee8e5450ba9861b3ae38" title="Reads data from a mesh seed .dat file. " alt="" coords="365,335,583,361"/>
 <area shape="rect" id="node15" href="$group___particles.html#ga550e2ee3c6c4a9cc0e1c27cfb1071571" title="Sorts the incident edges at a particle into counter&#45;clockwise order using a bubble&#45;sort algorithm..." alt="" coords="333,385,615,412"/>
 <area shape="rect" id="node17" href="$group___sphere_geom.html#ga84b61f121a82f260ac48915a6826663f" title="Finds the centroid of a spherical triangle defined by three vertices. " alt="" coords="356,436,592,463"/>
 <area shape="rect" id="node18" href="$group___faces.html#gacf7e3c70546c5d562a5a2de19f8553df" title="Determines the area of a triangular face. Assumes the face has exactly 3 edges (Does not account for ..." alt="" coords="390,233,558,260"/>

@@ -102,8 +102,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">facesmodule::faces Type Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Each faces knows the indices (to <a class="el" href="group___particles.html">Particles</a>) of its vertices and center and the indices (to <a class="el" href="group___edges.html">Edges</a>) of its edges.  
+ <a href="structfacesmodule_1_1faces.html#details">More...</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
+<div class="textblock"><p>Each faces knows the indices (to <a class="el" href="group___particles.html">Particles</a>) of its vertices and center and the indices (to <a class="el" href="group___edges.html">Edges</a>) of its edges. </p>
+<p>Designed to accomodate quadrilateral and triangular faces. Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree. </p>
+
 <p>Definition at line <a class="el" href="_faces_8f90_source.html#l00050">50</a> of file <a class="el" href="_faces_8f90_source.html">Faces.f90</a>.</p>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
@@ -115,15 +120,15 @@ Private Member Functions</h2></td></tr>
 Private Attributes</h2></td></tr>
 <tr class="memitem:gaa7a921916c177d13e19136734ff7342a"><td class="memItemLeft" align="right" valign="top">integer(kint), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___faces.html#gaa7a921916c177d13e19136734ff7342a">centerparticle</a></td></tr>
-<tr class="memdesc:gaa7a921916c177d13e19136734ff7342a"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' center particles in a <a class="el" href="structparticlesmodule_1_1particles.html">particlesmodule::particles</a> object  <a href="group___faces.html#gaa7a921916c177d13e19136734ff7342a">More...</a><br /></td></tr>
+<tr class="memdesc:gaa7a921916c177d13e19136734ff7342a"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' center particles in a <a class="el" href="structparticlesmodule_1_1particles.html" title="Class used to define a spatial discretization that may move in physical space. ">particlesmodule::particles</a> object  <a href="group___faces.html#gaa7a921916c177d13e19136734ff7342a">More...</a><br /></td></tr>
 <tr class="separator:gaa7a921916c177d13e19136734ff7342a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga39af0951686079293fb003953e03f4b4"><td class="memItemLeft" align="right" valign="top">integer(kint), dimension(:,:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___faces.html#ga39af0951686079293fb003953e03f4b4">vertices</a></td></tr>
-<tr class="memdesc:ga39af0951686079293fb003953e03f4b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' vertex particles in a <a class="el" href="structparticlesmodule_1_1particles.html">particlesmodule::particles</a> object  <a href="group___faces.html#ga39af0951686079293fb003953e03f4b4">More...</a><br /></td></tr>
+<tr class="memdesc:ga39af0951686079293fb003953e03f4b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' vertex particles in a <a class="el" href="structparticlesmodule_1_1particles.html" title="Class used to define a spatial discretization that may move in physical space. ">particlesmodule::particles</a> object  <a href="group___faces.html#ga39af0951686079293fb003953e03f4b4">More...</a><br /></td></tr>
 <tr class="separator:ga39af0951686079293fb003953e03f4b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8362039648718e99b0178ed21ef61199"><td class="memItemLeft" align="right" valign="top">integer(kint), dimension(:,:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___faces.html#ga8362039648718e99b0178ed21ef61199">edges</a></td></tr>
-<tr class="memdesc:ga8362039648718e99b0178ed21ef61199"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' edges in an <a class="el" href="structedgesmodule_1_1edges.html">edgesmodule::edges</a> object  <a href="group___faces.html#ga8362039648718e99b0178ed21ef61199">More...</a><br /></td></tr>
+<tr class="memdesc:ga8362039648718e99b0178ed21ef61199"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices to faces' edges in an <a class="el" href="structedgesmodule_1_1edges.html" title="Edges know the indices (to Particles) of their origin and destination, and the indices (to Faces) of ...">edgesmodule::edges</a> object  <a href="group___faces.html#ga8362039648718e99b0178ed21ef61199">More...</a><br /></td></tr>
 <tr class="separator:ga8362039648718e99b0178ed21ef61199"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8fa43da17552e5d6558379503ad50275"><td class="memItemLeft" align="right" valign="top">logical(klog), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___faces.html#ga8fa43da17552e5d6558379503ad50275">haschildren</a></td></tr>
@@ -156,7 +161,7 @@ allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 15:01:00 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Jan 11 2016 16:40:10 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>

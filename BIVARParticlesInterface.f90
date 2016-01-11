@@ -40,6 +40,7 @@ public InterpolateScalar, InterpolateVector, InterpolateLagParam
 ! Types and module constants
 !----------------
 !
+!> @brief Provides a simpler interface to the BIVAR scattered data interpolation package, bivar.f90.
 type BIVARInterface
 	integer(kint), dimension(:), allocatable :: intWork !< Integer variable workspace, see bivar.f90 for requirements
 	real(kreal), dimension(:), allocatable :: realWork !< Real variable workspace, see bivar.f90 for requirements

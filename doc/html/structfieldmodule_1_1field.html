@@ -102,9 +102,14 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">fieldmodule::field Type Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Vectorized class for physical data defined on a particles' spatial discretization of a domain. May be scalar or vector data.  
+ <a href="structfieldmodule_1_1field.html#details">More...</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
-<p>Definition at line <a class="el" href="_field_8f90_source.html#l00054">54</a> of file <a class="el" href="_field_8f90_source.html">Field.f90</a>.</p>
+<div class="textblock"><p>Vectorized class for physical data defined on a particles' spatial discretization of a domain. May be scalar or vector data. </p>
+<p>Field objects have a 1-to-1 correspondence with a <a class="el" href="group___particles.html">Particles</a> object, so that the data associated with the particle whose index is i are in the field object also at index i. </p>
+
+<p>Definition at line <a class="el" href="_field_8f90_source.html#l00053">53</a> of file <a class="el" href="_field_8f90_source.html">Field.f90</a>.</p>
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -115,25 +120,34 @@ Private Member Functions</h2></td></tr>
 Private Attributes</h2></td></tr>
 <tr class="memitem:gac8f68f49a9884b21b3bde876e1d392fc"><td class="memItemLeft" align="right" valign="top">real(kreal), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#gac8f68f49a9884b21b3bde876e1d392fc">scalar</a></td></tr>
+<tr class="memdesc:gac8f68f49a9884b21b3bde876e1d392fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array to hold scalar field data.  <a href="group___field.html#gac8f68f49a9884b21b3bde876e1d392fc">More...</a><br /></td></tr>
 <tr class="separator:gac8f68f49a9884b21b3bde876e1d392fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga6986ef1e83d6c7e4bf6ca8b2a570962e"><td class="memItemLeft" align="right" valign="top">real(kreal), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga6986ef1e83d6c7e4bf6ca8b2a570962e">xcomp</a></td></tr>
+<tr class="memdesc:ga6986ef1e83d6c7e4bf6ca8b2a570962e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array to hold the x-component of vector field data.  <a href="group___field.html#ga6986ef1e83d6c7e4bf6ca8b2a570962e">More...</a><br /></td></tr>
 <tr class="separator:ga6986ef1e83d6c7e4bf6ca8b2a570962e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga5cfee60685f380abd8d40ae668f8661d"><td class="memItemLeft" align="right" valign="top">real(kreal), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga5cfee60685f380abd8d40ae668f8661d">ycomp</a></td></tr>
+<tr class="memdesc:ga5cfee60685f380abd8d40ae668f8661d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array to hold the y-component of vector field data.  <a href="group___field.html#ga5cfee60685f380abd8d40ae668f8661d">More...</a><br /></td></tr>
 <tr class="separator:ga5cfee60685f380abd8d40ae668f8661d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga2ccfcb4f4845739cfa2821a1e9728d3b"><td class="memItemLeft" align="right" valign="top">real(kreal), dimension(:), <br class="typebreak" />
 allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga2ccfcb4f4845739cfa2821a1e9728d3b">zcomp</a></td></tr>
+<tr class="memdesc:ga2ccfcb4f4845739cfa2821a1e9728d3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array to hold the z-component of vector field data.  <a href="group___field.html#ga2ccfcb4f4845739cfa2821a1e9728d3b">More...</a><br /></td></tr>
 <tr class="separator:ga2ccfcb4f4845739cfa2821a1e9728d3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga825679f8f1d3bee2584df3c0c8a84023"><td class="memItemLeft" align="right" valign="top">character(max_string_length)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga825679f8f1d3bee2584df3c0c8a84023">name</a> = &quot;null&quot;</td></tr>
+<tr class="memdesc:ga825679f8f1d3bee2584df3c0c8a84023"><td class="mdescLeft">&#160;</td><td class="mdescRight">name of field variable  <a href="group___field.html#ga825679f8f1d3bee2584df3c0c8a84023">More...</a><br /></td></tr>
 <tr class="separator:ga825679f8f1d3bee2584df3c0c8a84023"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7716bd9baf0049fdbb4539d6c57de2d1"><td class="memItemLeft" align="right" valign="top">character(max_string_length)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga7716bd9baf0049fdbb4539d6c57de2d1">units</a> = &quot;null&quot;</td></tr>
+<tr class="memdesc:ga7716bd9baf0049fdbb4539d6c57de2d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">physical units of field variable  <a href="group___field.html#ga7716bd9baf0049fdbb4539d6c57de2d1">More...</a><br /></td></tr>
 <tr class="separator:ga7716bd9baf0049fdbb4539d6c57de2d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad46db321d0b16363e839ecf6f6e3dbef"><td class="memItemLeft" align="right" valign="top">integer(kint)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#gad46db321d0b16363e839ecf6f6e3dbef">n</a> = 0</td></tr>
+<tr class="memdesc:gad46db321d0b16363e839ecf6f6e3dbef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of field values stored (should be equal to the number of particles)  <a href="group___field.html#gad46db321d0b16363e839ecf6f6e3dbef">More...</a><br /></td></tr>
 <tr class="separator:gad46db321d0b16363e839ecf6f6e3dbef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga831062fb14c5ea049cb928e7666455e2"><td class="memItemLeft" align="right" valign="top">integer(kint)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga831062fb14c5ea049cb928e7666455e2">n_max</a> = 0</td></tr>
+<tr class="memdesc:ga831062fb14c5ea049cb928e7666455e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">maximum number of field values allowed in memory  <a href="group___field.html#ga831062fb14c5ea049cb928e7666455e2">More...</a><br /></td></tr>
 <tr class="separator:ga831062fb14c5ea049cb928e7666455e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga155d424c168caed309afcaf3556ae25c"><td class="memItemLeft" align="right" valign="top">integer(kint)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___field.html#ga155d424c168caed309afcaf3556ae25c">ndim</a> = 0</td></tr>
+<tr class="memdesc:ga155d424c168caed309afcaf3556ae25c"><td class="mdescLeft">&#160;</td><td class="mdescRight">dimension of field, 1 = scalar, &gt;= 2 for vector fields  <a href="group___field.html#ga155d424c168caed309afcaf3556ae25c">More...</a><br /></td></tr>
 <tr class="separator:ga155d424c168caed309afcaf3556ae25c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this type was generated from the following file:<ul>
@@ -142,7 +156,7 @@ allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 15:01:00 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Jan 11 2016 16:40:10 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>

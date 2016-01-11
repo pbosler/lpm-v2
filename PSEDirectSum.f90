@@ -52,6 +52,7 @@ public PSESphereInterpolateScalar, PSESphereGradientAtParticles, PSESphereDiverg
 public bivariateFirstDerivativeKernel8, bivariateLaplacianKernel8
 public PSEPlaneDoubleDotProductAtParticles
 
+!> @brief Data type for implementing Particle Strength Exchange (PSE) methods on LPM particle sets
 type PSE
 	real(kreal) :: eps !< PSE radius of influence, depends on mesh size
 	contains

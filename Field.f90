@@ -45,22 +45,21 @@ public MultiplyFieldByScalar
 public ScalarAverage
 !public SetFieldToScalarFunction, SetFieldToVectorFunction
 
-! > @class Field
-! > @brief Vectorized class for physical data defined on a particles' spatial discretization of a domain.
-! > May be scalar or vector data.
-! >
-! > Field objects have a 1-to-1 correspondence with a particlesmodule::particles object, so that the data associated with 
-! > the particle whose index is i are in the field object also at index i. 
+!> @brief Vectorized class for physical data defined on a particles' spatial discretization of a domain.
+!> May be scalar or vector data.
+!>
+!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with 
+!> the particle whose index is i are in the field object also at index i. 
 type Field
-	real(kreal), allocatable :: scalar(:) 
-	real(kreal), allocatable :: xComp(:) 
-	real(kreal), allocatable :: yComp(:) 
-	real(kreal), allocatable :: zComp(:) 
-	character(MAX_STRING_LENGTH) :: name = "null"
-	character(MAX_STRING_LENGTH) :: units = "null"
-	integer(kint) :: N = 0
-	integer(kint) :: N_Max = 0
-	integer(kint) :: nDim = 0
+	real(kreal), allocatable :: scalar(:) !< Array to hold scalar field data
+	real(kreal), allocatable :: xComp(:)  !< Array to hold the x-component of vector field data
+	real(kreal), allocatable :: yComp(:)  !< Array to hold the y-component of vector field data
+	real(kreal), allocatable :: zComp(:)  !< Array to hold the z-component of vector field data
+	character(MAX_STRING_LENGTH) :: name = "null" !< name of field variable
+	character(MAX_STRING_LENGTH) :: units = "null" !< physical units of field variable
+	integer(kint) :: N = 0 !< Number of field values stored (should be equal to the number of particles)
+	integer(kint) :: N_Max = 0 !< maximum number of field values allowed in memory
+	integer(kint) :: nDim = 0 !< dimension of field, 1 = scalar, >= 2 for vector fields
 	
 	contains	
 		final :: deletePrivate

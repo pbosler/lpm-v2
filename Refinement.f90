@@ -35,6 +35,7 @@ public IterateMeshRefinementTwoVariablesAndFlowMap
 ! types and module variables
 !----------------
 !
+!> @brief Data type for handling adaptive refinement of @ref PolyMesh2d objects
 type RefineSetup
 	logical(klog), pointer :: refineFlag(:) => null()  !< Face i will be refined if `refineSetup%%refineFlag(i) = .TRUE.`
 	contains

@@ -27,11 +27,13 @@ module ParticlesModule
 !> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$; 
 !> area (for 2d models) or volume (for 3d models).
 !>
+!> Particle sets used with a mesh are initialized in the @ref PolyMesh2d module.
+!> 
 !> 
 !> @{
 !
 !------------------------------------------------------------------------------
-use NumberKindsModule
+use @ref NumberKinds
 use OutputWriterModule
 use LoggerModule
 
@@ -54,10 +56,7 @@ public ResetLagrangianParameter
 !----------------
 !
 
-! > @class Particles
-! > @brief Class used to define a spatial discretization that may move in physical space.  
-! > This class should be extended for use in specific PDE applications with the inclusion of ::field objects. 
-! >
+!> @brief Class used to define a spatial discretization that may move in physical space.  
 type Particles
 	real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
@@ -74,7 +73,7 @@ type Particles
 	logical(klog), allocatable :: isPassive(:)  ! true if particle represents a leaf vertex
 	integer(kint) :: N = 0				! N particles in computation
 	integer(kint) :: N_Max = 0			! Max particles allowed in memory
-	integer(kint) :: geomKind = 0		! geometry identifier e.g., numberkindsmodule::planar_geom
+	integer(kint) :: geomKind = 0		! geometry identifier e.g., @ref NumberKinds::planar_geom
 end type
 
 !
@@ -126,9 +125,12 @@ contains
 !
 
 !> @brief Allocates memory for  a new particles object.  All values are zeroed and must be initialized separately.
+!> 
+!> 
+!> 
 !> @param self Target Particles object
 !> @param nMax Number of maximum particles required
-!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in numberkindsmodule 
+!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds 
 subroutine NewPrivate( self, nMax, geomKind )
 	type(Particles), intent(out) :: self
 	integer(kint), intent(in) :: nMax
