@@ -1,0 +1,34 @@
+&meshDefine
+	faceKind = 4
+	initNest = 5
+	maxNest = 7
+	amrLimit = 3
+	meshRadius = 7.0
+/
+
+&twoDipoles
+	radius1 = 1.0
+	initX1 = -2.0
+	initY1 = 0.0
+	initStrength1 = 1.0
+	radius2 = 1.0
+	initX2 = 2.0
+	initY2 = 0.0
+	initStrength2 = -1.0
+	circulationTol = 0.1
+	flowMapVarTol = 2.0
+/
+
+&timestepping
+	dt = 0.01
+	tfinal = 3.0
+	remeshInterval = 20
+	resetLagParamInterval = 3
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/planeIncomp'
+	outputRoot = 'collidingDipoles'
+	frameout = 1
+/
+

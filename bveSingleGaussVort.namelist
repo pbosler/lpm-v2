@@ -1,0 +1,27 @@
+&meshDefine
+	faceKind = 3 
+	initNest = 5
+	amrLimit = 0
+/
+
+&gaussVort
+	shapeParam = 4.0
+	rotRate = 6.283185307179586
+	vortStrength = 12.566370614359172
+	vortInitLon = 0.0
+	vortInitLat = 0.157079632679490
+	flowMapVarTol = 2.0
+	circulationTol = 0.25
+/
+
+&timestepping
+	dt = 0.01
+	tfinal = 0.05
+	remeshInterval = 20
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/BVE'
+	outputRoot = 'gaussVort_midlat_Ro1_titanCompare'
+	frameOut = 1
+/

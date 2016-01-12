@@ -1,0 +1,17 @@
+&meshDefine
+	faceKind = 3
+	initNest = 3
+	maxNest = 6
+	amrLimit = 0
+/
+
+&timestepping
+	dt = 0.025
+	tfinal = 6.0
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/SWE'
+	outputRoot = 'sphereTC2-chordDist'
+	frameOut = 4
+/

@@ -1,0 +1,22 @@
+&meshDefine
+	faceKind = 3
+	initNest = 5
+	maxNest = 6
+	amrLimit = 0
+/
+
+&parabolicFlood
+	r0 = 2.0
+	h0 = 0.25
+/
+
+&timestepping
+	dt = 0.025
+	tfinal = 0.05
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/SWE'
+	outputRoot = 'pFlood-newSolver'
+	frameOut = 2
+/

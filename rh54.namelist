@@ -1,0 +1,26 @@
+&meshDefine
+	faceKind = 4
+	initNest = 5
+	amrLimit = 0
+/
+
+&rhWave
+	rotationRate = 6.283185307179586 ! 2*pi = 6.283185307179586
+	rhWaveAmplitude = 1.0
+	flowMapVarTol = 2.0
+	circulationTol = 0.25
+	zonalWind = 0.0 ! pi/7 = 0.448798950512828
+/
+
+&timestepping
+	dt = 0.01
+	tfinal = 2.0
+	remeshInterval = 10
+	resetLagParamInterval = 6000
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/BVE'
+	outputRoot = 'rh54-nonStationary-rmTo0'
+	frameOut = 2
+/

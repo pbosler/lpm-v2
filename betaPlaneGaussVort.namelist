@@ -1,0 +1,27 @@
+&meshDefine
+	initNest = 3
+	maxNest = 5
+	amrLimit = 0
+	lat0 = 0.0
+	rotationRate = 6.2831853071795864769	
+/
+
+&gaussVort
+	shapeParam = 16.0
+	vorticityMax = 0.62831853071795864769
+	vortInitY = 0.025
+	flowMapVarTol = 2.0
+	circulationTol = 0.25
+/
+
+&timestepping
+	dt = 0.05
+	tfinal = 0.5
+	remeshInterval = 2
+/
+
+&fileIO
+	outputDir = "/Users/pabosle/modelData/BVE"
+	outputRoot = "betaPlaneTestDebugRemesh"
+	frameOut = 4
+/

@@ -1,0 +1,19 @@
+&meshDefine
+	faceKind = 3
+	initNest = 6
+	maxNest = 6
+	amrLimit = 0
+	f0 = 0.0
+	beta = 0.0
+/
+
+&timestepping
+	dt = 0.05
+	tfinal = 4.0
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/SWE'
+	outputRoot = 'gravWaves-smoothPtb'
+	frameOut = 1
+/

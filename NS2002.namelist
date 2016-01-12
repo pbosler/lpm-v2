@@ -1,0 +1,19 @@
+&meshDefine
+	faceKind = 4
+	initNest = 6
+	maxNest = 6
+	amrLimit = 0
+	f0 = 0.0
+	beta = 0.0
+/
+
+&timestepping
+	dt = 0.025
+	tfinal = 2.0
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/SWE'
+	outputRoot = 'NS2002-dt0.05-topoH0.5'
+	frameOut = 2
+/
