@@ -185,11 +185,14 @@ cmake ..
 </ol>
 <p>Within the <code>contains</code> section of a driver program, users may insert functions relevant to their application. <br />
 In most cases, these functions must conform to the interfaces defined in <a class="el" href="group___number_kinds.html">NumberKinds</a> and <a class="el" href="group___refinement.html">Refinement</a> . <br />
-Additionally, since different applications will require different input, each driver requires its own version of the <code>ReadNamelistFile</code> subroutine. </p>
+Additionally, since different applications will require different input, each driver requires its own version of the <code>ReadNamelistFile</code> subroutine.</p>
+<p>Most namelist files will include a "FileIO" namelist that tells LPM where to write output using the variable <code>outputRoot</code>. <br />
+Matlab and text output will be written to the outputRoot folder but VTK output (for displaying results using <a href="www.paraview.org">Paraview</a>) will be written to <code>outputRoot/vtkOut</code>. <br />
+If this <code>vtkOut</code> folder does not exist, the code will output an error and no Paraview output will be written. </p>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 16:40:10 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Jan 12 2016 10:09:31 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>

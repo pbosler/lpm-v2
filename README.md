@@ -161,3 +161,11 @@ Driver programs are organized into three phases:
 Within the `contains` section of a driver program, users may insert functions relevant to their application.  @n
 In most cases, these functions must conform to the interfaces defined in @ref NumberKinds and @ref Refinement . @n
 Additionally, since different applications will require different input, each driver requires its own version of the `ReadNamelistFile` subroutine.
+
+Most namelist files will include a "FileIO" namelist that tells LPM where to write output using the variable `outputRoot`. @n
+Matlab and text output will be written to the outputRoot folder but VTK output (for displaying results using [Paraview](www.paraview.org)) will be
+written to `outputRoot/vtkOut`. @n
+If this `vtkOut` folder does not exist, the code will output an error and no Paraview output will be written.  
+
+
+

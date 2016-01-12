@@ -256,10 +256,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;Within the `contains` section of a driver program, users may insert functions relevant to their application.  @n</div>
 <div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;In most cases, these functions must conform to the interfaces defined in @ref NumberKinds and @ref Refinement . @n</div>
 <div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;Additionally, since different applications will require different input, each driver requires its own version of the `ReadNamelistFile` subroutine.</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;</div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;Most namelist files will include a &quot;FileIO&quot; namelist that tells LPM where to write output using the variable `outputRoot`. @n</div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;Matlab and text output will be written to the outputRoot folder but VTK output (for displaying results using [Paraview](www.paraview.org)) will be</div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;written to `outputRoot/vtkOut`. @n</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;If this `vtkOut` folder does not exist, the code will output an error and no Paraview output will be written.  </div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;</div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;</div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 11 2016 16:40:08 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Jan 12 2016 10:09:29 for LPM: Lagrangian Particle Methods by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.8
 </small></address>
