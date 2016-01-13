@@ -145,6 +145,28 @@ pure function PSEPlaneInterpolateScalar(self, aMesh, scalarField, interpLoc )
 	enddo
 end function
 
+pure function PSESphereInterpolateScalar( self, aMesh, scalarField, interpLoc)
+	real(kreal) :: PSESphereInterpolateScalar
+	type(PSE), intent(in) :: self
+	type(PolyMesh2d), intent(in) :: aMesh
+	type(Field), intent(in) :: scalarField
+	real(kreal), intent(in) :: interpLoc(3)
+	!
+	integer(kint) :: j
+	real(kreal) :: kIn, xj(3)
+	
+	PSESphereInterpolateScalar = 0.0_kreal
+	do j = 1, aMesh%particles%N
+		if ( aMesh%particles%isActive(j) ) then
+			xj = PhysCoord(aMesh%particles, j)
+			kIn = SphereDistance(xj, interpLoc)/self%eps
+			PSESphereInterpolateScalar = PSESphereInterpolateScalar + scalarField%scalar(j) * aMesh%particles%area(j) * &
+				bivariateDeltaKernel8( kIn ) / (self%eps**2)
+		endif
+	enddo
+end function
+
+
 !> @brief Constructs a @ref Field that approximates that gradient of a scalar in the plane using PSE.
 !> 
 !> Integration is carried out in parallel using direct summation.
@@ -510,27 +532,6 @@ subroutine PSESphereLaplacianAtParticles( self, aMesh, scalarField, scalarLap, p
 	
 	call MultiplyFieldByScalar(scalarLap, 1.0_kreal/(self%eps**2))
 end subroutine
-
-pure function PSESphereInterpolateScalar( self, aMesh, scalarField, interpLoc)
-	real(kreal) :: PSESphereInterpolateScalar
-	type(PSE), intent(in) :: self
-	type(PolyMesh2d), intent(in) :: aMesh
-	type(Field), intent(in) :: scalarField
-	real(kreal), intent(in) :: interpLoc(3)
-	!
-	integer(kint) :: j
-	real(kreal) :: kIn, xj(3)
-	
-	PSESphereInterpolateScalar = 0.0_kreal
-	do j = 1, aMesh%particles%N
-		if ( aMesh%particles%isActive(j) ) then
-			xj = PhysCoord(aMesh%particles, j)
-			kIn = SphereDistance(xj, interpLoc)/self%eps
-			PSESphereInterpolateScalar = PSESphereInterpolateScalar + scalarField%scalar(j) * aMesh%particles%area(j) * &
-				bivariateDeltaKernel8( kIn ) / (self%eps**2)
-		endif
-	enddo
-end function
 
 subroutine PSESphereDivergenceAtParticles( self, aMesh, vectorField, divergence, particlesMPI )
 	type(PSE), intent(in) :: self

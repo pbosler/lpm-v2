@@ -444,7 +444,7 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 		uy = 0.0_kreal
 		vx = 0.0_kreal
 		vy = 0.0_kreal
-		do j = 1, i - 1
+		do j = 1, size(x)
 			if ( mask(j) ) then
 				surfHeightJ = h(j) + topoFn(x(j), y(j))
 				sqdist = (x(i) - x(j))**2 + (y(i) - y(j))**2
@@ -453,49 +453,51 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 				rotStrength = vort(j) * area(j) / denom
 				potStrength = div(j) * area(j) / denom
 				
+				pseKin = sqrt( sqDist ) / pseEps
+				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
+				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
+				
+				if ( i == j ) cycle
+				
 				u(i) = u(i) - (y(i) - y(j)) * rotStrength + (x(i) - x(j)) * potStrength
 				v(i) = v(i) + (x(i) - x(j)) * rotStrength + (y(i) - y(j)) * potStrength
-				
+			
 				ux = ux + potStrength - ( (x(i) - x(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
-					 			         area(j) / denom2
+										 area(j) / denom2
 				uy = uy - rotStrength - ( (y(i) - y(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
 										 area(j) / denom2
 				vx = vx + rotStrength - ( (x(i) - x(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
 										 area(j) / denom2
 				vy = vy + potStrength - ( (y(i) - y(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
 										 area(j) / denom2		
-			
-				pseKin = sqrt( sqDist ) / pseEps
-				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
-				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
 			endif
 		enddo
-		do j = i + 1, size(x)
-			if ( mask(j) ) then
-				surfHeightJ = h(j) + topoFn(x(j), y(j))
-				sqdist = (x(i) - x(j))**2 + (y(i) - y(j))**2
-				denom = 2.0_kreal * PI * sqdist
-				denom2 = PI * sqdist * sqdist
-				rotStrength = vort(j) * area(j) / denom
-				potStrength = div(j) * area(j) / denom
-				
-				u(i) = u(i) - (y(i) - y(j)) * rotStrength + (x(i) - x(j)) * potStrength
-				v(i) = v(i) + (x(i) - x(j)) * rotStrength + (y(i) - y(j)) * potStrength
-				
-				ux = ux + potStrength - ( (x(i) - x(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
-					 			         area(j) / denom2
-				uy = uy - rotStrength - ( (y(i) - y(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
-										 area(j) / denom2
-				vx = vx + rotStrength - ( (x(i) - x(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
-										 area(j) / denom2
-				vy = vy + potStrength - ( (y(i) - y(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
-										 area(j) / denom2		
-			
-				pseKin = sqrt( sqDist ) / pseEps
-				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
-				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
-			endif		
-		enddo
+!		do j = i + 1, size(x)
+!			if ( mask(j) ) then
+!				surfHeightJ = h(j) + topoFn(x(j), y(j))
+!				sqdist = (x(i) - x(j))**2 + (y(i) - y(j))**2
+!				denom = 2.0_kreal * PI * sqdist
+!				denom2 = PI * sqdist * sqdist
+!				rotStrength = vort(j) * area(j) / denom
+!				potStrength = div(j) * area(j) / denom
+!				
+!				u(i) = u(i) - (y(i) - y(j)) * rotStrength + (x(i) - x(j)) * potStrength
+!				v(i) = v(i) + (x(i) - x(j)) * rotStrength + (y(i) - y(j)) * potStrength
+!				
+!				ux = ux + potStrength - ( (x(i) - x(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
+!					 			         area(j) / denom2
+!				uy = uy - rotStrength - ( (y(i) - y(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
+!										 area(j) / denom2
+!				vx = vx + rotStrength - ( (x(i) - x(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
+!										 area(j) / denom2
+!				vy = vy + potStrength - ( (y(i) - y(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
+!										 area(j) / denom2		
+!			
+!				pseKin = sqrt( sqDist ) / pseEps
+!				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
+!				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
+!			endif		
+!		enddo
 		lapSurf(i) = lapSurf(i) / pseEps**2
 		doubleDot(i) = ux * ux + 2.0_kreal * uy * vx + vy * vy
 	enddo
