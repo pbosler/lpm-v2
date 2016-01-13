@@ -33,7 +33,7 @@ module ParticlesModule
 !> @{
 !
 !------------------------------------------------------------------------------
-use @ref NumberKinds
+use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
 
