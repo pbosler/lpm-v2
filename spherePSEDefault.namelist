@@ -1,0 +1,11 @@
+&meshDefine
+	faceKind = 3
+	initNest = 3
+	amrLimit = 0
+	radius = 1.0
+/
+
+&fileIO
+	outputDir='/Users/pabosle/modelData/tests'
+	outputRoot='spherePSEConvTest'
+/

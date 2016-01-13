@@ -79,6 +79,9 @@ TARGET_LINK_LIBRARIES(BivarConvergenceTest.exe lpmFortran)
 ADD_EXECUTABLE( ssrfpackTest.exe SSRFPACKTest.f90 )
 TARGET_LINK_LIBRARIES( ssrfpackTest.exe lpmFortran )
 
+ADD_EXECUTABLE( spherePSETest.exe SpherePSEConvTest.f90 )
+TARGET_LINK_LIBRARIES( spherePSETest.exe lpmFortran )
+
 # Unit Tests
 ENABLE_TESTING()
 ADD_TEST( particlesAndFieldTest ${PROJECT_BINARY_DIR}/particlesAndFieldTest.exe)
