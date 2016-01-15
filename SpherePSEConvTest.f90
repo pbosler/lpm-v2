@@ -46,6 +46,7 @@ type(Field) :: harmonicInterpError
 type(Field) :: harmonicLapExact
 type(Field) :: harmonicLapPSE
 type(Field) :: harmonicLapError
+type(Field) :: streamFnScalar
 integer(kint), parameter :: nLat = 181
 integer(kint), parameter :: nLon = 360
 real(kreal) :: dlam
@@ -53,14 +54,38 @@ real(kreal) :: lats(nLat)
 real(kreal) :: lons(nLon)
 real(kreal) :: constData(nLat, nLon)
 real(kreal) :: constInterp(nLat, nLon)
+real(kreal) :: constInterpErr(nLat,nLon)
 real(kreal) :: constLap(nLat, nLon)
 real(kreal) :: harmData(nLat, nLon)
 real(kreal) :: harmInterp(nLat, nLon)
+real(kreal) :: harmInterpError(nLat, nLon)
 real(kreal) :: harmLap(nLat, nLon)
 real(kreal) :: harmLapExact(nLat,nLon)
+real(kreal) :: harmLapError(nLat,nLon)
+real(kreal) :: stream(nLat,nLon)
+real(kreal) ::unifLinfConst
+real(kreal) ::unifL2Const
+real(kreal) ::unifLinfConstLap
+real(kreal) ::unifL2ConstLap
+real(kreal) ::unifLinfHarm
+real(kreal) ::unifL2Harm
+real(kreal) ::unifLinfHarmLap
+real(kreal) ::unifL2HarmLap
+real(kreal) ::particlesLinfConst
+real(kreal) ::particlesL2Const
+real(kreal) ::particlesLinfConstLap
+real(kreal) ::particlesL2ConstLap
+real(kreal) ::particlesLinfHarm
+real(kreal) ::particlesL2Harm
+real(kreal) ::particlesLinfHarmLap
+real(kreal) ::particlesL2HarmLap
+real(kreal) :: harmDenom
+real(kreal) :: harmLapDenom
+
 !
 ! i/o
 !
+character(len=MAX_STRING_LENGTH) :: testTitle
 character(len=MAX_STRING_LENGTH) :: outputDir
 character(len=MAX_STRING_LENGTH) :: outputRoot
 character(len=MAX_STRING_LENGTH) :: vtkFile
@@ -81,8 +106,8 @@ integer(kint) :: mpiErrCode
 real(kreal) :: timeStart, timeEnd
 integer(kint) :: i, j, k
 real(kreal), dimension(3) :: xi, xj
-real(kreal) :: xx, yy, zz, pseKin, lapKernel
-
+real(kreal) :: xx, yy, zz, pseKin, lapKernel, greensKernel
+real(kreal), parameter :: fourPi = 4.0_kreal * PI
 
 !--------------------------------
 !	initialize : setup mesh and computing environment
@@ -103,9 +128,15 @@ timeStart = MPI_WTIME()
 !	mesh and spatial field setup
 !
 call New(sphere, meshSeed, initNest, maxNest, amrLimit, radius)
+if ( procRank == 0 ) then
+	write(testTitle,'(A,X,F9.6)') trim(testTitle), MaxEdgeLength(sphere%edges, sphere%particles)
+endif
+call StartSection(exeLog, trim(testTitle))
+
 call New(constScalar, 1, sphere%particles%N_Max, "constantScalar")
-call New(harmonic, 1, sphere%particles%N_Max, "sphereHarm54")
+call New(harmonic, 1, sphere%particles%N_Max, "harmonicExact")
 call New(harmonicLapExact, 1, sphere%particles%N_Max, "harmLapExact")
+call New(streamFnScalar,1,sphere%particles%N_Max, "streamFn")
 call SetScalarFieldOnMesh( sphere, constScalar, ConstantScalarFn )
 call SetScalarFieldOnMesh( sphere, harmonic, SphericalHarmonicFn )
 call SetScalarFieldOnMesh( sphere, harmonicLapExact, ExactHarmonicLaplacian )
@@ -116,6 +147,7 @@ call New(harmonicLapPSE, 1, sphere%particles%N_Max, "harmLapPSE")
 
 call New(constScalarInterp, 1, sphere%particles%N, "constScalarInterp")
 call New(harmonicInterp, 1, sphere%particles%N, "harmonicInterp")
+call New(harmonicInterpError, 1, sphere%particles%N, "harmonicInterpError")
 
 
 dlam = 360.0_kreal / nLon
@@ -150,6 +182,7 @@ call New(pseSetup, sphere, psepower)
 !
 constLap = 0.0_kreal
 harmLap = 0.0_kreal
+stream = 0.0_kreal
 do j = mpiLongitudes%indexStart(procRank), mpiLongitudes%indexEnd(procRank)
 	do i = 1, nLat
 		xx = radius * cos( lons(j) ) * cos(lats(i))
@@ -162,11 +195,14 @@ do j = mpiLongitudes%indexStart(procRank), mpiLongitudes%indexEnd(procRank)
 			if ( sphere%particles%isActive(k) ) then
 				pseKin = SphereDistance( PhysCoord(sphere%particles, k), [xx, yy, zz]) / pseSetup%eps
 				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseSetup%eps**2
-			
+				greensKernel = log( radius * radius - xx * sphere%particles%x(k) - yy * sphere%particles%y(k) - &
+					zz * sphere%particles%z(k) ) / fourPi
+							
 				constLap(i,j) = constLap(i,j) + lapKernel * ( constScalar%scalar(k) - constData(i,j) ) * &
 					sphere%particles%area(k) / pseSetup%eps**2
 				harmLap(i,j) = harmLap(i,j) + lapKernel * ( harmonic%scalar(k) - harmData(i,j) ) * &
 					sphere%particles%area(k) / pseSetup%eps**2
+				stream(i,j) = stream(i,j) + greensKernel * harmonicLapExact%scalar(k) * sphere%particles%area(k)
 			endif
 		enddo
 	enddo
@@ -181,7 +217,13 @@ do i = 0, numProcs - 1
 		nLat * mpiLongitudes%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode )
 	call MPI_BCAST( harmLap(:, mpiLongitudes%indexStart(i):mpiLongitudes%indexEnd(i)), &
 		nLat * mpiLongitudes%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode )
+	call MPI_BCAST( stream(:, mpiLongitudes%indexStart(i):mpiLongitudes%indexEnd(i)), &
+		nLat * mpiLongitudes%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode )
 enddo
+
+constInterpErr = abs( constInterp - constVal )
+harmInterpError = abs( harmInterp - harmData )
+harmLapError = abs( harmLap - harmLapExact )
 
 !
 !	interpolation to particles & fields
@@ -190,10 +232,13 @@ constScalarLap%N = sphere%particles%N
 harmonicLapPSE%N = sphere%particles%N
 harmonicLapError%N = sphere%particles%N
 harmonicInterp%N = sphere%particles%N
+harmonicInterpError%N = sphere%particles%N
 constScalarInterp%N = sphere%particles%N 
+streamFnScalar%N = sphere%particles%N
 
-call SetFieldToZero( constScalarLap)
-call SetFieldToZero( harmonicLapPSE)
+call SetFieldToZero( constScalarLap )
+call SetFieldToZero( harmonicLapPSE )
+call SetFieldToZero( streamFnScalar )
 
 do i = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 	xi = PhysCoord(sphere%particles, i)
@@ -206,11 +251,17 @@ do i = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 			xj = PhysCoord(sphere%particles, j)
 			pseKin = SphereDistance( xi, xj ) / pseSetup%eps
 			lapKernel = bivariateLaplacianKernel8( pseKin ) / pseSetup%eps**2
+			greensKernel = log( radius * radius - sum(xi*xj) ) / fourPi
+
+			if ( j == i ) greensKernel = 0.0_kreal
 			
 			constScalarLap%scalar(i) = constScalarLap%scalar(i) + lapKernel * ( constScalar%scalar(j) - constScalar%scalar(i)) * &
 				sphere%particles%area(j) / pseSetup%eps**2
 			harmonicLapPSE%scalar(i) = harmonicLapPSE%scalar(i) + lapKernel * ( harmonic%scalar(j) - harmonic%scalar(i) ) * &
 				sphere%particles%area(j) / pseSetup%eps**2
+			
+			streamFnScalar%scalar(i) = streamFnScalar%scalar(i) + greensKernel * harmonicLapExact%scalar(j) * &
+				sphere%particles%area(j)
 		endif
 	enddo
 enddo
@@ -224,11 +275,102 @@ do i = 0, numProcs - 1
 		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	call MPI_BCAST( harmonicLapPSE%scalar( mpiParticles%indexStart(i): mpiParticles%indexEnd(i)), &
 		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+	call MPI_BCAST( streamFnScalar%scalar( mpiParticles%indexStart(i): mpiParticles%indexEnd(i)), &
+		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)		
 enddo
+
+harmonicInterpError%scalar = abs( harmonicInterp%scalar - harmonic%scalar )
+harmonicLapError%scalar = abs( harmonicLapPSE%scalar - harmonicLapExact%scalar )
+
+!
+!	compute error norms
+!
+particlesLinfConst = maxval(abs( constScalarInterp%scalar - constVal )) / abs( constVal)
+particlesLinfConstLap = maxval( abs( constScalarLap%scalar ))
+particlesLinfHarm = maxval( harmonicInterpError%scalar ) / maxval(abs(harmonic%scalar))
+particlesLinfHarmLap = maxval( harmonicLapError%scalar ) / maxval(abs(harmonicLapExact%scalar))
+
+harmDenom = 0.0_kreal
+harmLapDenom = 0.0_kreal
+particlesL2Const = 0.0_kreal
+particlesL2ConstLap = 0.0_kreal
+particlesL2Harm = 0.0_kreal
+particlesL2HarmLap = 0.0_kreal 
+do k = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
+	if ( sphere%particles%isActive(k) ) then
+		harmDenom = harmDenom + harmonic%scalar(k)**2 * sphere%particles%area(k)
+		harmLapDenom = harmLapDenom + harmonicLapExact%scalar(k)**2 * sphere%particles%area(k)
+		
+		particlesL2Const = particlesL2Const + ( constScalarInterp%scalar(k) - constVal )**2 * sphere%particles%area(k)
+		particlesL2ConstLap = particlesL2ConstLap + constScalarLap%scalar(k)**2 * sphere%particles%area(k)
+		
+		particlesL2Harm = particlesL2Harm + harmonicInterpError%scalar(k)**2 * sphere%particles%area(k)
+		particlesL2HarmLap = particlesL2HarmLap + harmonicLapError%scalar(k)**2 * sphere%particles%area(k)
+	endif
+enddo
+
+call MPI_Reduce( [harmDenom, harmLapDenom, particlesL2Const, particlesL2ConstLap, particlesL2Harm, particlesL2HarmLap], & 
+	[harmDenom, harmLapDenom, particlesL2Const, particlesL2ConstLap, particlesL2Harm, particlesL2HarmLap],&
+	6, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, mpiErrCode )
+
+particlesL2Const = particlesL2Const / ( 4.0_kreal * PI * radius * radius * constVal * constVal )
+particlesL2Harm = particlesL2Harm / harmDenom
+particlesL2HarmLap = particlesL2HarmLap / harmLapDenom
+
+unifL2Const = 0.0_kreal
+unifL2ConstLap = 0.0_kreal
+unifL2Harm = 0.0_kreal
+unifL2HarmLap = 0.0_kreal
+do j = mpiLongitudes%indexStart(procRank), mpiLongitudes%indexEnd(procRank)
+	do i = 1, nLat
+		unifL2Const = unifL2Const + ( constInterp(i,j) - constVal )**2 * cos(lats(i))
+		unifL2Harm = unifL2Harm + ( harmInterp(i,j) - harmData(i,j) )**2 * cos(lats(i))
+		unifL2ConstLap = unifL2ConstLap + constLap(i,j) ** 2 * cos(lats(i))
+		unifL2HarmLap = unifL2HarmLap + ( harmLap(i,j) - harmLapExact(i,j) )**2 * cos(lats(i))
+	enddo
+enddo
+
+call MPI_Reduce( [unifL2Const, unifL2ConstLap, unifL2Harm, unifL2HarmLap], &
+				 [unifL2Const, unifL2ConstLap, unifL2Harm, unifL2HarmLap], 4, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+				 MPI_COMM_WORLD, mpiErrCode )
+
+unifLinfConst = maxval( abs( constInterp - constVal )) / abs( constVal )
+unifLinfConstLap = maxval( abs( constLap ) )
+unifLinfHarm = maxval( abs( harmInterp - harmData )) / maxval(abs(harmData))
+unifLinfHarmLap = maxval( abs( harmLap - harmLapExact)) / maxval(abs(harmLapExact))
+
+unifL2Const = unifL2Const / ( 4.0_kreal * PI * radius * radius * constVal * constVal )
+unifL2Harm = unifL2Harm / harmDenom
+unifL2HarmLap = unifL2HarmLap / harmLapDenom 
+
+call StartSection(exeLog, "Particles to Uniform Grid approximations")
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constInterpLinf = ", unifLinfConst )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constInterpL2 = ", unifL2Const )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constLapLinf = ", unifLinfConstLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constLapL2 = ", unifL2ConstLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmInterpLinf = ", unifLinfHarm )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmInterpL2 = ", unifL2Harm )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmLapLinf = ", unifLinfHarmLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmLapL2 = ", unifL2HarmLap )
+call EndSection(exeLog)
+
+call StartSection(exeLog, "Particles to Particles approximations")
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constInterpLinf = ", particlesLinfConst )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constInterpL2 = ", particlesL2Const )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constLapLinf = ", particlesLinfConstLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constLapL2 = ", particlesL2ConstLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmInterpLinf = ", particlesLinfHarm )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmInterpL2 = ", particlesL2Harm )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmLapLinf = ", particlesLinfHarmLap )
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "harmLapL2 = ", particlesL2HarmLap )
+call EndSection(exeLog)
+
+harmonicInterpError%scalar = harmonicInterpError%scalar / maxval(abs(harmonic%scalar))
+harmonicLapError%scalar = harmonicLapError%scalar / maxval(abs(harmonicLapExact%scalar))
 
 
 !--------------------------------
-!	finalize : write output to files, clean up
+!	finalize : write output, clean up
 !--------------------------------
 if ( procRank == 0 ) then
 	!
@@ -244,14 +386,20 @@ if ( procRank == 0 ) then
 		call WriteFacesToVTKPolygons( sphere%faces, WRITE_UNIT_1)
 	
 		call WriteVTKPointDataSectionHeader(WRITE_UNIT_1, sphere%particles%N)
+		
 		call WriteFieldToVTKPointData( constScalar, WRITE_UNIT_1)
 		call WriteFieldToVTKPointData( constScalarInterp, WRITE_UNIT_1)
 		call WriteFieldToVTKPointData( constScalarLap, WRITE_UNIT_1)
+		
 		call WriteFieldToVTKPointData( harmonic, WRITE_UNIT_1 )
 		call WriteFieldToVTKPointData( harmonicInterp, WRITE_UNIT_1 )
-		call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )
-		call WriteFieldToVTKPointData( harmonicLapExact, WRITE_UNIT_1 )
+		call WriteFieldToVTKPointData( harmonicInterpError, WRITE_UNIT_1 )
 		
+		call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )	
+		call WriteFieldToVTKPointData( harmonicLapExact, WRITE_UNIT_1 )
+		call WriteFieldToVTKPointData( harmonicLapError, WRITE_UNIT_1 )
+		
+		call WriteFieldToVTKPointData( streamFnScalar, WRITE_UNIT_1 )
 	
 		call WriteFaceAreaToVTKCellData( sphere%faces, sphere%particles, WRITE_UNIT_1)
 	close(WRITE_UNIT_1)
@@ -268,14 +416,15 @@ if ( procRank == 0 ) then
 		call WriteToMatlab(lats, WRITE_UNIT_1, "lats")
 
 		call WriteToMatlab( constData, WRITE_UNIT_1, "const")
-		call WriteToMatlab( harmData, WRITE_UNIT_1, "sphHarm54")		
-
-		call WriteToMatlab( constInterp, WRITE_UNIT_1, "constInterp")
-		call WriteToMatlab( harmInterp, WRITE_UNIT_1, "harmInterp")
-	
 		call WriteToMatlab( constLap, WRITE_UNIT_1, "constLap")
+		call WriteToMatlab( constInterp, WRITE_UNIT_1, "constInterp")
+		
+		call WriteToMatlab( harmData, WRITE_UNIT_1, "harm54")		
+		call WriteToMatlab( harmInterp, WRITE_UNIT_1, "harmInterp")
 		call WriteToMatlab( harmLap, WRITE_UNIT_1, "harmLap")
 		call WriteToMatlab( harmLapExact, WRITE_UNIT_1, "harmLapExact")
+		
+		call WriteToMatlab( stream, WRITE_UNIT_1, "streamFn")
 	close(WRITE_UNIT_1)
 endif
 !
@@ -287,6 +436,8 @@ timeEnd = MPI_WTIME()
 
 write(logstring,'(A,F12.2,A)') "PROGRAM COMPLETE : elapsed time ", timeEnd - timeStart, " seconds."
 call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logkey)//" ", logString)
+
+call EndSection(exeLog)
 
 call Delete(harmonicLapError)
 call Delete(harmonicLapExact)
@@ -390,12 +541,14 @@ subroutine ReadNamelistFile( rank )
 		if (meshSeed == ICOS_TRI_SPHERE_SEED) then
 			if ( initNest == maxNest ) then
 				write(meshString, '(A,I1)') '_icosTri', initNest
+				write(testTitle,'(A,I1,A)') "PSE Convergence Test, Icos. Tri., nest = ", initNest, " mesh size = "
 			else
 				write(meshString, '(2(A,I1))') '_icosTriAMR', initNest, 'to', maxNest
 			endif
 		elseif (meshSeed == CUBED_SPHERE_SEED ) then
 			if ( initNest == maxNest ) then
 				write(meshString, '(A,I1)') '_cubedSphere', initNest
+				write(testTitle,'(A,I1,A)') "PSE Convergence Test, Cubed Sphere, nest = ", initNest, " mesh size = "
 			else
 				write(meshString, '(2(A,I1))') '_cubedSphereAMR', initNest, 'to', maxNest
 			endif

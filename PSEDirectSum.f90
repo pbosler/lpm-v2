@@ -108,7 +108,8 @@ subroutine newPrivate( self, aMesh, radiusMultiplier )
 		pow = 0.75_kreal
 	endif
 	
-	self%eps = h ** pow	
+	self%eps = h ** pow
+	call LogMessage(log, TRACE_LOGGING_LEVEL, "PSE Initialized. eps = ", self%eps )
 end subroutine
 
 !> @brief Deletes and frees memory associated with a PSE object.

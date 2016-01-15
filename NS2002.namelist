@@ -14,6 +14,6 @@
 
 &fileIO
 	outputDir = '/Users/pabosle/modelData/SWE'
-	outputRoot = 'NS2002-dt0.05-topoH0.5'
+	outputRoot = 'NS2002-newSWE-dt0.05-topoH0.5'
 	frameOut = 2
 /

@@ -3,7 +3,7 @@
 	initNest = 3
 	amrLimit = 0
 	radius = 1.0
-	psePower = 0.75
+	psePower = 0.6
 /
 
 &fileIO

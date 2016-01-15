@@ -438,7 +438,7 @@ subroutine SetStreamFunctionsOnMesh( self )
 		do j = 1, i - 1
 			if ( self%mesh%particles%isActive(j) ) then
 				xj = PhysCoord(self%mesh%particles, j)
-				greensKernel = - dlog( self%radius * self%radius - sum(xi * xj)) / (4.0_kreal * PI * self%radius)
+				greensKernel = - dlog( self%radius * self%radius - sum(xi * xj)) / (4.0_kreal * PI )
 				self%relStream%scalar(i) = self%relStream%scalar(i) + greensKernel * &
 					self%relVort%scalar(j) * self%mesh%particles%area(j)
 				self%absStream%scalar(i) = self%absStream%scalar(i) + greensKernel * &
@@ -448,7 +448,7 @@ subroutine SetStreamFunctionsOnMesh( self )
 		do j = i + 1, self%mesh%particles%N
 			if ( self%mesh%particles%isActive(j) ) then
 				xj = PhysCoord(self%mesh%particles, j)
-				greensKernel = - dlog( self%radius * self%radius - sum(xi * xj)) / (4.0_kreal * PI * self%radius)
+				greensKernel = - dlog( self%radius * self%radius - sum(xi * xj)) / (4.0_kreal * PI )
 				self%relStream%scalar(i) = self%relStream%scalar(i) + greensKernel * &
 					self%relVort%scalar(j) * self%mesh%particles%area(j)
 				self%absStream%scalar(i) = self%absStream%scalar(i) + greensKernel * & 
