@@ -217,7 +217,7 @@ subroutine copyPrivate(self, other)
 				enddo
 			endif
 		else
-			call LogMessage(log, WARNING_LOGGING_LEVEL, logKey, " copy BVEMesh ERROR : tracers not copied.")
+			call LogMessage(log, WARNING_LOGGING_LEVEL, logKey, " copy BVEMesh WARNING : tracers not copied.")
 		endif
 	endif
 end subroutine

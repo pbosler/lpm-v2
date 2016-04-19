@@ -48,7 +48,8 @@ add_library( lpmFortran NumberKinds.f90 OutputWriter.f90 Logger.f90 STDIntVector
 						MPISetup.f90 PlanarSWE.f90 SWEPlaneSolver.f90
 						BetaPlane.f90 BetaPlaneSolver.f90
 						Refinement.f90 SphereSWE.f90 SphereSWESolver.f90
-						SphereBVE.f90 SphereBVESolver.f90 )
+						SphereBVE.f90 SphereBVESolver.f90 
+						SphereTransport.f90)
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})						
 
 configure_file(cubedSphereSeed.dat ${CMAKE_BINARY_DIR}/cubedSphereSeed.dat COPYONLY)
