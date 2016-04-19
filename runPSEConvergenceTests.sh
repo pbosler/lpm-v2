@@ -3,7 +3,7 @@
 EXE_DIR=/Users/pabosle/lpm-v2/build
 OUTPUT_DIR=/Users/pabosle/modelData/tests
 
-pow=0.6
+pow=0.3
 outFile=$OUTPUT_DIR/convTestResultsPow_$pow.txt
 
 rm -f $outFile
