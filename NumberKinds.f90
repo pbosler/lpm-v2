@@ -85,6 +85,14 @@ module NumberKindsModule
 			real(8), intent(in) :: x, y, z
 		end function
 	end interface
+	
+	!> @brief Provides a generic function interface
+	interface 
+		function scalarFnOf3DSpaceAndTime( x, y, z, t )
+			real(8) :: scalarFnOf3DSpaceAndTime
+			real(8), intent(in) :: x, y, z, t
+		end function
+	end interface
 
 	!> @brief Provides a generic function interface
 	interface

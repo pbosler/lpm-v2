@@ -225,6 +225,13 @@ subroutine timestepPrivate( self, sphereBVE, dt )
 	!$acc routine(BVESphereVelocity) gang
 
 	nP = sphereBVE%mesh%particles%N
+	
+	self%xStart = sphereBVE%mesh%particles%x(1:nP)
+	self%yStart = sphereBVE%mesh%particles%y(1:nP)
+	self%zStart = sphereBVE%mesh%particles%z(1:nP)
+	
+	!$acc update device(self%xStart, self%yStart, self%zStart)
+	
 	!
 	!	RK Stage 1
 	!

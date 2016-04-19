@@ -5,7 +5,7 @@ module SphereTransportModule
 !> 
 !>
 !> @defgroup SphereTransport SphereTransport
-!> @brief Data structure for representing solutions of the advectio equation on the surface of a rotating sphere.
+!> @brief Data structure for representing solutions of the advection equation on the surface of a rotating sphere.
 !>
 !> @{
 use NumberKindsModule
@@ -31,7 +31,7 @@ private
 !
 public TransportMesh, New, Delete, Copy
 public AddTracers
-public SetVelocityOnMesh, SetTracerOnMesh
+public SetVelocityOnMesh, SetTracerOnMesh, SetInitialDensityOnMesh, SetDivergenceOnMesh
 public LogStats
 public OutputToVTK
 public TracerMass
@@ -43,6 +43,7 @@ type TransportMesh
 	type(Field) :: divergence
 	type(Field), dimension(:), allocatable :: tracers
 	real(kreal) :: radius = 1.0_kreal
+	logical(klog) :: nonzeroDivergence = .TRUE.
 	type(MPISetup) :: mpiParticles
 	
 	contains
@@ -79,6 +80,7 @@ interface SetTracerOnMesh
 	module procedure setVectorTracerOnMesh
 end interface
 
+
 !
 !----------------
 ! Logging
@@ -95,6 +97,40 @@ contains
 ! private methods
 !----------------
 !
+subroutine SetInitialDensityOnMesh( self, densFn )
+	type(TransportMesh), intent(inout) :: self
+	procedure(scalarFnOf3DSpace), optional :: densFn
+	integer(kint) :: i
+	
+	if ( present(densFn) ) then
+		do i = 1, self%mesh%particles%N
+			call InsertScalarToField( self%density, densFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i), &
+				 self%mesh%particles%z0(i)) ) 
+		enddo
+	else
+		do i = 1, self%mesh%particles%N
+			call InsertScalarToField(self%density, 1.0_kreal )
+		enddo
+	endif
+end subroutine
+
+subroutine SetDivergenceOnMesh(self, divFn, t)
+	type(TransportMesh), intent(inout) :: self
+	procedure(scalarFnOf3DSpaceAndTime), optional :: divFn
+	real(kreal), intent(in), optional :: t
+	integer(kint) :: i
+	
+	self%divergence%N = self%mesh%particles%N
+	if ( .NOT. present(divFn) ) then
+		call SetFieldToZero(self%divergence)
+	else
+		do i = 1, self%mesh%particles%N
+			self%divergence%scalar(i) = divFn(self%mesh%particles%x(i), self%mesh%particles%y(i), &
+				 self%mesh%particles%z(i), t ) 
+		enddo
+	endif
+end subroutine
+
 subroutine AddTracers(self, nTracers, tracerDims )
 	type(TransportMesh), intent(inout) :: self
 	integer(kint), intent(in) :: nTracers
@@ -144,13 +180,14 @@ end subroutine
 ! private methods
 !----------------
 !
-subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius )
+subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius, hasDivergence )
 	type(TransportMesh), intent(out) :: self
 	integer(kint), intent(in) :: meshSeed
 	integer(kint), intent(in) :: initNest
 	integer(kint), intent(in) :: maxNest
 	integer(kint), intent(in) :: amrLimit
 	real(kreal), intent(in) :: sphereRadius
+	logical(klog), intent(in) :: hasDivergence
 	
 	if ( .NOT. logInit ) call InitLogger(log, procRank)
 	
@@ -163,11 +200,12 @@ subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius
 	
 	call New( self%density, 1, self%mesh%particles%N_Max, "density", "kg/m^3")
 	call New( self%divergence, 1, self%mesh%particles%N_Max, "divergence", "1/s")
-	call New( self%velocity, 3, self%mesh%particles%N_Max, "density", "m/s")
+	call New( self%velocity, 3, self%mesh%particles%N_Max, "velocity", "m/s")
 	
 	call New(self%mpiParticles, self%mesh%particles%N, numProcs)
 	
 	self%radius = sphereRadius
+	self%nonzeroDivergence = hasDivergence
 end subroutine
 
 subroutine deletePrivate(self)
@@ -277,15 +315,30 @@ subroutine setVectorTracerOnMesh(self, tracerID, tracerFn )
 	enddo
 end subroutine
 
-function TracerMass(self)
+function FluidMass(self)
+	real(kreal) :: FluidMass
+	type(TransportMesh), intent(in) :: self
+	integer(kint) :: i
+	
+	FluidMass = 0.0_kreal
+	do i = 1, self%mesh%particles%N
+		if ( self%mesh%particles%isActive(i) ) then
+			FluidMass = FluidMass + self%density%scalar(i) * self%mesh%particles%area(i)
+		endif
+	enddo
+end function
+
+function TracerMass(self, tracerID)
 	real(kreal) :: TracerMass
 	type(TransportMesh), intent(in) :: self
+	integer(kint), intent(in) :: tracerID
 	integer(kint) :: i
 	
 	TracerMass = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
-			TracerMass = TracerMass + self%density%scalar(i) * self%mesh%particles%area(i)
+			TracerMass = TracerMass + self%tracers(tracerID)%scalar(i) * self%density%scalar(i) * &
+					 self%mesh%particles%area(i)
 		endif
 	enddo
 end function

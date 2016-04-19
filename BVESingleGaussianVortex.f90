@@ -274,6 +274,7 @@ deallocate(kineticEnergy)
 deallocate(enstrophy)
 call Delete(solver)
 call Delete(sphere)
+if (AMR) call Delete(refinement)
 
 call MPI_FINALIZE(mpiErrCode)
 

@@ -49,7 +49,8 @@ add_library( lpmFortran NumberKinds.f90 OutputWriter.f90 Logger.f90 STDIntVector
 						BetaPlane.f90 BetaPlaneSolver.f90
 						Refinement.f90 SphereSWE.f90 SphereSWESolver.f90
 						SphereBVE.f90 SphereBVESolver.f90 
-						SphereTransport.f90)
+						SphereTransport.f90 SphereTransportSolver.f90 SphereTransportVelocities.f90
+						SphereTracers.f90 )
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})						
 
 configure_file(cubedSphereSeed.dat ${CMAKE_BINARY_DIR}/cubedSphereSeed.dat COPYONLY)
@@ -93,6 +94,9 @@ ADD_TEST( cubedSphereTest ${PROJECT_BINARY_DIR}/cubedSphereTest.exe 4 )
 
 
 # APPLICATION DRIVERS
+ADD_EXECUTABLE( advectGaussHillsSphere.exe AdvectGaussianHills.f90)
+TARGET_LINK_LIBRARIES( advectGaussHillsSphere.exe lpmFortran)
+
 ADD_EXECUTABLE( nitscheStrickland.exe NitscheStrickland.f90 )
 TARGET_LINK_LIBRARIES( nitscheStrickland.exe lpmFortran)
 

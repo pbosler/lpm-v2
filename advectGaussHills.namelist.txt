@@ -1,0 +1,17 @@
+&meshDefine
+	faceKind = 3 
+	initNest = 3
+	amrLimit = 0
+/
+
+&timestepping
+	dt = 0.1
+	tfinal = 5.0
+	remeshInterval = 20
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/transport'
+	outputRoot = 'gaussHillsAdvection'
+	frameOut = 1
+/
