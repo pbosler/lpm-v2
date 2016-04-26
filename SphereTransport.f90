@@ -80,6 +80,10 @@ interface SetTracerOnMesh
 	module procedure setVectorTracerOnMesh
 end interface
 
+interface OutputToVTK
+	module procedure outputVTKPrivate
+end interface
+
 
 !
 !----------------
@@ -143,7 +147,7 @@ subroutine AddTracers(self, nTracers, tracerDims )
 	enddo
 end subroutine
 
-subroutine OutputToVTK( self, filename )
+subroutine outputVTKPrivate( self, filename )
 	type(TransportMesh), intent(in) :: self
 	character(len=*), intent(in) :: filename
 	integer(kint) :: i, writeStat

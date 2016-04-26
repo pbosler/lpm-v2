@@ -111,6 +111,10 @@ interface SetVelocityOnMesh
 	module procedure setVelocityFromVorticity
 end interface
 
+interface OutputToVTK
+	module procedure outputVTKPrivate
+end interface
+
 !
 !----------------
 ! Logging
@@ -271,7 +275,7 @@ end subroutine
 !> @brief Writes a BVE mesh to a legacy formatted .vtk file, including all @ref Field data for variables and tracers.
 !> @param[in] self BVE mesh
 !> @param[in] filename Name of output file
-subroutine OutputToVTK(self, filename)
+subroutine outputVTKPrivate(self, filename)
 	type(BVEMesh), intent(in) :: self
 	character(len=*), intent(in) :: filename
 	integer(kint) :: i, writeStat

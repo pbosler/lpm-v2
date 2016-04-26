@@ -22,6 +22,7 @@ use PlaneGeomModule
 use SphereGeomModule
 use PolyMesh2dModule
 use SphereBVEModule
+use SphereTransportModule
 use RefinementModule
 use MPISetupModule
 use SSRFPACKInterfaceModule
@@ -59,6 +60,7 @@ integer(kint), save :: remeshCounter = 0
 !
 interface New
 	module procedure newBVE
+	module procedure newTransport
 end interface
 
 interface Delete
@@ -127,6 +129,34 @@ subroutine newBVE( self, oldSphere )
 	endif
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" newBVERemesh : ", "returning.")
 end subroutine
+
+subroutine newTransport(self, oldSphere)
+	type(BVERemeshSource), intent(out) :: self
+	type(TransportMesh), intent(inout) :: oldSphere
+	!
+	integer(kint) :: i
+	
+	if ( .NOT. logInit) call InitLogger(log, procRank)
+	
+	call New(self%delTri, oldSphere%mesh)
+	call New(self%lagParamSource, oldSphere%mesh, 3)
+	
+	if ( allocated(oldSphere%tracers) ) then
+		allocate(self%tracerSource(size(oldSphere%tracers)))
+		
+		do i = 1, size(oldSphere%tracers)
+			call New(self%tracerSource(i), oldSphere%mesh, oldSphere%tracers(i)%nDim)
+			if ( oldSphere%tracers(i)%nDim == 1 ) then
+				call SetScalarSourceData(self%tracerSource(i), oldSphere%mesh, self%delTri, oldSphere%tracers(i))
+			else
+				call SetVectorSourceData(self%tracerSource(i), oldSphere%mesh, self%delTri, oldSphere%tracers(i))
+			endif
+		enddo
+	endif
+	
+	call SetSourceLagrangianParameter(self%lagParamSource, oldSphere%mesh, self%delTri)
+end subroutine
+
 
 !> @brief Deletes and frees memory associated with a BVE remeshing object
 !> @param[inout] self Target remeshing object
@@ -336,7 +366,7 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 	procedure(scalarFnOf3DSpace), optional :: tracerFn1
 	procedure(scalarFnOf3DSpace), optional :: tracerFn2
 	!
-	integer(kint) :: refinementType, nTracers
+	integer(kint) :: nTracers
 	logical(klog) :: refineVorticityTwice, doFlowMapRefinement
 	integer(kint) :: i, j, k
 	real(kreal) :: lon, lat
@@ -490,7 +520,163 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 	call LogMessage( log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", " Lagrangian Remesh Complete.")
 end subroutine
 
-!> @brief Performs a remesh/remap of an LPM @ref SphereBVE simulation using indirect interpolation for all variables in a BVE mesh.
+subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, AMR, velFn, t, divFn, &
+	tracerFn1, flagFn1, tol1, desc1, tracerFn2, flagFn2, tol2, desc2, RefineFlowMapYN, flowMapVarTol )
+	type(BVERemeshSource), intent(in) :: self
+	type(TransportMesh), intent(in) :: oldSphere
+	type(TransportMesh), intent(inout) :: newSphere
+	logical(klog), intent(in) :: AMR
+	procedure(vectorFnOf3DSpaceAndTime) :: velFn
+	real(kreal), intent(in) :: t
+	procedure(scalarFnOf3DSpaceAndTime), optional :: divFn
+	procedure(scalarFnOf3DSpace), optional :: tracerFn1
+	procedure(FlagFunction), optional :: flagFn1
+	real(kreal), intent(in), optional :: tol1
+	character(len=*), intent(in), optional :: desc1
+	procedure(scalarFnOf3DSpace), optional :: tracerFn2
+	procedure(FlagFunction), optional :: flagFn2
+	real(kreal), intent(in), optional :: tol2
+	character(len=*), intent(in), optional :: desc2
+	logical(klog), intent(in), optional :: RefineFlowMapYN
+	real(kreal), intent(in), optional :: flowMapVarTol
+	!
+	integer(kint) :: nLagTracers
+	logical(klog) :: doFlowMapRefinement
+	logical(klog) :: twoRefinements
+	integer(kint) :: i, j, k
+	real(kreal) :: lon, lat
+	real(kreal), dimension(3) :: x0
+	type(RefineSetup) :: refine
+	integer(kint) :: nParticlesBefore, nParticlesAfter
+	real(kreal), dimension(3) :: vec
+	
+	remeshCounter = remeshCounter + 1
+	
+	if ( present(tracerFn1) .and. newSphere%tracers(1)%nDim == 1 ) then
+		nLagTracers = 1
+		if ( present(tracerFn2) .and. newSphere%tracers(2)%nDim == 1 ) then
+			nLagTracers = 2
+		endif
+	else
+		nLagTracers = 0
+	endif
+	
+	if ( allocated(newSphere%tracers) ) then
+		do i = 1, size(newSphere%tracers) 
+			newSphere%tracers(i)%N = newSphere%mesh%particles%N
+		enddo
+	endif
+	
+	do i = 1, newSphere%mesh%particles%N
+		lon = Longitude(newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
+		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
+		x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
+		newSphere%mesh%particles%x0(i) = x0(1)
+		newSphere%mesh%particles%y0(i) = x0(2)
+		newSphere%mesh%particles%z0(i) = x0(3)
+		
+		if ( allocated(newSphere%tracers) ) then
+			if ( nLagTracers == 1 ) then
+				newSphere%tracers(1)%scalar(i) = tracerFn1( x0(1), x0(2), x0(3) )
+			elseif ( nLagTracers == 2 ) then
+				newSphere%tracers(1)%scalar(i) = tracerFn1( x0(1), x0(2), x0(3) )
+				newSphere%tracers(2)%scalar(i) = tracerFn2( x0(1), x0(2), x0(3) )
+			endif			
+			do j = nLagTracers + 1, size(newSphere%tracers)
+				if ( newSphere%tracers(j)%nDim == 1 ) then
+					newSphere%tracers(j)%scalar(i) = InterpolateScalar(lon, lat, self%tracerSource(j), oldSphere%mesh, &
+																	   self%delTri, oldSphere%tracers(j) )
+				else
+					vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, &
+											 self%delTri, oldSphere%tracers(j) )
+					newSphere%tracers(j)%xComp(i) = vec(1)
+					newSphere%tracers(j)%yComp(i) = vec(2)
+					newSphere%tracers(j)%zComp(i) = vec(3)
+				endif
+			enddo
+		endif
+	enddo
+	
+	!
+	!	AMR
+	!
+	if ( AMR ) then
+		doFlowMapRefinement = ( RefineFlowMapYN .AND. present(flowMapVarTol) )
+		twoRefinements = ( present(flagFn1) .AND. present(flagFn2) )
+		
+		call New( refine, newSphere%mesh%faces%N_Max)
+		
+		do i = 1, newSphere%mesh%amrLimit
+			nParticlesBefore = newSphere%mesh%particles%N
+			
+			if ( twoRefinements ) then
+				if ( doFlowMapRefinement ) then
+					call IterateMeshRefinementTwoVariablesAndFlowMap( refine, newSphere%mesh, newSphere%tracers(1), &
+						flagFn1, tol1, desc1, newSphere%tracers(1), flagFn2, tol2, desc2, &
+						flowMapVarTol, nParticlesBefore, nParticlesAfter )
+				else
+					call IterateMeshRefinementTwoVariables( refine, newSphere%mesh, newSphere%tracers(1), &
+						flagFn1, tol1, desc1, newSphere%tracers(1), flagFn2, tol2, desc2, &
+						nParticlesBefore, nParticlesAfter )
+				endif
+			else
+				if ( doFlowMapRefinement ) then
+					call IterateMeshRefinementOneVariableAndFlowMap( refine, newSphere%mesh, newSphere%tracers(1), &
+						flagFn1, tol1, desc1, flowMapVarTol, nParticlesBefore, nParticlesAfter )
+				else
+					call IterateMeshRefinementOneVariable( refine, newSphere%mesh, newSphere%tracers(1), &
+						flagFn1, tol1, desc1, nParticlesBefore, nParticlesAfter )
+				endif
+			endif
+		enddo
+		
+		do j = nParticlesBefore + 1, nParticlesAfter
+			lon = Longitude( newSphere%mesh%particles%x(j), newSphere%mesh%particles%y(j), &
+								 newSphere%mesh%particles%z(j))
+			lat = Latitude( newSphere%mesh%particles%x(j), newSphere%mesh%particles%y(j), &
+								newSphere%mesh%particles%z(j))
+			x0 = InterpolateLagParam(lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri )
+			newSphere%mesh%particles%x0(j) = x0(1)
+			newSphere%mesh%particles%y0(j) = x0(2)
+			newSphere%mesh%particles%z0(j) = x0(3)
+			
+			if ( allocated(newSphere%tracers) ) then
+				if ( nLagTracers == 1 ) then
+					newSphere%tracers(1)%scalar(j) = tracerFn1( x0(1), x0(2), x0(3) )
+				elseif ( nLagTracers == 2 ) then
+					newSphere%tracers(1)%scalar(j) = tracerFn1( x0(1), x0(2), x0(3) )
+					newSphere%tracers(2)%scalar(j) = tracerFn2( x0(1), x0(2), x0(3) )
+				endif
+				do k = nLagTracers + 1, size(newSphere%tracers)
+					if ( newSphere%tracers(k)%nDim == 1 ) then
+						newSphere%tracers(k)%scalar(j) = InterpolateScalar( lon, lat, self%tracerSource(k), &
+															oldSphere%mesh, self%delTri, oldSphere%tracers(k) )
+					else
+						vec = InterpolateVector( lon, lat, self%tracerSource(k), oldSphere%mesh, self%delTri, &
+												oldSphere%tracers(k) )
+						newSphere%tracers(k)%xComp(j) = vec(1)
+						newSphere%tracers(k)%yComp(j) = vec(2)
+						newSphere%tracers(k)%zComp(j) = vec(3)													
+					endif
+				enddo
+			endif
+		enddo 
+			
+		if ( allocated(newSphere%tracers) ) then
+			do k = 1, size(newSphere%tracers) 
+				newSphere%tracers(k)%N = newSphere%mesh%particles%N
+			enddo
+		endif
+		
+		call LoadBalance(newSphere%mpiParticles, newSphere%mesh%particles%N, numProcs )
+		call Delete(refine)
+	endif!AMR
+	
+	call SetVelocityOnMesh( newSphere, velFn, t )
+	call SetDivergenceOnMesh( newSphere, divFn, t )
+end subroutine
+
+!> @brief Performs a remesh/remap of an LPM @ref SphereBVE simulation using indirect interpolation for vorticity variables and up to two scalar tracer variables in a BVE mesh.  Additional tracers are directly interpolated.
 !> Remaps to reference time t = t_{rm}, where t_{rm} is time of definition for a reference mesh (numerical solution).
 !> Note that the reference mesh's Lagrangian parameter has been reset, so that x = x0, y = y0, z = z0 at t = t_{rm}
 !> 
