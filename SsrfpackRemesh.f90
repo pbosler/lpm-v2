@@ -51,6 +51,16 @@ type BVERemeshSource
 		final :: deleteBVE
 end type
 
+type TransportRemesh
+	type(DelaunayTriangulation) :: delTri
+	type(SSRFPACKInterface) :: densitySource
+	type(SSRFPACKInterface) :: lagParamSource
+	type(SSRFPACKInterface), dimension(:), allocatable :: tracerSource
+	
+	contains
+		final :: deleteTransport
+end type
+
 integer(kint), save :: remeshCounter = 0
 
 !
@@ -65,6 +75,7 @@ end interface
 
 interface Delete
 	module procedure deleteBVE
+	module procedure deleteTransport
 end interface
 
 !
@@ -131,7 +142,7 @@ subroutine newBVE( self, oldSphere )
 end subroutine
 
 subroutine newTransport(self, oldSphere)
-	type(BVERemeshSource), intent(out) :: self
+	type(TransportRemesh), intent(out) :: self
 	type(TransportMesh), intent(inout) :: oldSphere
 	!
 	integer(kint) :: i
@@ -140,6 +151,9 @@ subroutine newTransport(self, oldSphere)
 	
 	call New(self%delTri, oldSphere%mesh)
 	call New(self%lagParamSource, oldSphere%mesh, 3)
+	call New(self%densitySource, oldSphere%mesh, 1)
+	
+	call SetScalarSourceData(self%densitySource, oldSphere%mesh, self%delTri, oldSphere%density)
 	
 	if ( allocated(oldSphere%tracers) ) then
 		allocate(self%tracerSource(size(oldSphere%tracers)))
@@ -155,6 +169,21 @@ subroutine newTransport(self, oldSphere)
 	endif
 	
 	call SetSourceLagrangianParameter(self%lagParamSource, oldSphere%mesh, self%delTri)
+end subroutine
+
+subroutine deleteTransport(self)
+	type(TransportRemesh), intent(inout) :: self
+	integer(kint) :: i
+	
+	call Delete(self%delTri)
+	call Delete(self%lagParamSource)
+	call Delete(self%densitySource)
+	if ( allocated(self%tracerSource) ) then
+		do i = 1, size(self%tracerSource)
+			call Delete(self%tracerSource(i))
+		enddo
+		deallocate(self%tracerSource)	
+	endif
 end subroutine
 
 
@@ -522,7 +551,7 @@ end subroutine
 
 subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, AMR, velFn, t, divFn, &
 	tracerFn1, flagFn1, tol1, desc1, tracerFn2, flagFn2, tol2, desc2, RefineFlowMapYN, flowMapVarTol )
-	type(BVERemeshSource), intent(in) :: self
+	type(TransportRemesh), intent(in) :: self
 	type(TransportMesh), intent(in) :: oldSphere
 	type(TransportMesh), intent(inout) :: newSphere
 	logical(klog), intent(in) :: AMR
@@ -574,6 +603,9 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		newSphere%mesh%particles%x0(i) = x0(1)
 		newSphere%mesh%particles%y0(i) = x0(2)
 		newSphere%mesh%particles%z0(i) = x0(3)
+		
+		newSphere%density%scalar(i) = InterpolateScalar( lon, lat, self%densitySource, oldSphere%mesh, &
+											self%delTri, oldSphere%density)
 		
 		if ( allocated(newSphere%tracers) ) then
 			if ( nLagTracers == 1 ) then
@@ -639,6 +671,9 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 			newSphere%mesh%particles%x0(j) = x0(1)
 			newSphere%mesh%particles%y0(j) = x0(2)
 			newSphere%mesh%particles%z0(j) = x0(3)
+			
+			newSphere%density%scalar(j) = InterpolateScalar( lon, lat, self%densitySource, oldSphere%mesh, &
+												self%delTri, oldSphere%density)
 			
 			if ( allocated(newSphere%tracers) ) then
 				if ( nLagTracers == 1 ) then
