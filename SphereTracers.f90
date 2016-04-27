@@ -157,4 +157,11 @@ function ScaledBlockM(x,y)
 	endif
 end function
 
+pure function InitLatTracer( x0, y0, z0 )
+	real(kreal) :: InitLatTracer
+	real(kreal), intent(in) :: x0, y0, z0
+	InitLatTracer = Latitude( x0, y0, z0 )
+end function
+
+
 end module

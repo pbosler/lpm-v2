@@ -30,10 +30,11 @@ use SSRFPACKInterfaceModule
 implicit none
 
 private
-public BVERemeshSource, New, Delete
+public BVERemeshSource, TransportRemesh, New, Delete
 public DirectRemeshBVE
 public LagrangianRemeshBVEWithVorticityFunction
 public LagrangianRemeshBVEToReferenceMesh
+public LagrangianRemeshTransportWithFunctions
 
 
 !----------------
@@ -590,6 +591,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		nLagTracers = 0
 	endif
 	
+	newSphere%density%N = newSphere%mesh%particles%N
 	if ( allocated(newSphere%tracers) ) then
 		do i = 1, size(newSphere%tracers) 
 			newSphere%tracers(i)%N = newSphere%mesh%particles%N
@@ -696,7 +698,8 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 				enddo
 			endif
 		enddo 
-			
+		
+		newSphere%density%N = newSphere%mesh%particles%N	
 		if ( allocated(newSphere%tracers) ) then
 			do k = 1, size(newSphere%tracers) 
 				newSphere%tracers(k)%N = newSphere%mesh%particles%N

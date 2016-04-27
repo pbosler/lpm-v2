@@ -98,7 +98,7 @@ end interface
 logical(klog), save :: logInit = .FALSE.
 type(Logger) :: log
 character(len=28), save :: logKey = 'SSRFPACK'
-integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
+integer(kint), parameter :: logLevel = TRACE_LOGGING_LEVEL
 character(len=MAX_STRING_LENGTH) :: logString
 
 contains

@@ -97,6 +97,9 @@ ADD_TEST( cubedSphereTest ${PROJECT_BINARY_DIR}/cubedSphereTest.exe 4 )
 ADD_EXECUTABLE( advectGaussHillsSphere.exe AdvectGaussianHills.f90)
 TARGET_LINK_LIBRARIES( advectGaussHillsSphere.exe lpmFortran)
 
+ADD_EXECUTABLE( advectDivergentWind.exe AdvectDivergentWind.f90)
+TARGET_LINK_LIBRARIES( advectDivergentWind.exe lpmFortran)
+
 ADD_EXECUTABLE( nitscheStrickland.exe NitscheStrickland.f90 )
 TARGET_LINK_LIBRARIES( nitscheStrickland.exe lpmFortran)
 

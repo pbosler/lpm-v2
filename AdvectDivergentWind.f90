@@ -1,4 +1,4 @@
-program AdvectGaussianHillsDriver
+program AdvectDivergentWind
 
 use NumberKindsModule
 use OutputWriterModule
@@ -16,8 +16,8 @@ use SSRFPACKRemeshModule
 use SphereTransportSolverModule
 use SphereTracersModule
 use SphereTransportModule
-use SphereTransportVelocitiesModule, velFn => LauritzenEtalDeformationalVelocity
-
+use SphereTransportVelocitiesModule, velFn => LauritzenEtalDivergentFlowVelocity
+									
 implicit none
 
 include 'mpif.h'
@@ -72,12 +72,11 @@ namelist /fileIO/ outputDir, outputRoot, frameOut
 type(Logger) :: exeLog
 character(len=MAX_STRING_LENGTH) :: logString
 integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
-character(len=28) :: logKey = "AdvectGaussianHills"
+character(len=28) :: logKey = "AdvectDivWind"
 integer(kint) :: mpiErrCode
 real(kreal) :: timeStart, timeEnd
 integer(kint) :: i
 real(kreal), dimension(3) :: vec
-
 
 !--------------------------------
 !	initialize : setup computing environment
@@ -96,22 +95,16 @@ call ReadNamelistFile( procRank )
 !	initialize mesh and spatial fields
 !
 t = 0.0_kreal
-call New( sphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
+call New( sphere, meshSeed, initNest, maxNest, amrLimit, radius, .TRUE.)
 call AddTracers(sphere, 2, [1,1])
-sphere%tracers(1)%name = "gaussianHills"
+sphere%tracers(1)%name = "cosineBells"
 sphere%tracers(2)%name = "initialLatitude"
 call SetInitialDensityOnMesh(sphere)
-call SetTracerOnMesh( sphere, 1, GaussianHillsTracer )
+call SetTracerOnMesh( sphere, 1, CosineBellsTracer )
+call SetTracerOnMesh( sphere, 2, InitLatTracer )
 
 call SetVelocityOnMesh( sphere, velFn, t)
-call SetDivergenceOnMesh(sphere)
-
-do i = 1, sphere%mesh%particles%N
-	vec = LagCoord(sphere%mesh%particles, i)
-	call InsertScalarToField( sphere%tracers(2), Latitude(vec) )
-enddo
-
-! TO DO : AMR
+call SetDivergenceOnMesh(sphere, LauritzenEtalDivergentFlowDivergence, 0.0_kreal)
 
 !
 !	Output initial data
@@ -151,7 +144,6 @@ nTimesteps = floor( tfinal/dt )
 allocate(ghMass( nTimesteps + 1))
 ghMass(1) = TracerMass(sphere, 1)
 
-
 !--------------------------------
 !	run : evolve the problem in time 
 !--------------------------------
@@ -167,11 +159,11 @@ do timeJ = 0, nTimesteps - 1
 		
 		call New(tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
 		call AddTracers(tempSphere, 2, [1,1])
-		tempSphere%tracers(1)%name = "gaussianHills"
+		tempSphere%tracers(1)%name = "cosineBells"
 		tempSphere%tracers(2)%name = "initialLatitude"
 		
 		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
-			tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
+			tracerFn1 = CosineBellsTracer, tracerFn2 = InitLatTracer )
 		
 		call Copy(sphere, tempSphere)	
 		remeshCounter = remeshCounter + 1
@@ -183,7 +175,7 @@ do timeJ = 0, nTimesteps - 1
 		call New(solver, sphere)
 	endif
 	
-	call Timestep(solver, sphere, t, dt, velFn)
+	call Timestep(solver, sphere, t, dt, velFn, LauritzenEtalDivergentFlowDivergence)
 	
 	t = real(timeJ +1, kreal) * dt
 	sphere%mesh%t = t
@@ -205,7 +197,7 @@ if ( procRank == 0 ) then
 	write(matlabFile, '(5A)') trim(outputDir), '/', trim(outputRoot), trim(meshString), '.m'
 	open(unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE')
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
-		call WriteToMatlab(ghMass, WRITE_UNIT_1, "ghMass")
+		call WriteToMatlab(ghMass, WRITE_UNIT_1, "tracerMass")
 	close(WRITE_UNIT_1)
 endif
 
@@ -308,7 +300,6 @@ end subroutine
 !> 
 !> @param[in] log @ref Logger to initialize
 !> @param[in] rank MPI rank
-
 subroutine InitLogger(log, rank)
 	type(Logger), intent(inout) :: log
 	integer(kint), intent(in) :: rank
@@ -320,4 +311,4 @@ subroutine InitLogger(log, rank)
 	write(logKey,'(A,I0.2,A)') trim(logKey)//"_", rank, ":"
 end subroutine
 
-end program
+end program 
