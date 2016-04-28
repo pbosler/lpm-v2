@@ -39,8 +39,14 @@ namelist /meshDefine/ faceKind, initNest, amrLimit
 
 ! test case variables
 real(kreal), allocatable, dimension(:) :: ghMass
-real(kreal) :: l2Err
+real(kreal) :: l2Err, l2Denom
 real(kreal) :: lInfErr
+real(kreal) :: qMinTrue, qMaxTrue
+real(kreal) :: qMinComp, qMaxComp
+real(kreal) :: qMinErr, qMaxErr
+real(kreal), parameter :: qRange = 0.95_kreal
+integer(kint), parameter :: nTracers = 3
+integer(kint), dimension(3), parameter :: tracerDims = [1,1,1]
 
 ! remeshing variables
 type(TransportRemesh) :: remesh
@@ -97,9 +103,10 @@ call ReadNamelistFile( procRank )
 !
 t = 0.0_kreal
 call New( sphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
-call AddTracers(sphere, 2, [1,1])
+call AddTracers(sphere, nTracers, tracerDims)
 sphere%tracers(1)%name = "gaussianHills"
 sphere%tracers(2)%name = "initialLatitude"
+sphere%tracers(3)%name = "relError"
 call SetInitialDensityOnMesh(sphere)
 call SetTracerOnMesh( sphere, 1, GaussianHillsTracer )
 
@@ -151,6 +158,8 @@ nTimesteps = floor( tfinal/dt )
 allocate(ghMass( nTimesteps + 1))
 ghMass(1) = TracerMass(sphere, 1)
 
+qMinTrue = MinScalarVal(sphere%tracers(1))
+qMaxTrue = MaxScalarVal(sphere%tracers(1))
 
 !--------------------------------
 !	run : evolve the problem in time 
@@ -166,9 +175,10 @@ do timeJ = 0, nTimesteps - 1
 		call New(remesh, sphere)
 		
 		call New(tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
-		call AddTracers(tempSphere, 2, [1,1])
+		call AddTracers(tempSphere, nTracers, tracerDims)
 		tempSphere%tracers(1)%name = "gaussianHills"
 		tempSphere%tracers(2)%name = "initialLatitude"
+		tempSphere%tracers(3)%name = "relError"
 		
 		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
 			tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
@@ -190,6 +200,16 @@ do timeJ = 0, nTimesteps - 1
 	
 	ghMass(timeJ+2) = TracerMass(sphere, 1)
 	
+	if ( timeJ+1 == nTimesteps ) then
+	!--------------------------------
+	!	calculate error at each particle
+	!--------------------------------
+		do i = 1, sphere%mesh%particles%N
+			sphere%tracers(3)%scalar(i) = abs(GaussianHillsTracer( sphere%mesh%particles%x(i), &
+				 sphere%mesh%particles%y(i), sphere%mesh%particles%z(i) ) - sphere%tracers(1)%scalar(i) ) / qRange
+		enddo
+	endif
+
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 		call OutputToVTK(sphere, vtkFile)
@@ -198,11 +218,40 @@ do timeJ = 0, nTimesteps - 1
 	endif
 enddo 
 
+
+
 !
 !	write t = tfinal output
 !
 if ( procRank == 0 ) then
 	write(matlabFile, '(5A)') trim(outputDir), '/', trim(outputRoot), trim(meshString), '.m'
+
+	l2Err = 0.0_kreal
+	l2Denom = 0.0_kreal
+	do i = 1, sphere%mesh%particles%N
+		if ( sphere%mesh%particles%isActive(i) ) then
+			l2Err = l2Err + sphere%tracers(3)%scalar(i) * sphere%tracers(3)%scalar(i) * sphere%mesh%particles%area(i)
+			l2Denom = l2Denom + GaussianHillsTracer( sphere%mesh%particles%x(i), sphere%mesh%particles%y(i), &
+				  sphere%mesh%particles%z(i) ) ** 2 * sphere%mesh%particles%area(i) 
+		endif
+	enddo
+	l2Err = l2Err / l2Denom
+	lInfErr = MaxScalarVal(sphere%tracers(3))
+	
+	qMinComp = MinScalarVal(sphere%tracers(1))
+	qMaxComp = MaxScalarVal(sphere%tracers(1))
+	
+	qMinErr = (qMinComp - qMinTrue) / qRange
+	qMaxErr = (qMaxComp - qMaxTrue) / qRange
+	
+	call StartSection(exeLog, "Final Errors: "//meshString )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "l2Err = ", l2Err )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "lInfErr = ", lInfErr )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "qMinErr = ", qMinErr )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "qMaxErr = ", qMaxErr )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, " ", " ")
+	call EndSection(exeLog)
+		
 	open(unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE')
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
 		call WriteToMatlab(ghMass, WRITE_UNIT_1, "ghMass")

@@ -1,0 +1,17 @@
+&meshDefine
+	faceKind = 3 
+	initNest = 3
+	amrLimit = 0
+/
+
+&timestepping
+	dt = 0.05
+	tfinal = 5.0
+	remeshInterval = 5
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/transport'
+	outputRoot = 'divergentWindAdvection'
+	frameOut = 1
+/

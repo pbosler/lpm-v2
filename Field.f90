@@ -40,7 +40,7 @@ public WriteFieldToVTKPointData, WriteFieldToVTKCellData
 public WriteFieldToMatlab
 public LogStats
 public SetFieldToZero
-public MinMagnitude, MaxMagnitude
+public MinMagnitude, MaxMagnitude, MaxScalarVal, MinScalarVal
 public MultiplyFieldByScalar
 public ScalarAverage
 !public SetFieldToScalarFunction, SetFieldToVectorFunction
@@ -424,6 +424,18 @@ pure function MinMagnitude(self)
 			if ( mag < MinMagnitude ) MinMagnitude = mag
 		enddo 	
 	endif
+end function
+
+pure function MaxScalarVal(self)
+	real(kreal) :: MaxScalarVal
+	type(Field), intent(in) :: self
+	MaxScalarVal = maxval( self%scalar(1:self%N) )
+end function
+
+pure function MinScalarVal(self)
+	real(kreal) :: MinScalarVal
+	type(Field), intent(in) :: self
+	MinScalarVal = minval( self%scalar(1:self%N) )
 end function
 
 !> @brief Writes Field data to a script .m file readable by Matlab

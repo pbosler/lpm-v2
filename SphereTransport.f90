@@ -34,7 +34,7 @@ public AddTracers
 public SetVelocityOnMesh, SetTracerOnMesh, SetInitialDensityOnMesh, SetDivergenceOnMesh
 public LogStats
 public OutputToVTK
-public TracerMass
+public FluidMass, TracerMass
 
 type TransportMesh
 	type(PolyMesh2d) :: mesh
