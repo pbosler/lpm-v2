@@ -82,6 +82,7 @@ interface WriteToMatlab
 	module procedure WriteArrayToMatlab
 	module procedure WriteMatrixToMatlab
 	module procedure WriteIntegerMatrixToMatlab
+	module procedure WriteRealScalarToMatlab
 end interface
 
 contains
@@ -337,6 +338,18 @@ subroutine WriteIntegerMatrixToMatlab( matrix, fileunit, name )
 		write(fileunit,'(I8,A)', advance='no') matrix(m,j), ", "
 	enddo
 	write(fileunit,'(I8,A)') matrix(m,n), "];"
+end subroutine
+
+subroutine WriteRealScalarToMatlab( scalar, fileUnit, name )
+	real(kreal), intent(in) :: scalar
+	integer(kint), intent(in) :: fileUnit
+	character(len=*), intent(in) :: name
+
+	if ( abs(scalar) >= 1.0d7 ) then
+		write(fileUnit,'(A,A,E30.16,A)') trim(name), " = ", scalar, ";"
+	else
+		write(fileUnit,'(A,A,F30.16,A)') trim(name), " = ", scalar, ";"
+	endif
 end subroutine
 
 
