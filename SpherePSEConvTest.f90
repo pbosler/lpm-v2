@@ -379,29 +379,28 @@ if ( procRank == 0 ) then
 	open( unit=WRITE_UNIT_1, file=vtkFile, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(vtkFile))
-			return
+		else	
+			call WriteVTKPoints( sphere%particles, WRITE_UNIT_1)
+			call WriteFacesToVTKPolygons( sphere%faces, WRITE_UNIT_1)
+	
+			call WriteVTKPointDataSectionHeader(WRITE_UNIT_1, sphere%particles%N)
+		
+			call WriteFieldToVTKPointData( constScalar, WRITE_UNIT_1)
+			call WriteFieldToVTKPointData( constScalarInterp, WRITE_UNIT_1)
+			call WriteFieldToVTKPointData( constScalarLap, WRITE_UNIT_1)
+		
+			call WriteFieldToVTKPointData( harmonic, WRITE_UNIT_1 )
+			call WriteFieldToVTKPointData( harmonicInterp, WRITE_UNIT_1 )
+			call WriteFieldToVTKPointData( harmonicInterpError, WRITE_UNIT_1 )
+		
+			call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )	
+			call WriteFieldToVTKPointData( harmonicLapExact, WRITE_UNIT_1 )
+			call WriteFieldToVTKPointData( harmonicLapError, WRITE_UNIT_1 )
+		
+			call WriteFieldToVTKPointData( streamFnScalar, WRITE_UNIT_1 )
+	
+			call WriteFaceAreaToVTKCellData( sphere%faces, sphere%particles, WRITE_UNIT_1)
 		endif
-	
-		call WriteVTKPoints( sphere%particles, WRITE_UNIT_1)
-		call WriteFacesToVTKPolygons( sphere%faces, WRITE_UNIT_1)
-	
-		call WriteVTKPointDataSectionHeader(WRITE_UNIT_1, sphere%particles%N)
-		
-		call WriteFieldToVTKPointData( constScalar, WRITE_UNIT_1)
-		call WriteFieldToVTKPointData( constScalarInterp, WRITE_UNIT_1)
-		call WriteFieldToVTKPointData( constScalarLap, WRITE_UNIT_1)
-		
-		call WriteFieldToVTKPointData( harmonic, WRITE_UNIT_1 )
-		call WriteFieldToVTKPointData( harmonicInterp, WRITE_UNIT_1 )
-		call WriteFieldToVTKPointData( harmonicInterpError, WRITE_UNIT_1 )
-		
-		call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )	
-		call WriteFieldToVTKPointData( harmonicLapExact, WRITE_UNIT_1 )
-		call WriteFieldToVTKPointData( harmonicLapError, WRITE_UNIT_1 )
-		
-		call WriteFieldToVTKPointData( streamFnScalar, WRITE_UNIT_1 )
-	
-		call WriteFaceAreaToVTKCellData( sphere%faces, sphere%particles, WRITE_UNIT_1)
 	close(WRITE_UNIT_1)
 	!
 	!	write output to matlab
@@ -409,22 +408,21 @@ if ( procRank == 0 ) then
 	open( unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToMatlab ERROR writing to file = ", trim(matlabFile))
-			return
-		endif
-		
-		call WriteToMatlab(lons, WRITE_UNIT_1, "lons")
-		call WriteToMatlab(lats, WRITE_UNIT_1, "lats")
+		else
+			call WriteToMatlab(lons, WRITE_UNIT_1, "lons")
+			call WriteToMatlab(lats, WRITE_UNIT_1, "lats")
 
-		call WriteToMatlab( constData, WRITE_UNIT_1, "const")
-		call WriteToMatlab( constLap, WRITE_UNIT_1, "constLap")
-		call WriteToMatlab( constInterp, WRITE_UNIT_1, "constInterp")
+			call WriteToMatlab( constData, WRITE_UNIT_1, "const")
+			call WriteToMatlab( constLap, WRITE_UNIT_1, "constLap")
+			call WriteToMatlab( constInterp, WRITE_UNIT_1, "constInterp")
 		
-		call WriteToMatlab( harmData, WRITE_UNIT_1, "harm54")		
-		call WriteToMatlab( harmInterp, WRITE_UNIT_1, "harmInterp")
-		call WriteToMatlab( harmLap, WRITE_UNIT_1, "harmLap")
-		call WriteToMatlab( harmLapExact, WRITE_UNIT_1, "harmLapExact")
+			call WriteToMatlab( harmData, WRITE_UNIT_1, "harm54")		
+			call WriteToMatlab( harmInterp, WRITE_UNIT_1, "harmInterp")
+			call WriteToMatlab( harmLap, WRITE_UNIT_1, "harmLap")
+			call WriteToMatlab( harmLapExact, WRITE_UNIT_1, "harmLapExact")
 		
-		call WriteToMatlab( stream, WRITE_UNIT_1, "streamFn")
+			call WriteToMatlab( stream, WRITE_UNIT_1, "streamFn")
+		endif
 	close(WRITE_UNIT_1)
 endif
 !
