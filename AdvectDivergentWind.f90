@@ -196,6 +196,7 @@ do timeJ = 0, nTimesteps - 1
 	sphere%mesh%t = t
 	
 	ghMass(timeJ+2) = TracerMass(sphere, 1)
+	fMass(timeJ+2) = FluidMass(sphere)
 	
 	if ( timeJ+1 == nTimesteps ) then
 	!--------------------------------
@@ -253,6 +254,7 @@ if ( procRank == 0 ) then
 	open(unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE')
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
 		call WriteToMatlab(ghMass, WRITE_UNIT_1, "tracerMass")
+		call WriteToMatlab(fMass, WRITE_UNIT_1, "fluidMass")
 		call WriteToMatlab(l2Err, WRITE_UNIT_1, "l2Err")
 		call WriteToMatlab(lInfErr, WRITE_UNIT_1, "lInfErr")
 		call WriteToMatlab(qMinErr, WRITE_UNIT_1, "qMinErr")
