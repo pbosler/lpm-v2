@@ -178,7 +178,10 @@ do timeJ = 0, nTimesteps - 1
 		tempSphere%tracers(3)%name = "relError"
 		
 		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
+			divFn = LauritzenEtalDivergentFlowDivergence, &
 			tracerFn1 = CosineBellsTracer, tracerFn2 = InitLatTracer )
+!		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
+!			divFn = LauritzenEtalDivergentFlowDivergence )	
 		
 		call Copy(sphere, tempSphere)	
 		remeshCounter = remeshCounter + 1
