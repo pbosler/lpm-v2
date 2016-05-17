@@ -158,9 +158,7 @@ subroutine newDelTri(self, aMesh, useLagrangianCoords)
 	allocate(self%lend( aMesh%particles%N ))
 
 	useLagCoords = .FALSE.	
-	if ( present(useLagrangianCoords) ) then
-		if ( useLagrangianCoords ) useLagCoords = .TRUE.
-	endif
+	if ( present(useLagrangianCoords) .AND. useLagrangianCoords ) useLagCoords = .TRUE.
 	
 	call BuildDelaunayTriangulation(self, aMesh, useLagCoords)
 end subroutine

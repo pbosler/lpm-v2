@@ -33,7 +33,7 @@ public TransportMesh, New, Delete, Copy
 public AddTracers
 public SetVelocityOnMesh, SetTracerOnMesh, SetInitialDensityOnMesh, SetDivergenceOnMesh
 public LogStats
-public OutputToVTK
+public OutputToVTK, OutputInverseFlowMapToVTK
 public FluidMass, TracerMass
 
 type TransportMesh
@@ -178,7 +178,35 @@ subroutine outputVTKPrivate( self, filename )
 	close(WRITE_UNIT_1)
 end subroutine
 
-
+subroutine OutputInverseFlowMapToVTK( self, filename )
+	type(TransportMesh), intent(in) :: self
+	character(len=*), intent(in) :: filename
+	integer(kint) :: i, writeStat
+	
+	open( unit=WRITE_UNIT_1, file=filename, status='REPLACE', action='WRITE', iostat=writeStat)
+		if ( writeStat /= 0 ) then
+			call LogMessage(log,ERROR_LOGGING_LEVEL, trim(logKey)//" OutputToVTK ERROR opening file = ", trim(filename))
+			return
+		endif
+		call WriteVTKPointsInverse(self%mesh%particles, WRITE_UNIT_1)
+		call WriteFacesToVTKPolygons( self%mesh%faces, WRITE_UNIT_1)
+		
+		call WriteVTKPointDataSectionHeader(WRITE_UNIT_1, self%mesh%particles%N)
+		
+		call WriteVTKPhysCoords( self%mesh%particles, WRITE_UNIT_1)
+		
+		call WriteFieldToVTKPointData( self%density, WRITE_UNIT_1 )
+		call WriteFieldToVTKPointData( self%velocity, WRITE_UNIT_1)
+		call WriteFieldToVTKPointData( self%divergence, WRITE_UNIT_1 )
+		if ( allocated(self%tracers) ) then
+			do i = 1, size(self%tracers)
+				call WriteFieldToVTKPointData(self%tracers(i), WRITE_UNIT_1)
+			enddo
+		endif
+		
+		call WriteFaceAreaToVTKCellData( self%mesh%faces, self%mesh%particles, WRITE_UNIT_1)
+	close(WRITE_UNIT_1)
+end subroutine
 !
 !----------------
 ! private methods

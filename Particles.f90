@@ -46,6 +46,7 @@ public PhysCoord, LagCoord
 public LogStats, PrintDebugInfo
 public TotalArea, TotalVolume
 public WriteVTKLagCoords, WriteVTKParticleArea, WriteVTKParticleVolume, WriteVTKPoints
+public WriteVTKPointsInverse, WriteVTKPhysCoords
 public WriteParticlesToMatlab
 public SortIncidentEdgesAtParticle
 public MakeParticleActive, MakeParticlePassive
@@ -388,6 +389,30 @@ subroutine WriteVTKPoints( self, fileunit, title )
 	endif
 end subroutine
 
+subroutine WriteVTKPointsInverse( self, fileunit, title )
+	class(Particles), intent(in) :: self
+	integer(kint), intent(in) :: fileunit
+	character(len=*), intent(in), optional :: title
+	!
+	integer(kint) :: j
+	
+	if ( present(title)) then
+		call WriteVTKFileHeader(fileunit, title)
+	else
+		call WriteVTKFileHeader(fileunit)
+	endif
+	write(fileunit,'(A,I8,A)') "POINTS ", self%N, " double "
+	if ( self%geomKind == PLANAR_GEOM ) then
+		do j = 1, self%N
+			write(fileunit,*) self%x0(j), self%y0(j), 0.0_kreal
+		enddo
+	else
+		do j = 1, self%N
+			write(fileunit,*) self%x0(j), self%y0(j), self%z0(j)
+		enddo
+	endif
+end subroutine
+
 !> @brief Writes a particle set's Lagrangian coordinates to VTK PolyData Output
 !> @param self
 !> @param fileunit
@@ -406,6 +431,25 @@ subroutine WriteVTKLagCoords( self, fileunit )
 	else
 		do j = 1, self%N
 			write(fileunit,*) self%x0(j), self%y0(j), self%z0(j)
+		enddo
+	endif
+end subroutine
+
+subroutine WriteVTKPhysCoords( self, fileunit )
+	class(Particles), intent(in) :: self
+	integer(kint), intent(in) :: fileunit
+	!
+	integer(kint) :: j
+	
+	write(fileunit,'(A)') "SCALARS physCoord double 3"
+	write(fileunit,'(A)') "LOOKUP_TABLE default"
+	if ( self%geomKind == PLANAR_GEOM ) then
+		do j = 1, self%N
+			write(fileunit,*) self%x(j), self%y(j), 0.0_kreal
+		enddo
+	else
+		do j = 1, self%N
+			write(fileunit,*) self%x(j), self%y(j), self%z(j)
 		enddo
 	endif
 end subroutine

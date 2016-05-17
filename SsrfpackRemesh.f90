@@ -736,13 +736,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		enddo
 	endif
 	
-	!
-	!	interpolate density in Lagrangian space
-	!
-	useLagCoords = .TRUE.
-	call New(lagDelTri, oldSphere%mesh, useLagCoords)
-	call SetScalarSourceData( self%densitySource, oldSphere%mesh, lagDelTri, oldSphere%density, useLagCoords )
-	
+
 	do i = 1, newSphere%mesh%particles%N
 		lon = Longitude(newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
@@ -751,10 +745,16 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		newSphere%mesh%particles%y0(i) = x0(2)
 		newSphere%mesh%particles%z0(i) = x0(3)
 		
-		newSphere%density%scalar(i) = InterpolateScalar( Longitude(x0), Latitude(x0), self%densitySource, &
-			 oldSphere%mesh, lagDelTri, oldSphere%density, useLagCoords)
+		!
+		!	direct interpolation for density
+		!
+		newSphere%density%scalar(i) = InterpolateScalar( lon, lat, self%densitySource, &
+			 oldSphere%mesh, self%delTri, oldSphere%density)
 		
 		if ( allocated(newSphere%tracers) ) then
+			!
+			!	indirect interpolation for tracers 1 and 2
+			!
 			if ( nLagTracers == 1 ) then
 				newSphere%tracers(1)%scalar(i) = tracerFn1( x0(1), x0(2), x0(3) )
 			elseif ( nLagTracers == 2 ) then
@@ -859,7 +859,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	if ( present(divFn) ) then
 		call SetDivergenceOnMesh( newSphere, divFn, t )
 	endif
-	call Delete(lagDelTri)
+
 end subroutine
 
 !> @brief Performs a remesh/remap of an LPM @ref SphereBVE simulation using indirect interpolation for vorticity variables and up to two scalar tracer variables in a BVE mesh.  Additional tracers are directly interpolated.

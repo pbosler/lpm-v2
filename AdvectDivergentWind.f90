@@ -68,6 +68,7 @@ namelist /timestepping/ dt, tfinal, remeshInterval, useDirectRemesh
 character(len=MAX_STRING_LENGTH) :: outputDir
 character(len=MAX_STRING_LENGTH) :: outputRoot
 character(len=MAX_STRING_LENGTH) :: vtkFile
+character(len=MAX_STRING_LENGTH) :: vtkInvFile
 character(len=MAX_STRING_LENGTH) :: matlabFile
 character(len=MAX_STRING_LENGTH) :: vtkRoot
 character(len=MAX_STRING_LENGTH) :: meshString
@@ -110,6 +111,8 @@ sphere%tracers(3)%name = "relError"
 call SetInitialDensityOnMesh(sphere)
 call SetTracerOnMesh( sphere, 1, CosineBellsTracer )
 call SetTracerOnMesh( sphere, 2, InitLatTracer )
+call SetFieldToZero( sphere%tracers(3) )
+sphere%tracers(3)%N = sphere%mesh%particles%N
 
 call SetVelocityOnMesh( sphere, velFn, t)
 call SetDivergenceOnMesh(sphere, LauritzenEtalDivergentFlowDivergence, 0.0_kreal)
@@ -137,8 +140,10 @@ if ( procRank == 0 ) then
 	
 	write(vtkRoot,'(4A)') trim(outputDir), '/vtkOut/', trim(outputRoot), trim(meshString)
 	write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
+	write(vtkInvFile, '(A,A,I0.4,A)') trim(vtkRoot), "-inverse-", frameCounter, '.vtk'
 	
 	call OutputToVTK(sphere, vtkFile)
+	call OutputInverseFlowMapToVTK(sphere, vtkInvFile )
 	frameCounter = frameCounter + 1
 	
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" t = ", t)
@@ -177,6 +182,8 @@ do timeJ = 0, nTimesteps - 1
 		tempSphere%tracers(1)%name = "cosineBells"
 		tempSphere%tracers(2)%name = "initialLatitude"
 		tempSphere%tracers(3)%name = "relError"
+		call SetFieldToZero( tempSphere%tracers(3) )
+		tempSphere%tracers(3)%N = sphere%mesh%particles%N
 
 		if ( useDirectRemesh ) then
 			call DirectRemeshTransport(remesh, sphere, tempSphere, .FALSE., velFn, t, &
@@ -217,6 +224,8 @@ do timeJ = 0, nTimesteps - 1
 	
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
+		write(vtkInvFile, '(A,A,I0.4,A)') trim(vtkRoot), "-inverse-", frameCounter, '.vtk'
+		call OutputInverseFlowMapToVTK(sphere, vtkInvFile )
 		call OutputToVTK(sphere, vtkFile)
 		frameCounter = frameCounter + 1
 		call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//" t = ", t)
