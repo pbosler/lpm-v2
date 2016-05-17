@@ -29,6 +29,7 @@ cat <<EOF > divWindCosineBells.namelist
 	dt = 0.0125
 	tfinal = 5.0
 	remeshInterval = 20
+	useDirectRemesh = .FALSE.
 /
 
 &fileIO

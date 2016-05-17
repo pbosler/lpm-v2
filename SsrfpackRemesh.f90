@@ -689,7 +689,7 @@ end subroutine
 subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, AMR, velFn, t, divFn, &
 	tracerFn1, flagFn1, tol1, desc1, tracerFn2, flagFn2, tol2, desc2, RefineFlowMapYN, flowMapVarTol )
 	type(TransportRemesh), intent(inout) :: self
-	type(TransportMesh), intent(in) :: oldSphere
+	type(TransportMesh), intent(inout) :: oldSphere
 	type(TransportMesh), intent(inout) :: newSphere
 	logical(klog), intent(in) :: AMR
 	procedure(vectorFnOf3DSpaceAndTime) :: velFn
