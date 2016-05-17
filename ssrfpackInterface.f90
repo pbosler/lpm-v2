@@ -142,9 +142,12 @@ end subroutine
 !> 
 !> @param[out] self Target Delaunay triangulation of all particles (both centers and vertices)
 !> @param[in] aMesh @ref PolyMesh2d spherical mesh
-subroutine newDelTri(self, aMesh)
+subroutine newDelTri(self, aMesh, useLagrangianCoords)
 	type(DelaunayTriangulation), intent(out) :: self
 	type(PolyMesh2d), intent(inout) :: aMesh
+	logical(klog), intent(in), optional :: useLagrangianCoords
+	!
+	logical(klog) :: useLagCoords
 	
 	if ( .NOT. logInit) call InitLogger(log, procRank)
 	
@@ -153,8 +156,13 @@ subroutine newDelTri(self, aMesh)
 	allocate(self%list( 6 * aMesh%particles%N - 12 ))
 	allocate(self%lptr( 6 * amesh%particles%N - 12 ))
 	allocate(self%lend( aMesh%particles%N ))
+
+	useLagCoords = .FALSE.	
+	if ( present(useLagrangianCoords) ) then
+		if ( useLagrangianCoords ) useLagCoords = .TRUE.
+	endif
 	
-	call BuildDelaunayTriangulation(self, aMesh)
+	call BuildDelaunayTriangulation(self, aMesh, useLagCoords)
 end subroutine
 
 !> @brief Deletes and frees memory associated with a Delaunay triangulation
@@ -489,9 +497,10 @@ end subroutine
 !> 
 !> @param[inout] self STRIPACK data structures for Delaunay triangulation
 !> @param[in] aMesh spherical @ref PolyMesh2d
-subroutine BuildDelaunayTriangulation(self, aMesh)
+subroutine BuildDelaunayTriangulation(self, aMesh, useLagrangianCoords )
 	type(DelaunayTriangulation), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
+	logical(klog), intent(in) :: useLagrangianCoords
 	!
 	real(kreal), allocatable, dimension(:) :: dist
 	integer(kint), allocatable, dimension(:) :: near
@@ -502,8 +511,13 @@ subroutine BuildDelaunayTriangulation(self, aMesh)
 	allocate(near(amesh%particles%n))
 	allocate(next(amesh%particles%n))
 	
-	call TRMESH(aMesh%particles%N, aMesh%particles%x, aMesh%particles%y, aMesh%particles%z, &
+	if ( useLagrangianCoords ) then
+		call TRMESH(aMesh%particles%N, aMesh%particles%x0, aMesh%particles%y0, aMesh%particles%z0, &
+			self%list, self%lptr, self%lend, lnew, near, next, dist, errCode)
+	else
+		call TRMESH(aMesh%particles%N, aMesh%particles%x, aMesh%particles%y, aMesh%particles%z, &
 				self%list, self%lptr, self%lend, lnew, near, next, dist, errCode )
+	endif
 
 	if ( errCode == -1 ) then
 		call LogMessage(log,ERROR_LOGGING_LEVEL, trim(logKey)//' TRMESH ERROR :',' found n < 3 points.')
