@@ -237,20 +237,30 @@ end subroutine
 !> @param[in] aMesh @ref PolyMesh2d
 !> @param[in] delTri Delaunay triangulation
 !> @param[in] scalarField scalar @ref Field associated with aMesh
-subroutine SetScalarSourceData(self, aMesh, delTri, scalarField)
+subroutine SetScalarSourceData(self, aMesh, delTri, scalarField, useLagCoords)
 	type(SSRFPACKInterface), intent(inout) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
 	type(DelaunayTriangulation), intent(in) :: delTri
 	type(Field), intent(in) :: scalarField
+	logical(klog), intent(in), optional :: useLagCoords
+	!
 	integer(kint) :: i, errCode
 	real(kreal) :: dSig
 	
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" SetScalarSourceData : ", "entering.")
 	
-	do i = 1, aMesh%particles%N
-		call GRADL( aMesh%particles%n, i, aMesh%particles%x, aMesh%particles%y, aMesh%particles%z, &
-					scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, self%grad1(:,i), errCode)
-	enddo
+	if ( present(useLagCoords) .AND. useLagCoords) then
+		do i = 1, aMesh%particles%N
+			call GRADL( aMesh%particles%n, i, aMesh%particles%x0, aMesh%particles%y0, aMesh%particles%z0, &
+				scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, self%grad1(:,i), errCode )
+		enddo	
+	else
+		do i = 1, aMesh%particles%N
+			call GRADL( aMesh%particles%n, i, aMesh%particles%x, aMesh%particles%y, aMesh%particles%z, &
+						scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, self%grad1(:,i), errCode)
+		enddo
+	endif
+	
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" SetScalarSourceData : ", "gradient estimates done.")
 	if ( SIGMA_FLAG > 0 ) then
 	call GETSIG(aMesh%particles%N, aMesh%particles%x, aMesh%particles%y, aMesh%particles%z, &
@@ -305,19 +315,27 @@ end subroutine
 !> @param[in] delTri Delaunay triangulation
 !> @param[in] scalarField source data
 !> @return interpolated scalar value
-function InterpolateScalar( lon, lat, self, aMesh, delTri, scalarField)
+function InterpolateScalar( lon, lat, self, aMesh, delTri, scalarField, useLagCoords)
 	real(kreal) :: InterpolateScalar
+	real(kreal), intent(in) :: lon
+	real(kreal), intent(in) :: lat
 	type(SSRFPACKInterface), intent(in) :: self
 	type(PolyMesh2d), intent(in) :: aMesh
 	type(DelaunayTriangulation), intent(in) :: delTri
 	type(Field), intent(in) :: scalarField
-	real(kreal), intent(in) :: lon
-	real(kreal), intent(in) :: lat
+	logical(klog), intent(in), optional :: useLagCoords
+	!
 	integer(kint) :: errCode
 	
-	call INTRC1( aMesh%particles%N, lat, lon, amesh%particles%x, amesh%particles%y, amesh%particles%z, &
+	if ( present(useLagCoords) .AND. useLagCoords ) then
+		call INTRC1( aMesh%particles%N, lat, lon, aMesh%particles%x0, aMesh%particles%y0, aMesh%particles%z0, &
+			scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, SIGMA_FLAG, self%sigma1, GRAD_FLAG, &
+			self%grad1, startTriangle, InterpolateScalar, errCode )
+	else
+		call INTRC1( aMesh%particles%N, lat, lon, amesh%particles%x, amesh%particles%y, amesh%particles%z, &
 			 	 scalarField%scalar, delTri%list, delTri%lptr, delTri%lend, SIGMA_FLAG, self%sigma1, GRAD_FLAG, &
 			 	 self%grad1, startTriangle, InterpolateScalar, errCode)
+	endif
 end function
 
 !> @brief Performs parallel interpolation of a scalar field from an LPM particle set to a uniform latitude-longitude grid.

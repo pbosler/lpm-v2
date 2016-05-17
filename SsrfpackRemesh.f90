@@ -741,7 +741,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	!
 	useLagCoords = .TRUE.
 	call New(lagDelTri, oldSphere%mesh, useLagCoords)
-	call SetScalarSourceData( self%densitySource, oldSphere%mesh, lagDelTri, oldSphere%density )
+	call SetScalarSourceData( self%densitySource, oldSphere%mesh, lagDelTri, oldSphere%density, useLagCoords )
 	
 	do i = 1, newSphere%mesh%particles%N
 		lon = Longitude(newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
@@ -752,7 +752,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		newSphere%mesh%particles%z0(i) = x0(3)
 		
 		newSphere%density%scalar(i) = InterpolateScalar( Longitude(x0), Latitude(x0), self%densitySource, &
-			 oldSphere%mesh, lagDelTri, oldSphere%density)
+			 oldSphere%mesh, lagDelTri, oldSphere%density, useLagCoords)
 		
 		if ( allocated(newSphere%tracers) ) then
 			if ( nLagTracers == 1 ) then
