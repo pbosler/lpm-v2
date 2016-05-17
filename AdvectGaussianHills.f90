@@ -249,6 +249,8 @@ if ( procRank == 0 ) then
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "lInfErr = ", lInfErr )
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "qMinErr = ", qMinErr )
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "qMaxErr = ", qMaxErr )
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "rel. tracer mass change = ", & 
+											maxval(abs(ghMass - ghMass(1))) / ghMass(1) )
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, " ", " ")
 	call EndSection(exeLog)
 		
