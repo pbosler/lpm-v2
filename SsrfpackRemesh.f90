@@ -31,7 +31,7 @@ implicit none
 
 private
 public BVERemeshSource, TransportRemesh, New, Delete
-public DirectRemeshBVE
+public DirectRemeshBVE, DirectRemeshTransport
 public LagrangianRemeshBVEWithVorticityFunction
 public LagrangianRemeshBVEToReferenceMesh
 public LagrangianRemeshTransportWithFunctions
@@ -548,6 +548,74 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 	call OutputToVTK(newSphere, logString)
 	
 	call LogMessage( log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", " Lagrangian Remesh Complete.")
+end subroutine
+
+! All AMR done on tracer 1
+subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divFn, field1, amrFlagFn1, tol1, desc1, &
+	field2, amrFlagFn2, tol2, desc2 )
+	type(TransportRemesh), intent(in) :: self
+	type(TransportMesh), intent(in) :: oldSphere
+	type(TransportMesh), intent(inout) :: newSphere
+	logical(klog), intent(in) :: AMR
+	procedure(vectorFnOf3DSpaceAndTime) :: velFn
+	real(kreal), intent(in) :: t
+	procedure(scalarFnOf3DSpaceAndTime), optional :: divFn
+	type(Field), intent(inout), optional :: field1
+	procedure(FlagFunction), optional :: amrFlagFn1
+	real(kreal), intent(in), optional :: tol1
+	character(len=*), intent(in), optional :: desc1
+	type(Field), intent(inout), optional :: field2
+	procedure(FlagFunction), optional :: amrFlagFn2
+	real(kreal), intent(in), optional :: tol2
+	character(len=*), intent(in), optional :: desc2
+	!
+	integer(kint) :: i, j, k
+	real(kreal) :: lon, lat
+	real(kreal), dimension(3) :: x0, vec
+	type(RefineSetup) :: refine
+	integer(kint) :: nParticlesBefore, nParticlesAfter
+	
+	remeshCounter = remeshCounter + 1
+	
+	!
+	!	interpolate to new uniform mesh
+	!
+	do i = 1, size(newSphere%tracers)
+		newSphere%tracers(i)%N = newSphere%mesh%particles%N
+	enddo
+	do i = 1, newSphere%mesh%particles%N
+		lon = Longitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
+		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
+		
+		x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
+		newSphere%mesh%particles%x0(i) = x0(1)
+		newSphere%mesh%particles%y0(i) = x0(2)
+		newSphere%mesh%particles%z0(i) = x0(3)
+		
+		do j = 1, size(newSphere%tracers)
+			if ( newSphere%tracers(j)%nDim == 1 ) then
+				newSphere%tracers(j)%scalar(i) = InterpolateScalar(lon, lat, self%tracerSource(j), oldSphere%mesh, &
+					self%delTri, oldSphere%tracers(j) )
+			else
+				vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, self%delTri, oldSphere%tracers(j))
+				newSphere%tracers(j)%xComp(i) = vec(1)
+				newSphere%tracers(j)%yComp(i) = vec(2)
+				newSphere%tracers(j)%zComp(i) = vec(3)
+			endif
+		enddo
+	enddo
+	
+	!
+	!	AMR
+	!
+	if ( AMR ) then
+		call New(refine, newSphere%mesh%faces%N_Max)
+		
+		do i = 1, newSphere%mesh%amrLimit
+			
+		enddo
+		call Delete(refine)
+	endif!AMR
 end subroutine
 
 subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, AMR, velFn, t, divFn, &
