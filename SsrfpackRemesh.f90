@@ -304,10 +304,10 @@ subroutine DirectRemeshBVE(self, oldSphere, newSphere, AMR, vortFlagFn1, tol1, d
 											vortFlagFn1, tol1, desc1, nParticlesBefore, nParticlesAfter)
 				elseif ( refineVariableCount == 2 ) then
 					if ( present(field2) ) then
-						call IterateMeshRefinementTwoVariables( refine, newSphere%mesh, newSphere%relVort, vortFlagFn1, &
+						call IterateMeshRefinementTwoVariables(refine, newSphere%mesh, newSphere%relVort, vortFlagFn1, &
 								tol1, desc1, field2, flagFn2, tol2, desc2, nParticlesBefore, nParticlesAfter)
 					else
-						call IterateMeshRefinementTwoVariables( refine, newSphere%mesh, newSphere%relVort, vortFlagFn1, &
+						call IterateMeshRefinementTwoVariables(refine, newSphere%mesh, newSphere%relVort, vortFlagFn1, &
 								tol1, desc1, newSphere%relVort, flagFn2, tol2, desc2, nParticlesBefore, nParticlesAfter)
 					endif
 				endif
@@ -317,6 +317,12 @@ subroutine DirectRemeshBVE(self, oldSphere, newSphere, AMR, vortFlagFn1, tol1, d
 									 newSphere%mesh%particles%z(j))
 					lat = Latitude( newSphere%mesh%particles%x(j), newSphere%mesh%particles%y(j), &
 									newSphere%mesh%particles%z(j))
+					
+					x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
+					newSphere%mesh%particles%x0(j) = x0(1)
+					newSphere%mesh%particles%y0(j) = x0(2)
+					newSphere%mesh%particles%z0(j) = x0(3)				
+									
 					newSphere%relVort%scalar(j) = InterpolateScalar( lon, lat, self%relVortSource, oldSphere%mesh, &
 																	 self%delTri, oldSphere%relVort)
 					newSphere%absVort%scalar(j) = InterpolateScalar( lon, lat, self%absVortSource, oldSphere%mesh, &
@@ -551,8 +557,8 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 end subroutine
 
 ! All AMR done on tracer 1
-subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divFn, field1, amrFlagFn1, tol1, desc1, &
-	field2, amrFlagFn2, tol2, desc2 )
+subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divFn, field1, flagFn1, tol1, desc1, &
+	field2, flagFn2, tol2, desc2 )
 	type(TransportRemesh), intent(in) :: self
 	type(TransportMesh), intent(in) :: oldSphere
 	type(TransportMesh), intent(inout) :: newSphere
@@ -561,11 +567,11 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 	real(kreal), intent(in) :: t
 	procedure(scalarFnOf3DSpaceAndTime), optional :: divFn
 	type(Field), intent(inout), optional :: field1
-	procedure(FlagFunction), optional :: amrFlagFn1
+	procedure(FlagFunction), optional :: flagFn1
 	real(kreal), intent(in), optional :: tol1
 	character(len=*), intent(in), optional :: desc1
 	type(Field), intent(inout), optional :: field2
-	procedure(FlagFunction), optional :: amrFlagFn2
+	procedure(FlagFunction), optional :: flagFn2
 	real(kreal), intent(in), optional :: tol2
 	character(len=*), intent(in), optional :: desc2
 	!
@@ -574,12 +580,14 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 	real(kreal), dimension(3) :: x0, vec
 	type(RefineSetup) :: refine
 	integer(kint) :: nParticlesBefore, nParticlesAfter
+	integer(kint) :: amrVarCount
 	
 	remeshCounter = remeshCounter + 1
 	
 	!
 	!	interpolate to new uniform mesh
 	!
+	newSphere%density%N = newSphere%mesh%particles%N
 	do i = 1, size(newSphere%tracers)
 		newSphere%tracers(i)%N = newSphere%mesh%particles%N
 	enddo
@@ -592,12 +600,16 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 		newSphere%mesh%particles%y0(i) = x0(2)
 		newSphere%mesh%particles%z0(i) = x0(3)
 		
+		newSphere%density%scalar(i) = InterpolateScalar( lon, lat, self%densitySource, oldSphere%mesh, &
+											self%delTri, oldSphere%density)
+		
 		do j = 1, size(newSphere%tracers)
 			if ( newSphere%tracers(j)%nDim == 1 ) then
 				newSphere%tracers(j)%scalar(i) = InterpolateScalar(lon, lat, self%tracerSource(j), oldSphere%mesh, &
 					self%delTri, oldSphere%tracers(j) )
 			else
-				vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, self%delTri, oldSphere%tracers(j))
+				vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, self%delTri,&
+					 oldSphere%tracers(j))
 				newSphere%tracers(j)%xComp(i) = vec(1)
 				newSphere%tracers(j)%yComp(i) = vec(2)
 				newSphere%tracers(j)%zComp(i) = vec(3)
@@ -609,13 +621,69 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 	!	AMR
 	!
 	if ( AMR ) then
-		call New(refine, newSphere%mesh%faces%N_Max)
+		amrVarCount = 0
+		if ( (present(field1) .AND. present(flagFn1)) .AND. (present(tol1 ) .AND. present(desc1) ) ) then
+			amrVarCount = 1
+			if ( (present(field2) .AND. present(flagFn2)) .AND. (present(tol2) .AND. present(desc2) ) ) then
+				amrVarCount = 2
+			endif
+		endif
 		
-		do i = 1, newSphere%mesh%amrLimit
+		if ( amrVarCount > 0 ) then
+			call New(refine, newSphere%mesh%faces%N_Max)
+			do i = 1, newSphere%mesh%amrLimit
+				nParticlesBefore = newSphere%mesh%particles%N
+				
+				if ( amrVarCount == 1 ) then
+					call IterateMeshRefinementOneVariable( refine, newSphere%mesh, field1, flagFn1, tol1, desc1, &
+						nParticlesBefore, nParticlesAfter )
+				elseif ( amrVarCount == 2) then
+					call IterateMeshRefinementTwoVariables( refine, newSphere%mesh, field1, flagFn1, tol1, desc1, &
+						field2, flagFn2, tol2, desc2, nParticlesBefore, nParticlesAfter )
+				endif			
+			enddo
 			
-		enddo
-		call Delete(refine)
+			do j = nParticlesBefore + 1, nParticlesAfter
+				lon = Longitude( newSphere%mesh%particles%x(j), newSphere%mesh%particles%y(j), &
+									 newSphere%mesh%particles%z(j))
+				lat = Latitude( newSphere%mesh%particles%x(j), newSphere%mesh%particles%y(j), &
+									newSphere%mesh%particles%z(j))
+				x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
+				newSphere%mesh%particles%x0(j) = x0(1)
+				newSphere%mesh%particles%y0(j) = x0(2)
+				newSphere%mesh%particles%z0(j) = x0(3)
+		
+				newSphere%density%scalar(j) = InterpolateScalar( lon, lat, self%densitySource, oldSphere%mesh, &
+													self%delTri, oldSphere%density)
+													
+				do k = 1, size(newSphere%tracers)
+					if ( newSphere%tracers(k)%nDim == 1 ) then
+						newSphere%tracers(k)%scalar(j) = InterpolateScalar( lon, lat, self%tracerSource(k), &
+								 oldSphere%mesh, self%delTri, oldSphere%tracers(k) )
+					else
+						vec = InterpolateVector(lon, lat, self%tracerSource(k), oldSphere%mesh, self%delTri, &
+							oldSphere%tracers(k) )
+						newSphere%tracers(k)%xComp(j) = vec(1)
+						newSphere%tracers(k)%yComp(j) = vec(2)
+						newSphere%tracers(k)%zComp(j) = vec(3)
+					endif
+				enddo
+			enddo
+			
+			newSphere%density%N = newSphere%mesh%particles%N
+			do k = 1, size(newSphere%tracers)
+				newSphere%tracers(k)%N = newSphere%mesh%particles%N
+			enddo
+			call LoadBalance( newSphere%mpiParticles, newSphere%mesh%particles%N, numProcs)
+
+			call Delete(refine)
+		endif
 	endif!AMR
+	
+	call SetVelocityOnMesh( newSphere, velFn, t )
+	if ( present(divFn) ) then
+		call SetDivergenceOnMesh( newSphere, divFn, t )
+	endif
 end subroutine
 
 subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, AMR, velFn, t, divFn, &
@@ -779,7 +847,9 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	endif!AMR
 	
 	call SetVelocityOnMesh( newSphere, velFn, t )
-	call SetDivergenceOnMesh( newSphere, divFn, t )
+	if ( present(divFn) ) then
+		call SetDivergenceOnMesh( newSphere, divFn, t )
+	endif
 end subroutine
 
 !> @brief Performs a remesh/remap of an LPM @ref SphereBVE simulation using indirect interpolation for vorticity variables and up to two scalar tracer variables in a BVE mesh.  Additional tracers are directly interpolated.
