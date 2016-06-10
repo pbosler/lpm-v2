@@ -5,13 +5,13 @@
 /
 
 &timestepping
-	dt = 0.05
+	dt = 0.0125
 	tfinal = 5.0
-	remeshInterval = 5
+	remeshInterval = 10
 /
 
 &fileIO
 	outputDir = '/Users/pabosle/modelData/transport'
 	outputRoot = 'rhWaveAdvection'
-	frameOut = 1
+	frameOut = 4
 /

@@ -88,8 +88,9 @@ function RH4Velocity( x, y, z, t )
 	real(kreal), dimension(3) :: RH4Velocity
 	real(kreal), intent(in) :: x, y, z, t
 	real(kreal) :: u, v, lat, lon
-	real(kreal), parameter :: u0 = 0.0_kreal
-	real(kreal), parameter :: amp = 1.0_kreal
+!	real(kreal), parameter :: u0 = 0.0_kreal
+!	real(kreal), parameter :: amp = 1.0_kreal
+	real(kreal), parameter :: bkgrdRotVel = 5.0_kreal / 12.0_kreal / 2.0_kreal * PI
 	
 	lat = Latitude(x, y, z)
 	lon = Longitude(x, y, z)
@@ -101,8 +102,8 @@ function RH4Velocity( x, y, z, t )
 	u = 0.5_kreal * cos( 4 * lon) * cos(lat) ** 3 * ( 5.0_kreal * cos(2.0_kreal * lat) - 3.0_kreal )
 	v = 4.0_kreal * cos( lat ) ** 3 * sin(lat) * sin( 4.0_kreal * lon)
 	
-	RH4Velocity(1) = -u * sin(lon) - v * sin(lat) * cos(lon)
-	RH4Velocity(2) =  u * cos(lon) - v * sin(lat) * sin(lon)
+	RH4Velocity(1) =  - bkgrdRotVel * y - u * sin(lon) - v * sin(lat) * cos(lon)
+	RH4Velocity(2) =  bkgrdRotVel * x + u * cos(lon) - v * sin(lat) * sin(lon)
 	RH4Velocity(3) =  v * cos(lat)
 end function
 

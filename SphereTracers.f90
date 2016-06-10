@@ -12,10 +12,10 @@ contains
 function SlottedCylinderTracer( x, y, z )
 	real(kreal) :: SlottedCylinderTracer
 	real(kreal), intent(in) :: x, y, z 
-	real(kreal), parameter :: xx1 = -0.866025403784439_kreal*EARTH_RADIUS, &	
-							  yy1 = 0.5_kreal*EARTH_RADIUS, zz1 = 0.0_kreal*EARTH_RADIUS
-	real(kreal), parameter :: xx2 = -0.866025403784439_kreal*EARTH_RADIUS, &
-							  yy2 = -0.5_kreal*EARTH_RADIUS, zz2 = 0.0_kreal*EARTH_RADIUS
+	real(kreal), parameter :: xx1 = -0.866025403784439_kreal, &	
+							  yy1 = 0.5_kreal, zz1 = 0.0_kreal
+	real(kreal), parameter :: xx2 = -0.866025403784439_kreal, &
+							  yy2 = -0.5_kreal, zz2 = 0.0_kreal
 	real(kreal), parameter :: lat1 = 0.0_kreal, long1 = 5.0_kreal*PI/6.0_kreal
 	real(kreal), parameter :: lat2 = 0.0_kreal, long2 = 7.0_kreal*PI/6.0_kreal
 	real(kreal), parameter :: RR = 0.5_kreal, b = 0.1_kreal, c = 1.0_kreal
@@ -43,15 +43,15 @@ function SlottedCylinderTracer( x, y, z )
 			SlottedCylinderTracer = c
 		endif
 	endif
-end function 
+end function
 
 function CosineBellsTracer( x, y, z )
 	real(kreal) CosineBellsTracer
 	real(kreal), intent(in) :: x, y, z
-	real(kreal), parameter :: xx1 = -0.866025403784439_kreal*EARTH_RADIUS, &
-							  yy1 = 0.5_kreal*EARTH_RADIUS, zz1 = 0.0_kreal*EARTH_RADIUS
-	real(kreal), parameter :: xx2 = -0.866025403784439_kreal*EARTH_RADIUS,&
-		  					  yy2 = -0.5_kreal*EARTH_RADIUS, zz2 = 0.0_kreal*EARTH_RADIUS
+	real(kreal), parameter :: xx1 = -0.866025403784439_kreal, &
+							  yy1 = 0.5_kreal, zz1 = 0.0_kreal
+	real(kreal), parameter :: xx2 = -0.866025403784439_kreal,&
+		  					  yy2 = -0.5_kreal, zz2 = 0.0_kreal
 	real(kreal), parameter :: hmax = 1.0_kreal, RR = 0.5_kreal, b = 0.1_kreal, c = 0.9_kreal
 	real(kreal) :: r1, r2, h1, h2
 	r1 = SphereArcLength([x,y,z], [xx1,yy1,zz1])
@@ -65,7 +65,7 @@ function CosineBellsTracer( x, y, z )
 	else 
 		CosineBellsTracer = b
 	endif
-end function 
+end function
 
 function MovingVorticesTracer(x, y, z, t) 
 	real(kreal) :: MovingVorticesTracer
@@ -161,6 +161,18 @@ pure function InitLatTracer( x0, y0, z0 )
 	real(kreal) :: InitLatTracer
 	real(kreal), intent(in) :: x0, y0, z0
 	InitLatTracer = Latitude( x0, y0, z0 )
+end function
+
+pure function RH54Vorticity(x0, y0, z0 )
+	real(kreal) :: RH54Vorticity
+	real(kreal), intent(in) :: x0, y0, z0
+	!
+	real(kreal) :: lat, lon
+	
+	lat = Latitude(x0, y0, z0)
+	lon = Longitude(x0, y0, z0)
+	
+	RH54Vorticity = 30.0_kreal * cos( 4.0_kreal * lon ) * cos( lat ) **4 * sin(lat)
 end function
 
 
