@@ -40,7 +40,13 @@ namelist /meshDefine/ faceKind, initNest, amrLimit
 ! test case variables
 real(kreal), allocatable, dimension(:) :: trMass
 integer(kint), parameter :: nTracers = 1
-integer(kint), dimension(3), parameter :: tracerDims = [1]
+integer(kint), dimension(1), parameter :: tracerDims = [1]
+
+! remeshing variables
+type(TransportRemesh) :: remesh
+integer(kint) :: remeshInterval
+integer(kint) :: remeshCounter
+type(TransportMesh) :: tempSphere
 
 ! timestepping
 type(TransportSolver) :: solver
@@ -198,7 +204,8 @@ timeEnd = MPI_WTIME()
 write(logstring,'(A,F12.2,A)') "PROGRAM COMPLETE : elapsed time ", timeEnd - timeStart, " seconds."
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" ", logstring)
 
-deallocate(ghMass)
+deallocate(trMass)
+call Delete(solver)
 
 call MPI_FINALIZE(mpiErrCode)
 
