@@ -28,7 +28,7 @@ cat <<EOF > divWindCosineBells.namelist
 &timestepping
 	dt = 0.0125
 	tfinal = 5.0
-	remeshInterval = 20
+	remeshInterval = 10
 	useDirectRemesh = .FALSE.
 /
 
