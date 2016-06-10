@@ -82,7 +82,7 @@ function LauritzenEtalDivergentFlowDivergence( x, y, z, t )
 	
 	LauritzenEtalDivergentFlowDivergence = - 15.0_kreal * cos(lat) * cos(lat) * cos( PI * t / TT ) * sin(lat) * &
 		sin(lamPrime) / TT
-end function 
+end function
 
 function RH4Velocity( x, y, z, t )
 	real(kreal), dimension(3) :: RH4Velocity
@@ -94,9 +94,12 @@ function RH4Velocity( x, y, z, t )
 	lat = Latitude(x, y, z)
 	lon = Longitude(x, y, z)
 	
-	u = cos(lat) * ( u0 - 0.5_kreal * amp * cos( 4.0_kreal * lon ) * cos(lat) * cos(lat) * &
-		(-3.0_kreal + 5.0_kreal * cos(2.0_kreal * lat )) )
-	v = -4.0_kreal * amp * cos(lat) * cos(lat) * cos(lat) * sin(4.0_kreal * lon ) * sin(lat)
+!	u = cos(lat) * ( u0 - 0.5_kreal * amp * cos( 4.0_kreal * lon ) * cos(lat) * cos(lat) * &
+!		(-3.0_kreal + 5.0_kreal * cos(2.0_kreal * lat )) )
+!	v = -4.0_kreal * amp * cos(lat) * cos(lat) * cos(lat) * sin(4.0_kreal * lon ) * sin(lat)
+
+	u = 0.5_kreal * cos( 4 * lon) * cos(lat) ** 3 * ( 5.0_kreal * cos(2.0_kreal * lat) - 3.0_kreal )
+	v = 4.0_kreal * cos( lat ) ** 3 * sin(lat) * sin( 4.0_kreal * lon)
 	
 	RH4Velocity(1) = -u * sin(lon) - v * sin(lat) * cos(lon)
 	RH4Velocity(2) =  u * cos(lon) - v * sin(lat) * sin(lon)
