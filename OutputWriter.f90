@@ -75,6 +75,7 @@ interface Write
 	module procedure WriteInteger
 	module procedure WriteReal
 	module procedure WriteIntVector
+	module procedure WriteIntegerArray
 end interface
 
 !> @brief Writes various output to a .m file for later loading in Matlab
@@ -207,6 +208,15 @@ subroutine WriteIntVector(self, key, val)
 	write(self%fileUnit, form) trim(key), val%integers(1:val%N)
 end subroutine
 
+subroutine WriteIntegerArray( self, key, val )
+	type(OutputWriter), intent(in) :: self
+	character(len=*), intent(in) :: key
+	integer(kint), dimension(:), intent(in) :: val
+	character(len=32) :: form
+	write(form,'(A,I4,A)') "(A,2X,", size(val), "(I8,2X) )"
+	form = FormatWithIndent(self,form)
+	write(self%fileUnit, form) trim(key), val
+end subroutine
 
 !> @brief Starts an indented section with no title
 !> @param self Target OutputWriter object

@@ -20,11 +20,12 @@ module MPISetupModule
 !
 !------------------------------------------------------------------------------
 use NumberKindsModule
+use LoggerModule
 
 implicit none
 
 private
-public MPISetup, New, Delete, Copy
+public MPISetup, New, Delete, Copy, LogStats
 public LoadBalance
 
 !
@@ -58,6 +59,10 @@ interface Delete
 	module procedure deletePrivate
 end interface
 
+interface LogStats
+	module procedure logStatsPrivate
+end interface
+
 contains
 
 !
@@ -80,6 +85,23 @@ subroutine newPrivate( self, nItems, nProcs )
 	allocate(self%messageLength(0:nProcs-1))
 	
 	call LoadBalance(self, nItems, nProcs)	
+end subroutine
+
+subroutine logStatsPrivate(self, aLog )
+	type(MPISetup), intent(in) :: self
+	type(Logger), intent(inout) :: aLog
+	!
+	character(len=MAX_STRING_LENGTH) :: logString
+	
+	write(logString,'(A,I6,A,I6,A)') "Proc ", procRank, " of ", numProcs, " MPI:"
+	
+	call StartSection(aLog, trim(logString))
+	
+	call LogMessage(aLog, DEBUG_LOGGING_LEVEL, "indexStart = ", self%indexStart )
+	call LogMessage(aLog, DEBUG_LOGGING_LEVEL, "indexEnd = ", self%indexEnd )
+	call LogMessage(aLog, DEBUG_LOGGING_LEVEL, "msgSize = ", self%messageLength )
+	
+	call EndSection(alog)
 end subroutine
 
 !> @brief Deletes and frees memory associated with an MPISetup object.

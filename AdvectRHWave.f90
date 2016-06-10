@@ -98,17 +98,16 @@ t = 0.0_kreal
 call New( sphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
 call AddTracers(sphere, nTracers, tracerDims)
 sphere%tracers(1)%name = "initialLatitude"
-
 call SetInitialDensityOnMesh(sphere)
-call SetTracerOnMesh( sphere, 1, GaussianHillsTracer )
-
-call SetVelocityOnMesh( sphere, velFn, t)
-call SetDivergenceOnMesh(sphere)
-
 do i = 1, sphere%mesh%particles%N
 	vec = LagCoord(sphere%mesh%particles, i)
 	call InsertScalarToField( sphere%tracers(1), Latitude(vec) )
 enddo
+
+call SetVelocityOnMesh( sphere, velFn, t)
+call SetDivergenceOnMesh(sphere)
+
+call LogStats(sphere%mpiParticles, exeLog)
 
 ! TO DO : AMR, initial refinement
 
@@ -162,29 +161,45 @@ do timeJ = 0, nTimesteps - 1
 			 remeshCounter)
 		call New(remesh, sphere)
 		
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "Remesh::New has returned")
+		
 		call New(tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
+		
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "TempSphere::New has returned")
+		
 		call AddTracers(tempSphere, nTracers, tracerDims)
 		tempSphere%tracers(1)%name = "initialLatitude"
+		tempSphere%tracers(1)%units = "radians"
 		
 		! TO DO : Adaptive remeshing
 		
 		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
-			tracerFn1 = InitLatTracer, tracerFn2 = InitLatTracer )
+			tracerFn1 = InitLatTracer )
+		
+		call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "Remesh::LagRemesh has returned")
 		
 		call Copy(sphere, tempSphere)	
 		remeshCounter = remeshCounter + 1
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "Sphere::Copy has returned")
 		
 		call Delete(tempSphere)
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "TempSphere::Delete` has returned")
 		call Delete(remesh)
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "TransportRemesh::Delete` has returned")
 		
 		call Delete(solver)
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "Solver::Delete` has returned")
 		call New(solver, sphere)
+		!call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, "remesh loop: ", "Solver::New` has returned")
+		
+		!call LogStats(sphere%mpiParticles, exeLog)
 	endif
 	
+	!call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//"pre t = ", t)
 	call Timestep(solver, sphere, t, dt, velFn)
-	
 	t = real(timeJ +1, kreal) * dt
 	sphere%mesh%t = t
+	!call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//"post t = ", t)
 	
 	trMass(timeJ+2) = TracerMass(sphere, 1)
 

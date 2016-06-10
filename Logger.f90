@@ -71,6 +71,7 @@ interface LogMessage
 	module procedure LogInteger
 	module procedure LogReal
 	module procedure LogIntVector
+	module procedure LogIntArray
 end interface
 
 !> @brief Starts an indented section
@@ -182,6 +183,17 @@ subroutine LogIntVector(self, msgLevel, key, val )
 	
 	if ( msgLevel >= self%level ) then
 		call Write(self%writer, key, val)
+	endif
+end subroutine
+
+subroutine LogIntArray(self, msgLevel, key, val )
+	type(Logger), intent(in) :: self
+	integer(kint), intent(in) :: msgLevel
+	character(len=*), intent(in) :: Key
+	integer(kint), dimension(:), intent(in) :: val
+	
+	if ( msgLevel >= self%level ) then
+		call Write(self%writer, key, val )
 	endif
 end subroutine
 
