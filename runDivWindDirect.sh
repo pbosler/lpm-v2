@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=0:30:00
+#SBATCH --time=0:60:00
 #SBATCH --account=fy150039
 #SBATCH --job-name=adv-divWindCosBells
 #SBATCH --partition=ec
@@ -29,12 +29,12 @@ cat <<EOF > divWindCosineBells.namelist
 	dt = 0.0125
 	tfinal = 5.0
 	remeshInterval = 10
-	useDirectRemesh = .FALSE.
+	useDirectRemesh = .TRUE.
 /
 
 &fileIO
 	outputDir = '${OUTPUT_LOC}'
-	outputRoot = 'divWindCosBells-indRemesh'
+	outputRoot = 'divWindCosBells_directRemesh'
 	frameOut = 100
 /
 EOF
