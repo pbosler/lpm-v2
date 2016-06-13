@@ -103,6 +103,9 @@ TARGET_LINK_LIBRARIES( advectRossbyWave.exe lpmFortran)
 ADD_EXECUTABLE( advectDivergentWind.exe AdvectDivergentWind.f90)
 TARGET_LINK_LIBRARIES( advectDivergentWind.exe lpmFortran)
 
+ADD_EXECUTABLE( advectSlotC.exe AdvectSlottedC.f90)
+TARGET_LINK_LIBRARIES( advectSlotC.exe lpmFortran)
+
 ADD_EXECUTABLE( nitscheStrickland.exe NitscheStrickland.f90 )
 TARGET_LINK_LIBRARIES( nitscheStrickland.exe lpmFortran)
 

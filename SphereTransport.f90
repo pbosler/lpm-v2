@@ -127,6 +127,7 @@ subroutine SetDivergenceOnMesh(self, divFn, t)
 	self%divergence%N = self%mesh%particles%N
 	if ( .NOT. present(divFn) ) then
 		call SetFieldToZero(self%divergence)
+		self%divergence%N = self%mesh%particles%N
 	else
 		do i = 1, self%mesh%particles%N
 			self%divergence%scalar(i) = divFn(self%mesh%particles%x(i), self%mesh%particles%y(i), &

@@ -858,6 +858,8 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	call SetVelocityOnMesh( newSphere, velFn, t )
 	if ( present(divFn) ) then
 		call SetDivergenceOnMesh( newSphere, divFn, t )
+	else
+		call SetDivergenceOnMesh(newSphere)
 	endif
 
 end subroutine

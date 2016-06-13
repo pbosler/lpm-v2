@@ -56,8 +56,8 @@ function CosineBellsTracer( x, y, z )
 	real(kreal) :: r1, r2, h1, h2
 	r1 = SphereArcLength([x,y,z], [xx1,yy1,zz1])
 	r2 = SphereArcLength([x,y,z], [xx2,yy2,zz2])
-	h1 = hmax*(1.0_kreal + cos(PI*r1/RR))/2.0_kreal
-	h2 = hmax*(1.0_kreal + cos(PI*r2/RR))/2.0_kreal
+	h1 = 0.5_kreal * hmax * (1.0_kreal + cos(PI*r1/RR))
+	h2 = 0.5_kreal * hmax * (1.0_kreal + cos(PI*r2/RR))
 	if ( r1 < RR ) then
 		CosineBellsTracer = b + c * h1
 	elseif ( r2 < RR) then	
