@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=0:60:00
 #SBATCH --account=fy150039
-#SBATCH --job-name=adv-divWindCosBells
+#SBATCH --job-name=adv-slotC
 #SBATCH --partition=ec
 #SBATCH --mail-type=ALL
 

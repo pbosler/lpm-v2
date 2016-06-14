@@ -35,8 +35,7 @@ logical(klog) :: continueAMR
 logical(klog) :: AMR
 integer(kint) :: nParticlesBefore
 integer(kint) :: nParticlesAfter
-logical(klog) :: useDirectRemesh
-namelist /meshDefine/ faceKind, initNest, amrLimit, useDirectRemesh
+namelist /meshDefine/ faceKind, initNest, amrLimit
 
 ! test case variables
 real(kreal), allocatable, dimension(:) :: trMass
@@ -54,6 +53,7 @@ type(TransportRemesh) :: remesh
 integer(kint) :: remeshInterval
 integer(kint) :: remeshCounter
 type(TransportMesh) :: tempSphere
+logical(klog) :: useDirectRemesh
 
 ! timestepping
 type(TransportSolver) :: solver
@@ -62,7 +62,7 @@ real(kreal) :: t
 real(kreal) :: tfinal
 integer(kint) :: nTimesteps
 integer(kint) :: timeJ
-namelist /timestepping/ dt, tfinal, remeshInterval
+namelist /timestepping/ dt, tfinal, remeshInterval, useDirectRemesh
 
 ! i/o
 character(len=MAX_STRING_LENGTH) :: outputDir
