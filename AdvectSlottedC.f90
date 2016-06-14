@@ -256,6 +256,11 @@ if ( procRank == 0 ) then
 	open(unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE')
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
 		call WriteToMatlab(trMass, WRITE_UNIT_1, "trMass")
+		call WriteToMatlab(l2Err, WRITE_UNIT_1, "l2Err")
+		call WriteToMatlab(lInfErr, WRITE_UNIT_1, "lInfErr")
+		call WriteToMatlab(qMinErr, WRITE_UNIT_1, "qMinErr")
+		call WriteToMatlab(qMaxErr, WRITE_UNIT_1, "qMaxErr")
+		call WriteToMatlab(maxval(abs(trMass - trMass(1))) / trMass(1), WRITE_UNIT_1, "tracerMassChange")
 	close(WRITE_UNIT_1)
 endif
 
