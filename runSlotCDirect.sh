@@ -34,7 +34,7 @@ cat <<EOF > slotCAdvectionDir.namelist
 
 &fileIO
 	outputDir = '${OUTPUT_LOC}'
-	outputRoot = 'slotC_indRemesh'
+	outputRoot = 'slotC_dirRemesh'
 	frameOut = 100
 /
 EOF
