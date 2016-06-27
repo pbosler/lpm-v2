@@ -241,7 +241,7 @@ if ( procRank == 0 ) then
 	do i = 1, sphere%mesh%particles%N
 		if ( sphere%mesh%particles%isActive(i) ) then
 			l2Err = l2Err + sphere%tracers(3)%scalar(i) * sphere%tracers(3)%scalar(i) * sphere%mesh%particles%area(i)
-			l2Denom = l2Denom + CosineBellsTracer( sphere%mesh%particles%x(i), sphere%mesh%particles%y(i), &
+			l2Denom = l2Denom + GaussianHillsTracer( sphere%mesh%particles%x(i), sphere%mesh%particles%y(i), &
 				  sphere%mesh%particles%z(i) ) ** 2 * sphere%mesh%particles%area(i) 
 		endif
 	enddo
