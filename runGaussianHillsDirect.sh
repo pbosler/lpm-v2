@@ -10,7 +10,7 @@
 LPM_ROOT=$HOME/lpm-v2
 #OUTPUT_LOC=$HOME/modelData/transport
 OUTPUT_LOC=/fscratch/pabosle/modelData/transport
-JOB_FILENAME=divWindGHillsOutput.txt
+JOB_FILENAME=gHillsDirectOutput.txt
 
 cd $LPM_ROOT/build
 
@@ -18,7 +18,7 @@ rm -f $JOB_FILENAME
 
 for i in `seq 1 7`
 do
-cat <<EOF > gHillsDivWindDirect.namelist
+cat <<EOF > gHillsDirect.namelist
 &meshDefine
 	faceKind = 3 
 	initNest = ${i}
@@ -34,12 +34,12 @@ cat <<EOF > gHillsDivWindDirect.namelist
 
 &fileIO
 	outputDir = '${OUTPUT_LOC}'
-	outputRoot = 'divWind_gHills_directRemesh'
+	outputRoot = 'gHills_directRemesh'
 	frameOut = 100
 /
 EOF
 
-mpirun -np 8 advectGHillsDivWind.exe gHillsDivWindDirect.namelist 2>&1 | tee -a $JOB_FILENAME
+mpirun -np 8 advectGaussHillsSphere.exe gHillsDirect.namelist 2>&1 | tee -a $JOB_FILENAME
 
 done
 

@@ -61,7 +61,8 @@ real(kreal) :: t
 real(kreal) :: tfinal
 integer(kint) :: nTimesteps
 integer(kint) :: timeJ
-namelist /timestepping/ dt, tfinal, remeshInterval
+logical(klog) :: useDirectRemesh
+namelist /timestepping/ dt, tfinal, remeshInterval, useDirectRemesh
 
 ! i/o
 character(len=MAX_STRING_LENGTH) :: outputDir
@@ -180,9 +181,13 @@ do timeJ = 0, nTimesteps - 1
 		tempSphere%tracers(2)%name = "initialLatitude"
 		tempSphere%tracers(3)%name = "relError"
 		
-		call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
-			tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
-		
+		if ( useDirectRemesh ) then
+			call DirectRemeshTransport( remesh, sphere, tempSphere, .FALSE., velFn, t )
+		else
+			call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
+				tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
+		endif
+			
 		call Copy(sphere, tempSphere)	
 		remeshCounter = remeshCounter + 1
 		
@@ -256,6 +261,8 @@ if ( procRank == 0 ) then
 		
 	open(unit=WRITE_UNIT_1, file=matlabFile, status='REPLACE', action='WRITE')
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
+		call WriteToMatlab(l2Err, WRITE_UNIT_1, "l2Err")
+		call WriteToMatlab(lInfErr, WRITE_UNIT_1, "lInfErr")
 		call WriteToMatlab(ghMass, WRITE_UNIT_1, "ghMass")
 	close(WRITE_UNIT_1)
 endif
@@ -278,7 +285,7 @@ subroutine ReadNamelistFile( rank )
 	integer(kint), intent(in) :: rank
 	!
 	character(len=MAX_STRING_LENGTH) :: namelistFilename
-	integer(kint), parameter :: initBcast_intSize = 6
+	integer(kint), parameter :: initBcast_intSize = 7
 	integer(kint), parameter :: initBcast_realSize = 2
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
@@ -327,6 +334,11 @@ subroutine ReadNamelistFile( rank )
 		bcastIntegers(4) = amrLimit
 		bcastIntegers(5) = frameOut
 		bcastIntegers(6) = remeshInterval
+		if (useDirectRemesh) then
+			bcastIntegers(7) = 1
+		else
+			bcastIntegers(7) = 0
+		endif
 		
 		bcastReals(1) = dt
 		bcastReals(2) = tfinal
@@ -348,6 +360,11 @@ subroutine ReadNamelistFile( rank )
 	amrLimit = bcastIntegers(4)
 	frameOut = bcastIntegers(5)
 	remeshInterval = bcastIntegers(6)
+	if ( bcastIntegers(7) > 0 ) then
+		useDirectRemesh = .TRUE.
+	else
+		useDirectRemesh = .FALSE.
+	endif
 	
 	dt = bcastReals(1)
 	tfinal = bcastReals(2)

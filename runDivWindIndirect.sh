@@ -18,7 +18,7 @@ rm -f $JOB_FILENAME
 
 for i in `seq 1 7`
 do
-cat <<EOF > divWindGHills.namelist
+cat <<EOF > divWindGHillsInd.namelist
 &meshDefine
 	faceKind = 3 
 	initNest = ${i}
@@ -34,12 +34,12 @@ cat <<EOF > divWindGHills.namelist
 
 &fileIO
 	outputDir = '${OUTPUT_LOC}'
-	outputRoot = 'divWindGHills_indRemesh'
+	outputRoot = 'divWind_gHills_indRemesh'
 	frameOut = 100
 /
 EOF
 
-mpirun -np 8 advectGHillsDivWind.exe divWindGHills.namelist 2>&1 | tee -a $JOB_FILENAME
+mpirun -np 8 advectGHillsDivWind.exe divWindGHillsInd.namelist 2>&1 | tee -a $JOB_FILENAME
 
 done
 
