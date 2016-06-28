@@ -245,7 +245,7 @@ if ( procRank == 0 ) then
 				  sphere%mesh%particles%z(i) ) ** 2 * sphere%mesh%particles%area(i) 
 		endif
 	enddo
-	l2Err = l2Err / l2Denom
+	l2Err = sqrt(l2Err / l2Denom)
 	lInfErr = MaxScalarVal(sphere%tracers(3))
 	
 	qMinComp = MinScalarVal(sphere%tracers(1))
