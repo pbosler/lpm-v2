@@ -12,8 +12,8 @@
 &timestepping
 	dt = 0.01
 	tfinal = 1.0
-	remeshInterval = 10
-	resetLagParamInterval = 50
+	remeshInterval = 20
+	resetLagParamInterval = 3
 /
 
 &fileIO

@@ -228,11 +228,11 @@ do timeJ = 0, nTimesteps - 1
 !			refMesh%tracers(1)%name = "initX"
 			
 			if ( testID == 1 ) then
-				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( tempMesh, plane, ellipticVortex1, &
+				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( refMesh, plane, ellipticVortex1, &
 					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			else
-				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( tempMesh, plane, ellipticVortex2, &
+				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( refMesh, plane, ellipticVortex2, &
 					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			endif
