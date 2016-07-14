@@ -2,7 +2,7 @@
 	faceKind = 4
 	initNest = 5
 	maxNest = 7
-	amrLimit = 3
+	amrLimit = 0
 	meshRadius = 7.0
 /
 
@@ -21,13 +21,13 @@
 
 &timestepping
 	dt = 0.01
-	tfinal = 3.0
+	tfinal = 1.0
 	remeshInterval = 20
 	resetLagParamInterval = 3
 /
 
 &fileIO
-	outputDir = '/Users/pabosle/modelData/planeIncomp'
+	outputDir = '/Users/pabosle/modelData/plane'
 	outputRoot = 'collidingDipoles'
 	frameout = 1
 /

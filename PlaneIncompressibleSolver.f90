@@ -133,9 +133,9 @@ subroutine newPrivate( self, plane )
 	self%yStart = plane%mesh%particles%y(1:nParticles)
 	self%u = plane%velocity%xComp(1:nParticles)
 	self%v = plane%velocity%yComp(1:nParticles)
-	self%area = plane%mesh%particles%area(nParticles)
-	self%vort = plane%vorticity%scalar(nParticles)
-	self%mask = plane%mesh%particles%isActive(nParticles)
+	self%area = plane%mesh%particles%area(1:nParticles)
+	self%vort = plane%vorticity%scalar(1:nParticles)
+	self%mask = plane%mesh%particles%isActive(1:nParticles)
 end subroutine
 
 !> @brief Deletes and frees memory associated with a PlanarIncompressible solver.
@@ -247,10 +247,7 @@ subroutine timestepPrivate( self, plane, dt )
 	
 	plane%mesh%particles%x(1:nParticles) = self%xStart
 	plane%mesh%particles%y(1:nParticles) = self%yStart
-	
-!	call SetVelocityOnMesh( plane )
-!	self%u = plane%velocity%xComp(1:nParticles)
-!	self%v = plane%velocity%yComp(1:nParticles)
+
 	
 	call planarIncompressibleVelocity( self%u, self%v, self%xStart, self%yStart, self%vort, &
 		self%area, self%mask, plane%mpiParticles)

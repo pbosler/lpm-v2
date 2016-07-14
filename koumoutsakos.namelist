@@ -1,0 +1,24 @@
+&meshDefine
+	faceKind = 4
+	initNest = 5
+	maxNest = 5
+	amrLimit = 0
+	meshRadius = 3.0
+	testID = 1
+	circulationTol = 0.025
+	flowMapVarTol = 1.2
+/
+
+&timestepping
+	dt = 0.01
+	tfinal = 1.0
+	remeshInterval = 10
+	resetLagParamInterval = 50
+/
+
+&fileIO
+	outputDir = '/Users/pabosle/modelData/plane'
+	outputRoot = 'ellipticVortex1'
+	frameOut = 1
+/
+

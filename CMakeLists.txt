@@ -130,6 +130,9 @@ TARGET_LINK_LIBRARIES( betaPlaneGaussianVortex.exe lpmFortran)
 ADD_EXECUTABLE( collidingDipoles.exe CollidingDipoles.f90 )
 TARGET_LINK_LIBRARIES( collidingDipoles.exe lpmFortran )
 
+ADD_EXECUTABLE( ellipticVortex.exe EllipticVortex.f90 )
+TARGET_LINK_LIBRARIES( ellipticVortex.exe lpmFortran )
+
 ADD_EXECUTABLE( sweSteadyStatePlane.exe SWESteadyState.f90)
 TARGET_LINK_LIBRARIES( sweSteadyStatePlane.exe lpmFortran )
 
