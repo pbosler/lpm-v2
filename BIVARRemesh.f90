@@ -511,6 +511,8 @@ subroutine LagrangianRemeshPlanarIncompressibleWithVorticityFunction( newPlane, 
 		enddo
 	endif
 	
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" lagRemesh : ", "uniform mesh ready.")
+	
 	!
 	! AMR
 	!
@@ -546,6 +548,9 @@ subroutine LagrangianRemeshPlanarIncompressibleWithVorticityFunction( newPlane, 
 			
 			
 			if ( nParticlesAfter > nParticlesBefore ) then
+				write(logString,'(A, I4, A, I6, A)') "amr loop ", i, ": ", nParticlesAfter - nParticlesBefore, " particles added."
+				call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey), trim(logString) )
+			
 				call InterpolateLagParam( newPlane%mesh%particles%x0(nParticlesBefore + 1 : nParticlesAfter), &
 						newPlane%mesh%particles%y0(nParticlesBefore + 1 : nParticlesAfter), &
 						newPlane%mesh%particles%x(nParticlesBefore + 1 : nParticlesAfter), &
@@ -584,6 +589,8 @@ subroutine LagrangianRemeshPlanarIncompressibleWithVorticityFunction( newPlane, 
 						endif
 					enddo
 				endif
+			else 
+				exit
 			endif
 		enddo
 		

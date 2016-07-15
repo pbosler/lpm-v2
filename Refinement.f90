@@ -312,6 +312,7 @@ subroutine IterateMeshRefinementTwoVariablesAndFlowMap( self, aMesh, field1, fla
 	integer(kint) :: i
 	
 !	call StartSection(log, trim(logKey)//" meshAMR status")
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" entering : ", "IterateMeshRefinementTwoVariablesAndFlowMap")
 	
 	counters = 0
 	nParticlesStart = aMesh%particles%N
@@ -343,7 +344,8 @@ subroutine IterateMeshRefinementTwoVariablesAndFlowMap( self, aMesh, field1, fla
 	
 	call DivideFlaggedFaces( self, aMesh)
 	nParticlesEnd = aMesh%particles%N
-	
+
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" exiting : ", "IterateMeshRefinementTwoVariablesAndFlowMap")	
 !	call EndSection(log)
 end subroutine
 
@@ -499,12 +501,16 @@ function ScalarVariationRefinement( mesh, dataField, tol, faceIndex )
 	type(STDIntVector) :: faceVerts
 	
 	pIndex = mesh%faces%centerParticle(faceIndex)
-	call CCWVerticesAroundFace( mesh, faceVerts, faceindex)
+!	call CCWVerticesAroundFace( mesh, faceVerts, faceindex)
+!	if ( procRank == 0 ) then
+!		call logMessage(log, DEBUG_LOGGING_LEVEL, "faceIndex = ", faceIndex )
+!		call logMessage(log, DEBUG_LOGGING_LEVEL, "faceVerts = ", faceVerts)
+!	endif
 	maxScalar = dataField%scalar(pIndex)
 	minScalar = maxScalar
-	do i = 1, faceVerts%N
-		if ( dataField%scalar( faceVerts%int(i) ) > maxScalar ) maxScalar = dataField%scalar( faceVerts%int(i))
-		if ( dataField%scalar( faceVerts%int(i) ) < minScalar ) minScalar = dataField%scalar( faceVerts%int(i))
+	do i = 1, mesh%faceKind
+		if ( dataField%scalar(i) > maxScalar ) maxScalar = dataField%scalar(i)
+		if ( dataField%scalar(i) < minScalar ) minScalar = dataField%scalar(i)
 	enddo
 	ScalarVariationRefinement = ( maxScalar - minScalar > tol )
 end function

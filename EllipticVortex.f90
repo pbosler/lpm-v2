@@ -37,6 +37,7 @@ integer(kint) :: nParticlesBefore
 integer(kint) :: nParticlesAfter
 real(kreal) :: circulationTol
 real(kreal) :: flowMapVarTol
+real(kreal) :: vortVarTol
 
 ! remeshing variables
 integer(kint) :: remeshInterval
@@ -64,7 +65,8 @@ character(len=MAX_STRING_LENGTH) :: meshString
 integer(kint) :: frameOut
 integer(kint) :: frameCounter
 
-namelist /meshDefine/ faceKind, initNest, maxNest, amrLimit, meshRadius, testID, circulationTol, flowMapVarTol
+namelist /meshDefine/ faceKind, initNest, maxNest, amrLimit, meshRadius, testID, &
+	 circulationTol, flowMapVarTol, vortVarTol
 namelist /timestepping/ dt, tfinal, remeshInterval, resetLagParamInterval
 namelist /fileIO/ outputDir, outputRoot, frameOut
 
@@ -109,7 +111,7 @@ endif
 useAMR = ( amrLimit > 0 )
 if ( useAMR ) then
 
-	doFlowMapRefine = .FALSE.
+	doFlowMapRefine = .TRUE.
 	
 	call New(refinement, plane%mesh%faces%N_Max)
 	
@@ -202,11 +204,15 @@ do timeJ = 0, nTimesteps - 1
 			
 			if ( testID == 1 ) then
 				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( tempMesh, plane, ellipticVortex1, &
-					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
+					ScalarIntegralRefinement, circulationTol, "circulation refinement", &
+					ScalarVariationRefinement, vortVarTol, "vorticity variation refinement", &
+					RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			else
 				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( tempMesh, plane, ellipticVortex2, &
-					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
+					ScalarIntegralRefinement, circulationTol, "circulation refinement", &
+					ScalarVariationRefinement, vortVarTol, "vorticity variation refinement", &
+					RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			endif
 
@@ -229,11 +235,15 @@ do timeJ = 0, nTimesteps - 1
 			
 			if ( testID == 1 ) then
 				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( refMesh, plane, ellipticVortex1, &
-					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
+					ScalarIntegralRefinement, circulationTol, "circulation refinement", &
+					ScalarVariationRefinement, vortVarTol, "vorticity variation refinement", &
+					RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			else
 				call LagrangianRemeshPlanarIncompressibleWithVorticityFunction( refMesh, plane, ellipticVortex2, &
-					ScalarIntegralRefinement, circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
+					ScalarIntegralRefinement, circulationTol, "circulation refinement", &
+					ScalarVariationRefinement, vortVarTol, "vorticity variation refinement", &
+					RefineFlowMapYN = doFlowMapRefine, &
 					flowMapVarTol = flowMapVarTol )
 			endif
 			
@@ -259,8 +269,10 @@ do timeJ = 0, nTimesteps - 1
 			call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logKey)//" calling remesh routine = ", t)
 			
 			call LagrangianRemeshPlanarIncompressibleToReferenceMesh( tempMesh, plane, refMesh, ScalarIntegralRefinement, &
-					circulationTol, "circulation refinement", RefineFlowMapYN = doFlowMapRefine, &
-					flowMapVarTol = flowMapVarTol)
+					circulationTol, "circulation refinement", &
+					ScalarVariationRefinement, vortVarTol, "vorticity variation refinement", &
+					RefineFlowMapYN = doFlowMapRefine, &
+					flowMapVarTol = flowMapVarTol )
 			
 			call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logKey)//" returned from remesh = ", t)
 			
@@ -375,7 +387,7 @@ subroutine ReadNamelistFile( rank )
 	!
 	character(len=MAX_STRING_LENGTH) :: namelistFilename
 	integer(kint), parameter :: initBcast_intSize = 8
-	integer(kint), parameter :: initBcast_realSize = 5
+	integer(kint), parameter :: initBcast_realSize = 6
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
 	integer(kint) :: mpiErrCode, readStat
@@ -435,6 +447,7 @@ subroutine ReadNamelistFile( rank )
 		bcastReals(3) = circulationTol
 		bcastReals(4) = flowMapVarTol
 		bcastReals(5) = meshRadius
+		bcastReals(6) = vortVarTol
 	endif
 	
 	call MPI_BCAST(bcastIntegers, initBCAST_intSize, MPI_INTEGER, 0, MPI_COMM_WORLD, mpiErrCode)
@@ -461,6 +474,7 @@ subroutine ReadNamelistFile( rank )
 	circulationTol = bcastReals(3)
 	flowMapVarTol = bcastReals(4)
 	meshRadius = bcastReals(5)
+	vortVarTol = bcastReals(6)
 end subroutine
 
 subroutine StoreLagParamAsTracer( aPlane, tracerID )
