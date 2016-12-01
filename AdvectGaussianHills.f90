@@ -82,6 +82,8 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 character(len=28) :: logKey = "AdvectGaussianHills"
 integer(kint) :: mpiErrCode
 real(kreal) :: timeStart, timeEnd
+real(kreal) :: rmTimeStart, rmTimeEnd, rmTimeTotal
+real(kreal) :: stepTimeStart, stepTimeEnd, stepTimeTotal
 integer(kint) :: i
 real(kreal), dimension(3) :: vec
 
@@ -125,7 +127,7 @@ enddo
 !	Output initial data
 !
 frameCounter = 0
-remeshCounter = 0
+remeshCounter = 1
 if ( procRank == 0 ) then
 	call LogStats(sphere, exeLog)
 	if (meshSeed == ICOS_TRI_SPHERE_SEED) then
@@ -168,9 +170,12 @@ qMaxTrue = MaxScalarVal(sphere%tracers(1))
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
 
+rmTimeTotal = 0.0_kreal
+stepTimeTotal = 0.0_kreal
 do timeJ = 0, nTimesteps - 1
 
 	if ( mod(timeJ+1, remeshInterval) == 0 ) then
+		rmTimeStart = MPI_WTIME()
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" remesh triggered by remesh interval : ",& 
 			 remeshCounter)
 		call New(remesh, sphere)
@@ -196,9 +201,14 @@ do timeJ = 0, nTimesteps - 1
 		
 		call Delete(solver)
 		call New(solver, sphere)
+		rmTimeEnd = MPI_WTIME()
+		rmTimeTotal = rmTimeTotal + (rmTimeEnd - rmTimeStart)
 	endif
 	
+	stepTimeStart = MPI_WTIME()
 	call Timestep(solver, sphere, t, dt, velFn)
+	stepTimeEnd = MPI_WTIME()
+	stepTimeTotal = stepTimeTotal + (stepTimeEnd - stepTimeStart)
 	
 	t = real(timeJ +1, kreal) * dt
 	sphere%mesh%t = t
@@ -270,6 +280,14 @@ endif
 !--------------------------------
 !	finalize : clean up
 !--------------------------------
+
+write(logString, '(A,2(F12.6,A))') "TOTAL REMESH TIME = ", rmTimeTotal, " seconds. Time per remesh = ", & 
+	rmTimeTotal / real(remeshCounter, kreal), " seconds."
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" ", logstring)
+
+write(logString, '(A,2(F12.6,A))') "TOTAL RK4 TIME = ", stepTimeTotal, " seconds. Time per time step = ", &
+	stepTimeTotal / real(nTimesteps, kreal), " seconds."
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" ", logstring)
 
 timeEnd = MPI_WTIME()
 write(logstring,'(A,F12.2,A)') "PROGRAM COMPLETE : elapsed time ", timeEnd - timeStart, " seconds."
