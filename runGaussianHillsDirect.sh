@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 #SBATCH --time=0:18:00
 #SBATCH --account=fy150039
 #SBATCH --job-name=gHills-lpmD
@@ -13,13 +13,13 @@ module load gnu/4.9.2
 module load openmpi-intel/1.8
 
 nnodes=$SLURM_JOB_NUM_NODES
-cores=16
+cores=8
 nnp=$(($cores*$nnodes))
 
 LPM_ROOT=$HOME/lpm-v2
 #OUTPUT_LOC=$HOME/modelData/transport
 OUTPUT_LOC=/fscratch/pabosle/modelData/transport/timingDirect
-JOB_FILENAME=gHillsDirectOutput_np${nnp}.txt
+JOB_FILENAME=gHillsDirectOutput_np${nnp}_parRM.txt
 
 cp $LPM_ROOT/build/advectGaussHillsSphere.exe $OUTPUT_LOC/.
 cd $OUTPUT_LOC

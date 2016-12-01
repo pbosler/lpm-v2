@@ -29,6 +29,8 @@ use SSRFPACKInterfaceModule
 
 implicit none
 
+include 'mpif.h'
+
 private
 public BVERemeshSource, TransportRemesh, New, Delete
 public DirectRemeshBVE, DirectRemeshTransport
@@ -580,7 +582,7 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 	real(kreal), dimension(3) :: x0, vec
 	type(RefineSetup) :: refine
 	integer(kint) :: nParticlesBefore, nParticlesAfter
-	integer(kint) :: amrVarCount
+	integer(kint) :: amrVarCount, mpiErrCode
 	
 	remeshCounter = remeshCounter + 1
 	
@@ -591,7 +593,7 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 	do i = 1, size(newSphere%tracers)
 		newSphere%tracers(i)%N = newSphere%mesh%particles%N
 	enddo
-	do i = 1, newSphere%mesh%particles%N
+	do i = newSphere%mpiParticles%indexStart(procRank), newSphere%mpiParticles%indexEnd(procRank)
 		lon = Longitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		
@@ -613,6 +615,26 @@ subroutine DirectRemeshTransport(self, oldSphere, newSphere, AMR, velFn, t, divF
 				newSphere%tracers(j)%xComp(i) = vec(1)
 				newSphere%tracers(j)%yComp(i) = vec(2)
 				newSphere%tracers(j)%zComp(i) = vec(3)
+			endif
+		enddo
+	enddo
+	
+	do i = 0, numProcs - 1
+		! broadcast density
+		call MPI_BCAST(newSphere%density%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+			newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+		! broadcast tracers
+		do j = 1, size(newSphere%tracers)
+			if ( newSphere%tracers(j)%nDim == 1) then
+				call MPI_BCAST(newSphere%tracers(j)%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+			else
+				call MPI_BCAST(newSphere%tracers(j)%xComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+				call MPI_BCAST(newSphere%tracers(j)%yComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+				call MPI_BCAST(newSphere%tracers(j)%zComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)	
 			endif
 		enddo
 	enddo
@@ -717,6 +739,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	real(kreal), dimension(3) :: vec
 	type(DelaunayTriangulation) :: lagDelTri
 	logical(klog) :: useLagCoords
+	integer(kint) :: mpiErrCode
 	
 	remeshCounter = remeshCounter + 1
 	
@@ -737,7 +760,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	endif
 	
 
-	do i = 1, newSphere%mesh%particles%N
+	do i = newSphere%mpiParticles%indexStart(procRank), newSphere%mpiParticles%indexEnd(procRank)
 		lon = Longitude(newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
@@ -774,6 +797,26 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 				endif
 			enddo
 		endif
+	enddo
+	
+	do i = 0, numProcs - 1
+		! broadcast density
+		call MPI_BCAST(newSphere%density%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+			newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+		! broadcast tracers
+		do j = 1, size(newSphere%tracers)
+			if ( newSphere%tracers(j)%nDim == 1) then
+				call MPI_BCAST(newSphere%tracers(j)%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+			else
+				call MPI_BCAST(newSphere%tracers(j)%xComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+				call MPI_BCAST(newSphere%tracers(j)%yComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+				call MPI_BCAST(newSphere%tracers(j)%zComp(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
+					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)	
+			endif
+		enddo
 	enddo
 	
 	!
