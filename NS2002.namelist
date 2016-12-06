@@ -9,11 +9,12 @@
 
 &timestepping
 	dt = 0.025
-	tfinal = 2.0
+	tfinal = 1.0
+	remeshInterval = 20
 /
 
 &fileIO
-	outputDir = '/Users/pabosle/modelData/SWE'
-	outputRoot = 'NS2002-newSWE-dt0.05-topoH0.5'
-	frameOut = 2
+	outputDir = '/Users/pabosle/modelData/plane'
+	outputRoot = 'NS2002-dt0.025-rm20'
+	frameOut = 1
 /

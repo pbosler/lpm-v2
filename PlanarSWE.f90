@@ -63,12 +63,13 @@ implicit none
 include 'mpif.h'
 
 private
-public SWEMesh, New, Delete
+public SWEMesh, New, Delete, Copy
 public AddTracers
 public LogStats
 public OutputToVTKFile
 public SetBottomHeightOnMesh, SetInitialDivergenceOnMesh, SetInitialHOnMesh, SetInitialPotVortOnMesh
-public SetInitialVelocityOnMesh, SetInitialVorticityOnMesh
+public SetInitialVelocityOnMesh, SetInitialVorticityOnMesh, SetFieldN
+public SetVelocityOnMesh
 
 !> @brief Defines a mesh (via @ref PolyMesh2d) and data fields (via @ref Field) suitable for solving the planar Shallow Water Equations (SWE).
 type SWEMesh
@@ -79,7 +80,7 @@ type SWEMesh
 	type(Field) :: velocity !< velocity of each particle
 	type(Field) :: h !< fluid depth at each particle
 	type(Field) :: hBottom !< bottom height at each particle
-	type(Field), pointer :: tracers(:) => null() !< Tracers carried by each particle
+	type(Field), dimension(:), allocatable :: tracers !< Tracers carried by each particle
 	real(kreal) :: f0 = 0.0_kreal !< beta plane parameter
 	real(kreal) :: beta = 0.0_kreal !< beta plane parameter
 	real(kreal) :: g = 0.0_kreal !< gravitational constant
@@ -103,6 +104,10 @@ end interface
 
 interface LogStats
 	module procedure logStatsPrivate
+end interface
+
+interface SetVelocityOnMesh
+	module procedure setVelocityFromFieldData
 end interface
 
 !
@@ -185,6 +190,30 @@ end subroutine
 subroutine copyPrivate(self, other)
 	type(SWEMesh), intent(inout) :: self
 	type(SWEMesh), intent(in) :: other
+	!
+	integer(kint) :: i
+	
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" copyPrivate : ", "entering")
+	
+	self%g = other%g
+	self%f0 = other%f0
+	self%beta = other%beta
+	self%pseEps = other%pseEps
+	
+	call Copy(self%mesh, other%mesh)
+	call Copy(self%relVort, other%relVort)
+	call Copy(self%potVort, other%potVort)
+	call Copy(self%divergence, other%divergence)
+	call Copy(self%velocity, other%velocity)
+	call Copy(self%h, other%h)
+	call Copy(self%hBottom, other%hBottom)
+	call Copy(self%mpiParticles, other%mpiParticles)
+	
+	if (allocated(other%tracers) .AND. (size(self%tracers) == size(other%tracers)) ) then
+		do i = 1, size(self%tracers)	
+			call Copy(self%tracers(i), other%tracers(i))
+		enddo
+	endif
 end subroutine
 
 !> @brief Deletes and frees memory associated with a SWEMesh
@@ -202,12 +231,28 @@ subroutine deletePrivate(self)
 	call Delete(self%velocity)
 	call Delete(self%h)
 	call Delete(self%mesh)
-	if ( associated(self%tracers)) then
+	if ( allocated(self%tracers)) then
 		do i = 1, size(self%tracers)
 			call Delete(self%tracers(i))
 		enddo
 		deallocate(self%tracers)
 	endif
+end subroutine
+
+subroutine SetFieldN(self)
+	type(SWEMesh), intent(inout) :: self
+	!
+	integer(kint) :: nn
+	
+	nn = self%mesh%particles%N
+	
+	self%hBottom%N = nn
+	self%relVort%N = nn
+	self%potVort%N = nn
+	self%divergence%N = nn
+	self%velocity%N = nn
+	self%h%N = nn
+	
 end subroutine
 
 !> @brief Computes the fluid velocity at each particle in parallel using direct summation.
@@ -225,7 +270,7 @@ subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 	
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		do j = 1, self%mesh%particles%N
-			if ( self%mesh%particles%isActive(j) ) then
+			if ( i /= j .AND. self%mesh%particles%isActive(j) ) then
 				denom = 2.0_kreal * PI * ( (x(i) - x(j))**2 + (y(i) - y(j))**2)
 				velocity%xComp(i) = velocity%xComp(i) + (( y(i) - y(j) ) * relVort(j) + (x(i) - x(j)) * divergence(j)) * &
 					area(j) / denom
@@ -256,6 +301,7 @@ subroutine logStatsPrivate(self, aLog)
 	call LogStats(self%divergence, aLog)
 	call LogStats(self%velocity, aLog) 
 	call LogStats(self%hBottom, aLog)
+	call LogStats(self%mpiParticles, aLog)
 end subroutine
 
 subroutine SetCoriolis(self, f0, beta)
@@ -316,7 +362,7 @@ subroutine OutputToVTKFile( self, filename )
 		call WriteFieldToVTKPointData(self%divergence, WRITE_UNIT_1)
 		call WriteFieldToVTKPointData(self%velocity, WRITE_UNIT_1)
 		call WriteFieldToVTKPointData(self%hBottom, WRITE_UNIT_1)
-		if ( associated(self%tracers)) then
+		if ( allocated(self%tracers)) then
 			do i = 1, size(self%tracers)
 				call WriteFieldToVTKPointData(self%tracers(i), WRITE_UNIT_1)
 			enddo
@@ -396,6 +442,63 @@ subroutine SetInitialVelocityOnMesh(self, velFn)
 		call InsertVectorToField(self%velocity, velFn( self%mesh%particles%x(i), self%mesh%particles%y(i)))
 	enddo
 end subroutine
+
+subroutine setVelocityFromFieldData(self)
+	type(SWEMesh), intent(inout) :: self
+	!
+	integer(kint) :: i, j, mpiErrCode
+	real(kreal) :: rotStrength, potStrength 
+	real(kreal) :: sqDist, denom
+
+	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
+	print *, "remesh proc ", procRank
+	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
+	
+	call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" setVelocityFromFieldData : ", " entering.")
+	call LogStats(self, log)
+
+!	call SWEComputeVelocity(self, self%velocity, self%mesh%particles%x, self%mesh%particles%y, &
+!		self%relVort%scalar, self%divergence%scalar, self%mesh%particles%area )
+	
+!	if (procRank == 1) then
+!			
+!	endif
+!	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
+!	
+	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
+		self%velocity%xComp(i) = 0.0_kreal
+		self%velocity%yComp(i) = 0.0_kreal
+!		print *, "proc ", procRank, ": i = ", i
+		do j = 1, self%mesh%particles%N
+			if ( i /= j .AND. self%mesh%particles%isActive(j)) then
+				sqDist = (self%mesh%particles%x(i) - self%mesh%particles%x(j))**2 + &
+						 (self%mesh%particles%y(i) - self%mesh%particles%y(j))**2
+				denom = 2.0_kreal * PI * sqDist
+			
+				rotStrength = self%relVort%scalar(j) * self%mesh%particles%area(j) / denom
+				potStrength = self%divergence%scalar(j) * self%mesh%particles%area(j) / denom
+				
+				self%velocity%xComp(i) = self%velocity%xComp(i) - & 
+						(self%mesh%particles%y(i) - self%mesh%particles%y(j)) * rotStrength + &
+						(self%mesh%particles%x(i) - self%mesh%particles%x(j)) * potStrength
+				self%velocity%yComp(i) = self%velocity%yComp(i) + &
+						(self%mesh%particles%x(i) - self%mesh%particles%x(j)) * rotStrength + &
+						(self%mesh%particles%y(i) - self%mesh%particles%y(j)) * potStrength
+			endif
+		enddo	
+	enddo
+!	
+!	print *, "proc ", procRank, " velocity work done, waiting for broadcast."
+	
+	do i = 0, numProcs - 1
+		call MPI_BCAST(self%velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
+			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+		call MPI_BCAST(self%velocity%yComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
+			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
+	enddo
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" setVelocityFromFieldData : ", " done.")
+end subroutine
+
 
 subroutine SetInitialPotVortOnMesh( self )
 	type(SWEMesh), intent(inout) :: self

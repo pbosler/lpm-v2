@@ -25,6 +25,7 @@ use FieldModule
 use MPISetupModule
 use SWEPlaneSolverModule
 use PSEDirectSumModule
+use BIVARRemeshModule
 
 implicit none
 
@@ -66,7 +67,14 @@ real(kreal) :: t
 integer(kint) :: timeJ, nTimesteps
 type(PSE) :: pseSetup
 
-namelist /timestepping/ dt, tfinal
+!
+!	remeshing
+!
+integer(kint) :: remeshInterval
+integer(kint) :: remeshCounter
+type(SWEMesh) :: tempMesh
+
+namelist /timestepping/ dt, tfinal, remeshInterval
 !
 !	I/O variables
 !
@@ -82,6 +90,8 @@ call MPI_INIT(mpiErrCode)
 call MPI_COMM_SIZE(MPI_COMM_WORLD, numProcs, mpiErrCode)
 call MPI_COMM_RANK(MPI_COMM_WORLD, procRank, mpiErrCode)
 programStart = MPI_WTIME()
+
+print *, "hello from proc ", procRank
 
 call InitLogger(exeLog, procRank)
 
@@ -127,9 +137,58 @@ endif
 !--------------------------------
 !	run : evolve the problem in time (currently no remeshing)
 !--------------------------------
+remeshCounter = 0
+!print *, "proc ", procRank, ": starting time stepping loop."
 do timeJ = 0, nTimesteps - 1
+	!
+	!	remesh
+	!
+	if (mod(timeJ+1, remeshInterval) == 0) then
+		call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
+!		print *, "proc ", procRank, ": entering remesh."
+		remeshCounter = remeshCounter + 1
+		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" remesh ", remeshCounter)
+		call New(tempMesh, meshSeed, initNest, maxNest, amrLimit, meshRadius, f0, beta, g)
+		call SetFieldN(tempMesh)
+		
+		if (procRank == 0 ) then
+			call OutputToVTKFile(tempMesh, trim(outputDir)//"/vtkOut/preInterp.vtk")
+		endif
+		
+		print *, "proc ", procRank, ": new mesh built."
+		
+		call SetBottomHeightOnMesh(tempMesh, bottomTopo)
+		call DirectRemeshPlanarSWE(mesh, tempMesh, .FALSE.)
+		
+		if (procRank == 0 ) then
+			call OutputToVTKFile(tempMesh, trim(outputDir)//"/vtkOut/postInterp.vtk")
+		endif
+		
+		call Copy(mesh, tempMesh)
+		
+!		call StartSection(exeLog, "post copy")
+!		call LogStats(mesh, exeLog)
+!		call EndSection(exeLog)
+		
+		call Delete(tempMesh)
+		
+		call Delete(timekeeper)
+
+		call Delete(pseSetup)		
+		call New(pseSetup, mesh%mesh)
+		mesh%pseEps = pseSetup%eps
+		
+		call New(timekeeper, mesh, bottomTopo)
+!		call LogStats(timekeeper, exeLog)
+	endif
 	
 	call Timestep( timekeeper, mesh, dt, bottomTopo)
+!	if (timeJ + 1 == remeshInterval) then
+!		call LogStats(timekeeper, exeLog)
+!		call StartSection(exeLog, "post timestep")
+!		call LogStats(mesh, exeLog)
+!		call EndSection(exeLog)
+!	endif
 	
 	t = real(timeJ+1,kreal) * dt
 	mesh%mesh%t = t
@@ -268,7 +327,7 @@ end subroutine
 subroutine ReadNamelistFile(rank)
 	integer(kint), intent(in) :: rank
 	!
-	integer(kint), parameter :: initBCAST_intSize = 5
+	integer(kint), parameter :: initBCAST_intSize = 6
 	integer(kint), parameter :: initBCAST_realSize = 4
 	integer(kint) :: readStat
 	integer(kint) :: bcastIntegers(initBCAST_intSize)
@@ -312,6 +371,7 @@ subroutine ReadNamelistFile(rank)
 			bcastIntegers(3) = maxNest
 			bcastIntegers(4) = amrLimit
 			bcastIntegers(5) = frameOut
+			bcastIntegers(6) = remeshInterval
 			
 			bcastReals(1) = dt
 			bcastReals(2) = tfinal
@@ -329,6 +389,7 @@ subroutine ReadNamelistFile(rank)
 	maxNest = bcastIntegers(3)
 	amrLimit = bcastIntegers(4)
 	frameOut = bcastIntegers(5)
+	remeshInterval = bcastIntegers(6)
 	
 	dt = bcastReals(1)
 	tfinal = bcastReals(2)

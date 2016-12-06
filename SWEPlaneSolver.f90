@@ -34,6 +34,7 @@ include 'mpif.h'
 private
 public SWESolver, New, Delete
 public Timestep
+public LogStats
 
 !
 !----------------
@@ -104,6 +105,10 @@ end interface
 
 interface Timestep
 	module procedure timestepPrivate
+end interface
+
+interface LogStats
+	module procedure logStatsPrivate
 end interface
 
 !
@@ -196,6 +201,41 @@ subroutine newPrivate( self, plane, topoFn )
 	
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xStart, self%yStart, self%relVortStart, &
 				self%divStart, self%hStart, topoFn, self%areaStart, self%mask, plane%pseEps, plane%mpiParticles)
+end subroutine
+
+subroutine logStatsPrivate(self, aLog)
+	type(SWESolver), intent(in) :: self
+	type(Logger), intent(inout) :: aLog
+	
+	call StartSection(aLog, trim(logKey)//" SWESolver Stats:")
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size xStart = ", size(self%xStart))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max xStart = ", maxval(self%xStart))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size yStart = ", size(self%yStart))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max yStart = ", maxval(self%yStart))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size u = ", size(self%u))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max u = ", maxval(self%u))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size v = ", size(self%v))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max v = ", maxval(self%v))
+		
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size doubleDot = ", size(self%doubleDot))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max doubleDot = ", maxval(self%doubleDot))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size lapSurf = ", size(self%lapSurf))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max lapSurf = ", maxval(self%lapSurf))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size relVortStart = ", size(self%relVortStart))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max relVortStart = ", maxval(self%relVortStart))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size hStart = ", size(self%hStart))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max hStart = ", maxval(self%hStart))
+	
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size areaStart = ", size(self%areaStart))
+	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max areaStart = ", maxval(self%areaStart))
+		
+	call EndSection(aLog)
 end subroutine
 
 !> @brief Deletes and frees memory associated with an SWESolver.

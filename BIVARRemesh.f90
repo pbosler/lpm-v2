@@ -23,6 +23,7 @@ use MPISetupModule
 use PlaneGeomModule
 use BIVARInterfaceModule
 use PlanarIncompressibleModule
+use PlanarSWEModule
 use BetaPlaneMeshModule
 use RefinementModule
 
@@ -40,6 +41,7 @@ public DirectRemeshBetaPlane
 public LagrangianRemeshBetaPlaneWithVorticityFunction
 public LagrangianRemeshPlanarIncompressibleWithVorticityFunction
 public LagrangianRemeshPlanarIncompressibleToReferenceMesh
+public DirectRemeshPlanarSWE!, LagrangianRemeshPlanarSWE
 
 !
 !----------------
@@ -211,6 +213,91 @@ subroutine DirectRemeshBetaPlane( oldBetaPlane, newBetaPlane, AMR, vortFlagFn1, 
 	
 	call SetVelocityOnMesh( newBetaPlane )
 	call SetStreamFunctionsOnMesh( newBetaPlane )
+	call Delete(bivar)
+end subroutine
+
+subroutine DirectRemeshPlanarSWE(oldPlane, newPlane, useAMR, vortFlagFn1, tol1, desc1, flagFn2, tol2, desc2, field2)
+	type(SWEMesh), intent(in) :: oldPlane
+	type(SWEMesh), intent(inout) :: newPlane
+	logical(klog), intent(in) :: useAMR
+	procedure(FlagFunction), optional :: vortFlagFn1
+	real(kreal), optional, intent(in) :: tol1
+	character(len=*), intent(in), optional :: desc1
+	procedure(FlagFunction), optional :: flagFn2
+	real(kreal), intent(in), optional :: tol2
+	character(len=*), intent(in), optional :: desc2
+	type(Field), intent(inout), optional :: field2
+	!
+	integer(kint) :: i, j, k, nn
+	real(kreal), dimension(2) :: x0, vecT
+	type(RefineSetup) :: refine
+	integer(kint) :: nParticlesBefore, nParticlesAfter
+	type(BIVARInterface) :: bivar
+	
+	if ( .NOT. logInit) call InitLogger(log, procRank)
+	
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "entering.")
+	
+	!
+	!	Remesh to uniform new mesh
+	!
+	call New(bivar, oldPlane%mesh%particles)
+	nn = newPlane%mesh%particles%N
+	newPlane%relVort%N = nn
+	newPlane%potVort%N = nn
+	newPlane%divergence%N = nn
+	newPlane%velocity%N = nn
+	newPlane%h%N = nn
+!	if ( allocated(newPlane%tracers)) then
+!		do i = 1, size(newPlane%tracers)
+!			newPlane%tracers(i)%N = nn
+!		enddo
+!	endif
+
+	call SetBIVARMD(bivar, 1)
+	
+	call InterpolateLagParam(newPlane%mesh%particles%x0(1:nn), newPlane%mesh%particles%y0(1:nn), &
+		newPlane%mesh%particles%x(1:nn), newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "LagParam interpolation done.")
+	
+	call SetBIVARMD(bivar, 3)
+	
+	call InterpolateScalar(newPlane%relVort%scalar(1:nn), newPlane%mesh%particles%x(1:nn), &
+		newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, oldPlane%relVort)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "relvort interpolation done.")	
+	
+	call InterpolateScalar(newPlane%potVort%scalar(1:nn), newPlane%mesh%particles%x(1:nn), &
+		newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, oldPlane%potVort)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "potvort interpolation done.")	
+	
+	call InterpolateScalar(newPlane%divergence%scalar(1:nn), newPlane%mesh%particles%x(1:nn), &
+		newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, oldPlane%divergence)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "divergence interpolation done.")		
+	
+	call InterpolateScalar(newPlane%h%scalar(1:nn), newPlane%mesh%particles%x(1:nn), &
+		newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, oldPlane%h)	
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" DirectRemeshPlanarSWE : ", "h interpolation done.")		
+	
+!	if (allocated(newPlane%tracers)) then
+!		do i = 1, size(newPlane%tracers)
+!			if (newPlane%tracers(i)%nDim == 1) then
+!				call InterpolateScalar(newPlane%tracers(i)%scalar(1:nn), newPlane%mesh%particles%x(1:nn), &
+!					newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, oldPlane%tracers(i))			
+!			else
+!				call InterpolateVector(newPlane%tracers(i)%xComp(1:nn), newPlane%tracers(i)%yComp(1:nn), &
+!					newPlane%mesh%particles%x(1:nn), newPlane%mesh%particles%y(1:nn), bivar, oldPlane%mesh%particles, &
+!					oldPlane%tracers(i))			
+!			endif
+!		enddo
+!	endif
+	
+	if ( useAMR ) then
+		call LogMessage(log, TRACE_LOGGING_LEVEL, trim(logkey)//" DirectRemeshPlanarSWE WARNING : ", "AMR not implemented yet.")
+		call SetBIVARMD(bivar, 2)
+	endif
+	
+	call SetVelocityOnMesh(newPlane)
+		
 	call Delete(bivar)
 end subroutine
 

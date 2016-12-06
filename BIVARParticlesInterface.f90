@@ -111,11 +111,17 @@ subroutine SetBIVARMD(self, md)
 	type(BIVARInterface), intent(inout) :: self
 	integer(kint), intent(in) :: md
 	
-	if ( md > 3 .OR. md < 1 ) then
-		call LogMessage(log, WARNING_LOGGING_LEVEL,trim(logKey)//" SetBIVARMD WARNING : ", "invalid md value")
-	else
-		!self%md = md
-	endif
+	select case (md)
+		case (1)
+			call LogMessage(log, TRACE_LOGGING_LEVEL,trim(logKey)//" SetBIVARMD = 1: ", "first call / redo everyting")	
+		case (2)
+			call LogMessage(log, TRACE_LOGGING_LEVEL,trim(logKey)//" SetBIVARMD = 2: ", "same input as before, new output locations")	
+		case (3)
+			call LogMessage(log, TRACE_LOGGING_LEVEL,trim(logKey)//" SetBIVARMD = 3: ", "same locations, new field")	
+		case default
+			call LogMessage(log, WARNING_LOGGING_LEVEL,trim(logKey)//" SetBIVARMD WARNING : ", "invalid md value")		
+	end select
+	self%md = md
 end subroutine
 
 !> @brief Interpolates a scalar @ref Field from a set of @ref Particles to a set of destination points.
@@ -141,6 +147,7 @@ subroutine InterpolateScalar( scalarOut, xOut, yOut, self, sourceParticles, sour
 	nOut = size(xOut)
 	call IDBVIP( self%md, sourceParticles%N, sourceParticles%x(1:nParticles), sourceParticles%y(1:nParticles), &
 				 sourceField%scalar(1:nParticles), nOut, xOut, yOut, scalarOut, self%intWork, self%realWork)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" InterpolateScalar ", "returned from bivar.f90")				 
 end subroutine	
 
 !> @brief Interpolates the Lagrangian coordinates from a set of @ref Particles to a set of destination points.
@@ -165,7 +172,7 @@ subroutine InterpolateLagParam( lagXOut, lagYOut, xOut, yOut, self, sourcePartic
 	
 	nParticles = sourceParticles%N
 	nOut = size(xOut)
-	!call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" nOut = ", nOut)
+	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" InterpolateLagParam nOut = ", nOut)
 	!print *, "nOut = ", nOut
 	
 	tempMD = self%md
