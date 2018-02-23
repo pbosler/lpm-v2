@@ -298,7 +298,7 @@ function bottomTopo(x,y)
 	real(kreal) :: bottomTopo
 	real(kreal), intent(in) :: x, y
 	!bottomTopo = 0.0_kreal
-	bottomTopo = 0.5_kreal * exp( -5.0_kreal * (x-0.75_kreal) * (x-0.75_kreal) - 5.0_kreal * y * y)
+	bottomTopo = 0.25_kreal * exp( -5.0_kreal * (x-0.75_kreal) * (x-0.75_kreal) - 5.0_kreal * y * y)
 end function
 
 !> @brief Initializes a @ref Logger for this executable program.

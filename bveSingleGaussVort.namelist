@@ -21,7 +21,7 @@
 /
 
 &fileIO
-	outputDir = '/Users/pabosle/modelData/BVE'
-	outputRoot = 'gaussVort_midlat_Ro1_titanCompare'
+	outputDir = '/Users/pabosle/Desktop/dataTemp/BVE'
+	outputRoot = 'gaussVort_midlat_Ro1'
 	frameOut = 1
 /

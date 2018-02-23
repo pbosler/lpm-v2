@@ -8,13 +8,13 @@
 /
 
 &timestepping
-	dt = 0.025
-	tfinal = 1.0
-	remeshInterval = 20
+	dt = 0.05
+	tfinal = 4.0
+	remeshInterval = 30
 /
 
 &fileIO
 	outputDir = '/Users/pabosle/modelData/plane'
-	outputRoot = 'NS2002-dt0.025-rm20'
+	outputRoot = 'NS2002-dt0.05-rm40-mtn0.25'
 	frameOut = 1
 /
