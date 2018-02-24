@@ -1,7 +1,7 @@
 add_library( lpmFortran TypeDefs.f90 OutputWriter.f90 Logger.f90 STDIntVector.f90
 						SphereGeometry.f90 PlaneGeometry.f90 
 						Particles.f90 Field.f90
-						Edges.f90 Faces.f90 PolyMesh2d.f90 CubicEdges.f90
+						Edges.f90 Faces.f90 PolyMesh2d.f90 CubicEdges.f90 CubicQuadFaces.f90
 						PlanarIncompressible.f90 PlaneIncompressibleSolver.f90
 						bivar.f90 BIVARParticlesInterface.f90 BIVARRemesh.f90
 						PSEDirectSum.f90 
