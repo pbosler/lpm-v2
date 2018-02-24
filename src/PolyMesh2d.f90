@@ -148,7 +148,7 @@ subroutine newPrivate(self, meshSeed, initNest, maxNest, amrLimit, ampFactor )
 	self%meshSeed = meshSeed
 	self%initNest = initNest
 	self%amrLimit = amrLimit
-	if ( meshSeed < TRI_HEX_SEED .OR. meshSeed > BETA_PLANE_SEED ) then
+	if ( meshSeed < TRI_HEX_SEED .OR. meshSeed > CUBIC_PLANE_SEED ) then
 		call LogMessage(log,ERROR_LOGGING_LEVEL, logkey," NewMesh ERROR : invalid meshSeed.")
 		return
 	endif

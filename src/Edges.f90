@@ -49,6 +49,7 @@ public CountParents
 !> of their left face and right face.
 type Edges
 	integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles 
+	integer(kint), allocatable :: midpts(:,:) !< Integer array containing indices of particlesmodule::particles
 	integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles 
 	integer(kint), allocatable :: rightFace(:) !< Integer array containing indices of facesmodule::faces
 	integer(kint), allocatable :: leftFace(:) !< Integer array containing indices of facesmodule::faces
@@ -58,6 +59,7 @@ type Edges
 	integer(kint), allocatable :: parent(:) !< Null for root edges.  Integer pointers into edges for divided edges
 	integer(kint) :: N = 0 !< Number of edges currently in use
 	integer(kint) :: N_Max = 0 !< Max number of edges allowed in memory
+	logical(klog) :: hasInteriorPts = .FALSE.
 	
 	contains
 		final :: deletePrivate
@@ -87,6 +89,11 @@ interface CountParents
 	module procedure countParentEdges
 end interface 
 
+interface DivideEdge
+    module procedure divideLinearEdge
+    module procedure divideCubicEdge
+end interface
+
 !
 !----------------
 ! Logging
@@ -106,9 +113,10 @@ contains
 !> @brief Allocates memory for a new edges object.  All values are zeroed and must be initialized separately.
 !> @param self Target edge object
 !> @param nMax max number of edges allowed in memory
-subroutine NewPrivate(self, nMax )
+subroutine NewPrivate(self, nMax, nInteriorPts )
 	type(Edges), intent(out) :: self
 	integer(kint), intent(in) :: nMax
+	integer(kint), intent(in), optional :: nInteriorPts
 	
 	if ( .NOT. logInit ) call InitLogger(log, procRank )
 	
@@ -136,6 +144,10 @@ subroutine NewPrivate(self, nMax )
 	self%child2 = 0
 	allocate(self%parent(nMax))
 	self%parent = 0
+	if (present(nInteriorPts)) then
+	    allocate(self%midpts(nInteriorPts, nMax))
+	    self%hasInteriorPts = .TRUE.
+	endif
 end subroutine
 
 !> @brief Deletes and frees memory associated with an edges object
@@ -150,6 +162,7 @@ subroutine deletePrivate(self)
 	if ( allocated(self%child1)) deallocate(self%child1)
 	if ( allocated(self%child2)) deallocate(self%child2)
 	if ( allocated(self%parent)) deallocate(self%parent)
+	if ( allocated(self%midpts)) deallocate(self%midpts)
 end subroutine
 
 !> @brief Performs a deep copy of one edges object into another.  They must have been allocated the same to avoid memory errors.
@@ -177,6 +190,11 @@ subroutine copyPrivate( self, other )
 		self%parent(j) = other%parent(j)
 	enddo
 	self%N = other%N
+	if (allocated(self%midpoints) .AND. allocated(other%midpts)) then
+	    do j = 1, other%N
+	        self%midpts(:,j) = other%midpts(:,j)
+	    enddo
+	endif
 end subroutine
 
 !> @brief Log summarizing statistics about an edges object
@@ -201,10 +219,11 @@ end subroutine
 !> @param destIndex index to destination particle
 !> @param leftFace index to left face of new edge in faces object
 !> @param rightFace index to right face of new edge in faces object
-subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFace )
+subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFace,  interiorIndices )
 	type(Edges), intent(inout) :: self
 	type(Particles), intent(inout) :: aParticles
 	integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
+	integer(kint), dimension(:), intent(in), optional :: interiorIndices
 	!
 	integer(kint) :: n
 	
@@ -219,6 +238,15 @@ subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFa
 	self%dest( n + 1 ) = destIndex
 	self%leftFace( n + 1) = leftFace
 	self%rightFace(n + 1) = rightFace
+	
+	if (present(interiorIndices)) then
+	    if (allocated(self%midpts) .AND. size(self%midpts,1) == size(interiorIndices)) then
+            self%midpts(:,n+1) = interiorIndices
+        else
+            call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " InsertEdge : interior points size mismatch")
+            return
+        endif
+	endif
 	
 	call RecordIncidentEdgeAtParticles( self, n + 1, 	aParticles )
 	
@@ -557,7 +585,7 @@ end function
 !> @param self Target edge object
 !> @param edgeIndex target edge
 !> @param aParticles particles object associated with this set of edges
-subroutine DivideEdge( self, edgeIndex, aParticles )
+subroutine divideLinearEdge( self, edgeIndex, aParticles )
 	type(Edges), intent(inout) :: self
 	integer(kint), intent(in) :: edgeIndex
 	type(Particles), intent(inout) :: aParticles
@@ -566,7 +594,7 @@ subroutine DivideEdge( self, edgeIndex, aParticles )
 	integer(kint) :: pInsertIndex
 	
 	if ( self%N + 2 > self%N_Max ) then
-		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " DivideEdge : out of memory.")
+		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divideLinearEdge : out of memory.")
 		return
 	endif
 	
@@ -608,6 +636,88 @@ subroutine DivideEdge( self, edgeIndex, aParticles )
 	
 	self%N = self%N + 2
 end subroutine
+
+subroutine divideCubicEdge(self, edgeIndex, aParticles)
+    type(Edges), intent(inout) :: self
+    integer(kint), intent(in) :: edgeIndex
+    type(Particles), intent(inout) :: aParticles
+    !
+    real(kreal) :: v0(3), v1(3), lV0(3), lV1(3), newCoords(3,4), newLagCoords(3,4) 
+    real(kreal) :: midPt(3), lagMidPt(3), norms(4), lagNorms(4)
+    integer(kint) :: pInsertIndex, j
+    integer(kint), dimension(4) :: parentParticleIndices, child1Inds, child2Inds
+    real(kreal), parameter :: sqrt5 = sqrt(5.0_kreal)
+    
+    if (self%N + 2 > self%N_Max) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divideCubicEdge : out of memory.")
+        return
+    endif
+    
+    v0 = PhysCoord(aParticles, self%orig(edgeIndex))
+	lV0 = LagCoord(aParticles, self%orig(edgeIndex))
+	v1 = PhysCoord(aParticles, self%dest(edgeIndex))
+	lV1 = LagCoord(aParticles, self%dest(edgeIndex))
+	
+	parentParticleIndices(1) = self%orig(edgeIndex)
+	parentParticleIndices(2) = self%midpts(1, edgeIndex)
+	parentParticleIndices(3) = self%midpts(2, edgeIndex)
+	parentParticleIndices(4) = self%dest(edgeIndex)
+	
+	pInsertIndex = aParticles%N+1
+	
+	child1Inds(1) = parentParticleIndices(1)
+	child1Inds(2) = parentParticleIndices(2)
+	child1Inds(3) = pInsertIndex
+	child1Inds(4) = pInsertIndex + 1
+	
+	child2Inds(1) = pInsertIndex + 1
+	child2Inds(2) = pInsertIndex + 2
+	child2Inds(3) = parentParticleIndices(3)
+	child2Inds(4) = parentParticleIndices(4)
+	
+	!
+	!   insert and reposition particles for child edges
+	!
+	
+    midPt = 0.5_kreal * (v0 + v1)
+    lagMidPt = 0.5_kreal *(lV0 + lV1)
+    
+    newCoords(:,1) = pointAlongVector(v0, midPt, -1.0_kreal / sqrt5)
+    newCoords(:,2) = pointAlongVector(v0, midPt, 1.0_kreal / sqrt5)
+    newCoords(:,3) = pointAlongVector(midPt, v1, -1.0_kreal / sqrt5)
+    newCoords(:,4) = pointAlongVector(midPt, v1, 1.0_kreal / sqrt5)
+    
+    newLagCoords(:,1) = pointAlongVector(lV0, lagMidPt, -1.0_kreal / sqrt5)
+    newLagCoords(:,2) = pointAlongVector(lV0, lagMidPt, 1.0_kreal / sqrt5)
+    newLagCoords(:,3) = pointAlongVector(lagMidPt, lV1, -1.0_kreal / sqrt5)
+    newLagCoords(:,4) = pointAlongVector(lagMidPt, lV1, 1.0_kreal / sqrt5)
+    if (aParticles%geomKind == SPHERE_GEOM) then
+        do j=1, 4
+            norms(j) = sqrt(sum(newCoords(:,j) * newCoords(:,j)))
+            lagNorms(j) = sqrt(sum(newLagCoords(:,j) * newLagCoords(:,j)))
+        enddo
+        do j=1,4
+            newCoords(:,j) = newCoords(:,j) / norms(j)
+            newLagCoords(:,j) = newLagCoords(:,j) / norms(j)
+        enddo
+	endif 
+    
+    call ReplaceParticle(aParticles, parentParticleIndices(2), newCoords(:,1), newLagCoords(:,1))
+    call InsertParticle(aParticles, newCoords(:,2), newLagCoords(:,2))
+    call InsertParticle(aParticles, midPt, lagMidPt)
+    call InsertParticle(aParticles, newCoords(:,3), newLagCoords(:,3))
+    call ReplaceParticle(aParticles, parentParticleIndices(3), newCoords(:,4), newLagCoords(:,4))
+        
+        
+end subroutine
+
+pure function pointAlongVector(p0, p1, s)
+    real(kreal), dimension(3) :: pointAlongVector
+    real(kreal), dimension(3), intent(in) :: p0, p1
+    real(kreal), intent(in) :: s
+    
+    pointAlongVector = 0.5_kreal * ( (1-s) * p0 + (1+s) * p1)
+end function    
 
 !> @brief Replaces an edge recorded at its incident particles with the appropriate child edge index.
 !> @param self Target edge object

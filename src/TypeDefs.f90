@@ -34,7 +34,7 @@ module NumberKindsModule
 	real(KREAL), parameter :: GRAV = 9.80616 !< acceleration due to gravity {m s^(-2)} @ingroup PhysicalConstants
 	real(KREAL), parameter :: ONE_DAY = 86140.0_kreal !< Earth's sidereal day {s} @ingroup PhysicalConstants
 	real(KREAL), parameter :: EARTH_RADIUS = 6371220_kreal !< mean radius of the Earth { m } @ingroup PhysicalConstants
-!    real(KREAL), save ::	  OMEGA = 2.0_kreal*PI / ONE_DAY  !< rotation rate of sphere {s^(-1)} @ingroup PhysicalConstants
+    real(KREAL), parameter :: EARTH_OMEGA = 2.0_kreal*PI / ONE_DAY  !< rotation rate of sphere {s^(-1)} @ingroup PhysicalConstants
     real(KREAL), parameter :: EARTH_SURFACE_AREA = 4.0_kreal * PI * EARTH_RADIUS * EARTH_RADIUS
 
 
@@ -60,6 +60,7 @@ module NumberKindsModule
 	integer(KINT), parameter ::	MAX_POLYGON_SIDES = 20 !< defines maximum allowable polygon size in a Voronoi mesh @ingroup MeshConstants
 	integer(KINT), parameter ::	FREE_BOUNDARIES = 101 !< boundary condition parameter for planar meshes @ingroup MeshConstants
 	integer(KINT), parameter ::	PERIODIC_BOUNDARIES = 102 !< boundary condition parameter for planar meshes @ingroup MeshConstants
+	
 	integer(KINT), parameter :: TRI_HEX_SEED = 201
 	integer(KINT), parameter :: QUAD_RECT_SEED = 202
 	integer(KINT), parameter :: POLAR_DISC_SEED = 203
@@ -67,6 +68,7 @@ module NumberKindsModule
 	integer(KINT), parameter :: ICOS_TRI_SPHERE_SEED = 205
 	integer(KINT), parameter :: CUBED_SPHERE_SEED = 206
 	integer(KINT), parameter :: BETA_PLANE_SEED = 207
+	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208
 	real(KREAL), save :: SphereRadius = 1.0_kreal
 
 	integer(KINT), save :: numProcs = 1 !< number of processess @ingroup MPIVariables

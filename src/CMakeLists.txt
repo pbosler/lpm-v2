@@ -1,4 +1,4 @@
-add_library( lpmFortran NumberKinds.f90 OutputWriter.f90 Logger.f90 STDIntVector.f90
+add_library( lpmFortran TypeDefs.f90 OutputWriter.f90 Logger.f90 STDIntVector.f90
 						SphereGeometry.f90 PlaneGeometry.f90 
 						Particles.f90 Field.f90
 						Edges.f90 Faces.f90 PolyMesh2d.f90 

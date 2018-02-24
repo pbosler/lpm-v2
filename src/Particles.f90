@@ -41,7 +41,7 @@ implicit none
 private
 public Particles
 public New, Delete, Copy
-public InsertParticle
+public InsertParticle, ReplaceParticle
 public PhysCoord, LagCoord
 public LogStats, PrintDebugInfo
 public TotalArea, TotalVolume
@@ -514,6 +514,21 @@ subroutine InsertParticle( self, physX, lagX )
 	endif
 	self%isPassive(self%N+1) = .TRUE.
 	self%N = self%N + 1
+end subroutine
+
+subroutine ReplaceParticle(self, index, physX, lagX)
+    type(Particles), intent(inout) :: self
+    integer(kint), intent(in) :: index
+    real(kreal), intent(in) :: physX(:), lagX(:)
+    
+    self%x(index) = physX(1)
+    self%y(index) = physX(2)
+    self%x0(index) = lagX(1)
+    self%y0(index) = lagX(2)
+    if (self%geomKind /= PLANAR_GEOM) then
+        self%z(index) = physX(3)
+        self%z0(index) = lagX(3)
+    endif
 end subroutine
 
 !> @brief Changes a passive particle to an active particle. 
