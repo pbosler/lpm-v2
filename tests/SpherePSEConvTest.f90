@@ -368,6 +368,17 @@ call EndSection(exeLog)
 harmonicInterpError%scalar = harmonicInterpError%scalar / maxval(abs(harmonic%scalar))
 harmonicLapError%scalar = harmonicLapError%scalar / maxval(abs(harmonicLapExact%scalar))
 
+if (procRank==0) then
+    if (unifLinfConstLap > ZERO_TOL .OR. unifL2ConstLap > ZERO_TOL .OR. &
+        particlesLinfConstLap > ZERO_TOL .OR. particlesL2ConstLap > ZERO_TOL) stop "TEST FAIL: Constant Laplacian != 0.0"
+
+    if (unifLinfHarm > 0.018 .OR. unifLinfHarmLap > 0.01805) stop "TEST FAIL: uniform harmonic regression."
+
+    if (particlesLinfHarm > 0.0176 .OR. particlesL2Harm > 0.0002) stop "TEST FAIL: particles harmonic interpolation regression"
+
+    if (particlesLinfHarmLap > 0.0175 .OR. particlesL2HarmLap > 0.000118) &
+        stop "TEST FAIL: particles laplacian approximation regression."
+endif
 
 !--------------------------------
 !	finalize : write output, clean up
