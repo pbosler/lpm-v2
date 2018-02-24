@@ -72,6 +72,27 @@ pure function ChordDistance(xyzA, xyzB)
 end function
 
 
+pure function pointAlongChordVector(p0, p1, s)
+    real(kreal), dimension(3) :: pointAlongChordVector
+    real(kreal), dimension(3), intent(in) :: p0, p1
+    real(kreal), intent(in) :: s
+    
+    pointAlongChordVector = 0.5_kreal * ( (1-s) * p0 + (1+s) * p1)
+end function 
+
+pure function pointAlongSphereVector(p0, p1, s)
+    real(kreal), dimension(3) :: pointAlongSphereVector
+    real(kreal), dimension(3), intent(in) :: p0, p1
+    real(kreal), intent(in) :: s
+    !
+    real(kreal) :: norm
+    
+    pointAlongSphereVector = pointAlongChordVector(p0, p1, s)
+    norm = sqrt(sum(pointAlongSphereVector*pointAlongSphereVector))
+    pointAlongSphereVector = pointAlongSphereVector / norm * SphereRadius
+end function 
+
+
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
 !> @brief Great-circle distance between two points on the sphere
