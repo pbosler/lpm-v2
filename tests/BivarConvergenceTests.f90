@@ -29,7 +29,9 @@ type(Field) :: estLap, exactLap, lapError
 real(kreal), parameter :: b = 3.0_kreal
 real(kreal), parameter :: xc = 0.0_kreal, yc = 0.0_kreal
 real(kreal), parameter :: maxAbsLap = 36.0_kreal
-real(kreal) :: estGradError(9), estLapError(9), interpError(9), meshSize(9)
+integer(kint), parameter :: nestStart = 3, nestEnd = 5, testSize = nestEnd - nestStart + 1
+integer(kint) :: nestCtr
+real(kreal) :: estGradError(testSize), estLapError(testSize), interpError(testSize), meshSize(testSize)
 real(kreal) :: testStart, testEnd, maxGradMag
 
 integer(kint) :: i, j
@@ -39,6 +41,7 @@ integer(kint), allocatable :: ipt(:), ipl(:), iwl(:), iwp(:)
 real(kreal), allocatable :: wk(:), partials(:)
 
 integer(kint), parameter :: nn = 501
+
 real(kreal), parameter :: dx = 8.0_kreal / real( nn - 1, kreal)
 real(kreal), parameter :: xmin = -4.0_kreal
 real(kreal), parameter :: xmax = 4.0_kreal
@@ -59,9 +62,13 @@ character(len=MAX_STRING_LENGTH) :: filename
 !
 call New(exeLog, DEBUG_LOGGING_LEVEL)
 
-do initNest = 8, 8
+
+nestCtr = 1
+
+do initNest = nestStart, nestEnd
 	
-	write(logstring,'(A,I3,A)') "test ", initNest+1, ", of 9..."
+	write(logstring,'(2(A,I3),A)') "test ", nestCtr, ", of ", nestEnd-nestStart +1, "..."
+	
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL,"Interpolation Convergence : ", logString)
 	call cpu_time(testStart)
 	!
@@ -89,13 +96,9 @@ do initNest = 8, 8
 		call InsertVectorToField(exact2ndPartials, Gauss2ndDerivs([triMesh%particles%x(i), triMesh%particles%y(i)], b))
 		call InsertScalarToField(exactLap, GaussLap([triMesh%particles%x(i), triMesh%particles%y(i)],b) )
 	enddo
-	
+
 	!
-	! set up interpolation, estimate derivatives
-	!
-	
-	!
-	! interpolate to uniform mesh
+	! define uniform mesh to serve as interpolation target
 	!
 	do i = 1, nn
 		x(i) = xmin + dx * (i-1)
@@ -107,9 +110,9 @@ do initNest = 8, 8
 	allocate(ipl(6*triMesh%particles%N))	   ! border edges and triangles : border edge I has 
 											   ! 	endpoint 1, endpoint 2, and triangle index stored at
 											   !	ipl(3*I-2), ipl(3*I-1), and ipl(3*I), for I = 1,...,nL.
-	allocate(iwl(18*triMesh%particles%N))	! work space only
-	allocate(iwp(triMesh%particles%N))		! work space only
-	allocate(wk(8*triMesh%particles%N))		! work space only
+	allocate(iwl(18*triMesh%particles%N))	! workspace only
+	allocate(iwp(triMesh%particles%N))		! workspace only
+	allocate(wk(8*triMesh%particles%N))		! workspace only
 	!
 	!	triangulate particles
 	!
@@ -145,15 +148,16 @@ do initNest = 8, 8
 	!
 	! 	interpolate the scalar
 	!
+	interpScalar = 0.0_kreal
 	do j = 1, nn
 		do i = 1, nn
 			exactScalar(i,j) = Gaussian( [x(j),y(i)], b)
-			!if ( pointIsOutsideMesh(triMesh, [ x(j), y(i), 0.0_kreal ]) ) then
-			!	interpScalar(i,j) = 0.0_kreal
-			!else
+			if ( pointIsOutsideMesh(triMesh, [ x(j), y(i), 0.0_kreal ]) ) then
+				interpScalar(i,j) = 0.0_kreal
+			else
 				call idptip( triMesh%particles%N, triMesh%particles%x, triMesh%particles%y, scalar%scalar, &
 						 nTri, ipt, nL, ipl, partials, inTri(i,j), x(j), y(i), interpScalar(i,j))
-			!endif
+			endif
 		enddo
 	enddo
 	
@@ -174,13 +178,13 @@ do initNest = 8, 8
 	enddo
 	
 	maxGradMag = MaxMagnitude(exactGrad)
-	meshSize(initNest+1) = MaxEdgeLength(triMesh%edges, triMesh%particles)
-	estGradError(initNest+1) = maxval(gradError%scalar)/maxGradMag
-	estLapError(initNest+1) = maxval(abs(lapError%scalar))/maxAbsLap
-	interpError(initNest+1) = maxval(abs(interpScalar-exactScalar))
+	meshSize(nestCtr) = MaxEdgeLength(triMesh%edges, triMesh%particles)
+	estGradError(nestCtr) = maxval(gradError%scalar)/maxGradMag
+	estLapError(nestCtr) = maxval(abs(lapError%scalar))/maxAbsLap
+	interpError(nestCtr) = maxval(abs(interpScalar-exactScalar))
 	
 	write(6,'(4A24)') "dx", "gradErr-particles", "lapErr-particles", "interp error"
-	write(6,'(4F24.10)') meshSize(initNest+1), estGradError(initNest+1), estLapError(initNest+1), interpError(initNest+1)
+	write(6,'(4F24.10)') meshSize(nestCtr), estGradError(nestCtr), estLapError(nestCtr), interpError(nestCtr)
 				  
 	write(filename,'(A,I1,A)') 'BivarTestTriMesh', initNest, '.m'
 	open(unit=WRITE_UNIT_1,file=filename,status='REPLACE',action='WRITE')
@@ -239,10 +243,11 @@ do initNest = 8, 8
 	call Delete(triMesh)
 	
 	call LogMessage(exeLog,TRACE_LOGGING_LEVEL, "test complete for initNest = ", initNest)
+	nestCtr = nestCtr + 1
 enddo
 
 write(6,'(4A24)') "dx", "gradErr-particles", "lapErr-particles", "interp error"
-do i = 1, 9
+do i = 1, testSize
 	write(6,'(4F24.10)') meshSize(i), estGradError(i), estLapError(i), interpError(i)
 enddo
 

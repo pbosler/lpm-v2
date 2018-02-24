@@ -552,7 +552,7 @@ subroutine ReadNamelistFile( rank )
 			endif
 		endif
 	
-		write(vtkFile,'(5A)') trim(outputDir), '/vtkOut/', trim(outputRoot), trim(meshString), '.vtk'
+		write(vtkFile,'(4A)') trim(outputDir), trim(outputRoot), trim(meshString), '.vtk'
 		write(matlabFile,'(5A)') trim(outputDir), '/', trim(outputRoot), trim(meshString), '.m'
 		
 		bcastIntegers(1) = meshSeed

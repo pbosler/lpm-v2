@@ -70,6 +70,10 @@ module NumberKindsModule
 	integer(KINT), parameter :: BETA_PLANE_SEED = 207
 	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208
 	real(KREAL), save :: SphereRadius = 1.0_kreal
+	
+	real(kreal), parameter :: sqrt5 = sqrt(5.0_kreal), oosqrt5 = 1.0_kreal / sqrt5, oo6 = 1.0_kreal / 6.0_kreal
+	real(kreal), dimension(4), parameter :: cubic_gll_coords = (/ -1.0_kreal, -oosqrt5, oosqrt5, 1.0_kreal /)
+	real(kreal), dimension(4), parameter :: cubic_gll_weights = (/oo6, 1.0_kreal - oo6, 1.0_kreal - oo6, oo6/)
 
 	integer(KINT), save :: numProcs = 1 !< number of processess @ingroup MPIVariables
 	integer(KINT), save :: procRank = 0 !< process rank @ingroup MPIVariables

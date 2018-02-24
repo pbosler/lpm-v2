@@ -59,6 +59,8 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 character(len=MAX_STRING_LENGTH) :: logString
 character(len=15) :: logKey = "ssrfTest"
 real(kreal) :: programStart, programEnd
+real(kreal) :: interpErr
+real(kreal), parameter :: errTol = 0.0002_kreal
 
 ! output variables
 character(len=100) :: matlabFilename
@@ -84,7 +86,7 @@ call InitLogger(exeLog, procRank)
 if ( procRank == 0 ) then
 	narg = IARGC()
 	if ( narg /= 2 ) then
-		stop "usage : spherePSETest.exe meshType initNest"
+		stop "usage : ssrfpackTest.exe meshType initNest"
 	else
 		call GETARG(1, arg)
 		read(arg, *) meshSeed
@@ -185,8 +187,11 @@ do i = 0, numProcs - 1
 		MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 enddo
 
-call LogMessage(exeLog,TRACE_LOGGING_LEVEL,trim(logkey)//" interp err = ", &
-		maxval(abs(harmInterp-exactHarm))/maxval(abs(exactHarm)))
+interpErr = maxval(abs(harmInterp-exactHarm))/maxval(abs(exactHarm))
+
+call LogMessage(exeLog,TRACE_LOGGING_LEVEL,trim(logkey)//" interp err = ", interpErr)
+
+if ( interpErr > errTol ) stop "TEST FAILED."
 
 !
 !----------------

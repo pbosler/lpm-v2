@@ -32,9 +32,14 @@ ADD_EXECUTABLE( spherePSETest.exe SpherePSEConvTest.f90 )
 TARGET_LINK_LIBRARIES( spherePSETest.exe lpmFortran )
 
 # Unit Tests
-
 create_test(particlesAndFieldTest.exe)
 create_test(stdIntVectorTest.exe)
 create_test(planarMeshTest.exe 3)
 create_test(icosTriSphereTest.exe 2)
 create_test(cubedSphereTest.exe 4)
+
+# Regression tests
+#create_test(BivarConvergenceTest.exe)
+add_test(NAME ssrfpacTest COMMAND mpirun "-np" 4 $<TARGET_FILE:ssrfpackTest.exe> 3 4)
+add_test(NAME spherePSETest COMMAND mpirun "-np" 4 $<TARGET_FILE:spherePSETest.exe> ${PROJECT_BINARY_DIR}/../tests/spherePSEDefault.namelist)
+

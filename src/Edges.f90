@@ -87,6 +87,9 @@ interface CountParents
     module procedure countParentEdges
 end interface 
 
+interface InsertEdge
+    module procedure insertPrivate
+end interface
 
 interface DivideEdge
     module procedure divideLinearEdge
@@ -206,11 +209,10 @@ end subroutine
 !> @param destIndex index to destination particle
 !> @param leftFace index to left face of new edge in faces object
 !> @param rightFace index to right face of new edge in faces object
-subroutine InsertEdge( self, aParticles, origIndex, destIndex, leftFace, rightFace,  interiorIndices )
+subroutine insertPrivate( self, aParticles, origIndex, destIndex, leftFace, rightFace)
     type(Edges), intent(inout) :: self
     type(Particles), intent(inout) :: aParticles
     integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
-    integer(kint), dimension(:), intent(in), optional :: interiorIndices
     !
     integer(kint) :: n
     
