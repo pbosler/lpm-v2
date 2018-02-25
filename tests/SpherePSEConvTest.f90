@@ -370,14 +370,21 @@ harmonicLapError%scalar = harmonicLapError%scalar / maxval(abs(harmonicLapExact%
 
 if (procRank==0) then
     if (unifLinfConstLap > ZERO_TOL .OR. unifL2ConstLap > ZERO_TOL .OR. &
-        particlesLinfConstLap > ZERO_TOL .OR. particlesL2ConstLap > ZERO_TOL) stop "TEST FAIL: Constant Laplacian != 0.0"
+        particlesLinfConstLap > ZERO_TOL .OR. particlesL2ConstLap > ZERO_TOL) then
+            call logMessage(exeLog, ERROR_LOGGING_LEVEL, "", "TEST FAIL: Constant Laplacian /= 0.0")
+    endif
 
-    if (unifLinfHarm > 0.018 .OR. unifLinfHarmLap > 0.01805) stop "TEST FAIL: uniform harmonic regression."
+    if (unifLinfHarm > 0.018 .OR. unifLinfHarmLap > 0.01805) then
+        call LogMessage(exeLog, ERROR_LOGGING_LEVEL, " ", "TEST FAIL: uniform harmonic regression.")
+    endif
 
-    if (particlesLinfHarm > 0.0176 .OR. particlesL2Harm > 0.0002) stop "TEST FAIL: particles harmonic interpolation regression"
+    if (particlesLinfHarm > 0.0176 .OR. particlesL2Harm > 0.0002) then 
+        call LogMessage(exeLog, ERROR_LOGGING_LEVEL, " ", "TEST FAIL: particles harmonic interpolation regression")
+    endif
 
-    if (particlesLinfHarmLap > 0.0175 .OR. particlesL2HarmLap > 0.000118) &
-        stop "TEST FAIL: particles laplacian approximation regression."
+    if (particlesLinfHarmLap > 0.0175 .OR. particlesL2HarmLap > 0.000118) then
+        call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "", "TEST FAIL: particles laplacian approximation regression.")
+    endif
 endif
 
 !--------------------------------
@@ -457,6 +464,8 @@ call Delete(mpiLongitudes)
 call Delete(constScalar)
 call Delete(harmonic)
 call Delete(sphere)
+
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "test result: ", "PASSED.")
 
 call MPI_FINALIZE(mpiErrCode)
 

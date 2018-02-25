@@ -152,6 +152,10 @@ subroutine LogString(self,msgLevel,key,string)
 			call Write(self%writer,key)
 		endif
 	endif
+	
+	if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
+	endif
 end subroutine
 
 !> @brief Logs a string/integer key-value pair.
@@ -167,6 +171,9 @@ subroutine LogInteger(self,msgLevel,key,val)
 	integer(kint), intent(in) :: val
 	if ( msgLevel >= self%level) then
 		call Write(self%writer,key,val)
+	endif
+    if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
 	endif
 end subroutine
 
@@ -184,6 +191,9 @@ subroutine LogIntVector(self, msgLevel, key, val )
 	if ( msgLevel >= self%level ) then
 		call Write(self%writer, key, val)
 	endif
+    if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
+	endif
 end subroutine
 
 subroutine LogIntArray(self, msgLevel, key, val )
@@ -194,6 +204,9 @@ subroutine LogIntArray(self, msgLevel, key, val )
 	
 	if ( msgLevel >= self%level ) then
 		call Write(self%writer, key, val )
+	endif
+    if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
 	endif
 end subroutine
 
@@ -210,6 +223,9 @@ subroutine LogReal(self,msgLevel,key,val)
 	real(kreal), intent(in) :: val
 	if (msgLevel>=self%level) then
 		call Write(self%writer,key,val)
+	endif
+    if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
 	endif
 end subroutine
 

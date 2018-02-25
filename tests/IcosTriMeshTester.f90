@@ -24,6 +24,7 @@ integer(kint) :: nEdges
 
 type(Logger) :: exeLog
 
+
 real(kreal) :: lons(180)
 real(kreal) :: lats(91)
 integer(kint) :: triFaces(91,180), nearParticles(91,180)
@@ -72,6 +73,7 @@ call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test 1 : ", " constructing icosahe
 	do i = 1, sphere%particles%N
 		if ( sphere%particles%isActive(i) .AND. sphere%particles%isPassive(i) ) then
 			call LogMessage(exeLog, WARNING_LOGGING_LEVEL,"sphere Particles WARNING : both active and passive = .TRUE. at particle ", i)
+			testPass = .FALSE.
 		endif
 	enddo
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test 1 : ", " complete.")
@@ -83,6 +85,7 @@ minEdgeLength0 = 1.0e20
 if ( sphere%edges%N - count(sphere%edges%hasChildren) /= nEdges) then
 	call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "ERROR : nEdges = ", nEdges)
 	call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "edges%N_Active =  ", sphere%edges%N - count(sphere%edges%hasChildren))
+	testPass = .FALSE.
 endif
 
 do i = 1, sphere%edges%N
@@ -238,9 +241,9 @@ call WriteMeshToVTKPolyData( sphere, WRITE_UNIT_1, 'icosTriTest')
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test 4 : ", " complete.")
 close(WRITE_UNIT_1)
 
-
-
 call Delete( sphere )
+
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test result: " , "PASSED.")
 call Delete(exeLog)
 
 end program

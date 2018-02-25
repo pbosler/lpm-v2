@@ -11,6 +11,7 @@ integer(kint) :: i, j
 integer(kint), dimension(:) :: intArray(10), tooBigIntArray(30)
 
 
+
 print *, "STDIntVectorTest: 1. test all constructors."
 print *, "STDIntVectorTest: 2. test copy."
 print *, "STDIntVectorTest: 3. test pushback, insert, replace."
@@ -28,6 +29,9 @@ print *, "size intVec1%integers = ", size(intVec1%integers)
 print *, "intVec1%N = ", intVec1%N
 if ( intVec1%empty() ) then
 	print *, "intVec1.empty() = .TRUE."
+else
+    testPass = .FALSE.
+    stop
 endif
 
 print *, " "
@@ -99,6 +103,12 @@ do i = 1, intVec4%N
 enddo
 print *, " "
 print *, " "
+if (.NOT. (intVec4%N == intVec1%N .and. count(intVec4%integers(1:intvec4%N) == intVec1%integers(1:intVec1%N)) == intVec1%N)) then
+    testPass = .FALSE.
+    stop
+endif
+
+if (testPass) print *, "TEST PASSED."
 
 
 

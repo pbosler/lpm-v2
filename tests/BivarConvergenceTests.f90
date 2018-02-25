@@ -29,7 +29,7 @@ type(Field) :: estLap, exactLap, lapError
 real(kreal), parameter :: b = 3.0_kreal
 real(kreal), parameter :: xc = 0.0_kreal, yc = 0.0_kreal
 real(kreal), parameter :: maxAbsLap = 36.0_kreal
-integer(kint), parameter :: nestStart = 3, nestEnd = 5, testSize = nestEnd - nestStart + 1
+integer(kint), parameter :: nestStart = 5, nestEnd = 5, testSize = nestEnd - nestStart + 1
 integer(kint) :: nestCtr
 real(kreal) :: estGradError(testSize), estLapError(testSize), interpError(testSize), meshSize(testSize)
 real(kreal) :: testStart, testEnd, maxGradMag
@@ -245,11 +245,29 @@ do initNest = nestStart, nestEnd
 	call LogMessage(exeLog,TRACE_LOGGING_LEVEL, "test complete for initNest = ", initNest)
 	nestCtr = nestCtr + 1
 enddo
+!
+!write(6,'(4A24)') "dx", "gradErr-particles", "lapErr-particles", "interp error"
+!do i = 1, testSize
+!	write(6,'(4F24.10)') meshSize(i), estGradError(i), estLapError(i), interpError(i)
+!enddo
+!
+!if ((meshSize(1) /= 0.375) .OR. estGradError(1) > 0.3953 .OR. interpError(1) > 0.0003134) then
+!    testPass = .FALSE.
+!    call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "test result: ", "regression failed at index 1")
+!endif
+!
+!if ((meshSize(2) /= 0.1875) .OR. estGradError(2) > 0.2091 .OR. interpError(2) > 0.0003134) then
+!    testPass = .FALSE.
+!    call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "test result: ", "regression failed at index 2")
+!endif
 
-write(6,'(4A24)') "dx", "gradErr-particles", "lapErr-particles", "interp error"
-do i = 1, testSize
-	write(6,'(4F24.10)') meshSize(i), estGradError(i), estLapError(i), interpError(i)
-enddo
+if ((meshSize(1) /= 0.09375) .OR. estGradError(1) > 0.10728 .OR. interpError(1) > 0.0003134) then
+    testPass = .FALSE.
+    call LogMessage(exeLog, ERROR_LOGGING_LEVEL, "test result: ", "regression failed at index 3")
+endif
+
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "test result: ", "PASSED.")
+
 
 contains
 

@@ -21,6 +21,7 @@ real(kreal) :: ampFactor
 
 type(Logger) :: exeLog
 
+
 integer(kint), parameter :: nn = 101
 real(kreal), parameter :: dx = 0.1
 real(kreal), parameter :: xmin = -5.0_kreal
@@ -70,6 +71,7 @@ call LogStats(triMesh, exeLog)
 do i = 1, triMesh%particles%N
 	if ( triMesh%particles%isActive(i) .AND. triMesh%particles%isPassive(i) ) then
 		call LogMessage(exeLog, WARNING_LOGGING_LEVEL,"TriMesh Particles WARNING : both active and passive = .TRUE. at particle ", i)
+		testPass = .FALSE.
 	endif
 enddo
 
@@ -289,6 +291,7 @@ call LogStats(quadMesh, exeLog)
 do i = 1, quadMesh%particles%N
 	if ( quadMesh%particles%isActive(i) .AND. quadMesh%particles%isPassive(i) ) then
 		call LogMessage(exeLog, WARNING_LOGGING_LEVEL,"QuadMesh Particles WARNING : both active and passive = .TRUE. at particle ", i)
+		testPass = .FALSE.
 	endif
 enddo
 
@@ -417,6 +420,7 @@ close(WRITE_UNIT_1)
 
 call Delete(quadMesh)
 
-
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test result: " , "PASSED")
 call Delete(exeLog)
+
 end program 

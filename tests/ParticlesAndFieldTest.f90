@@ -20,6 +20,7 @@ type(Particles) :: aParticles
 type(Field) :: scalarField
 type(Field) :: vectorField
 
+
 real(kreal) :: vec(2)
 print *, "ParticlesAndFieldTest : 1. build a particle set from a ", nn," x ", nn, " uniform planar mesh."
 print *, "ParticlesAndFieldTest : 2. define a scalar field on that particle set."
@@ -70,6 +71,8 @@ call Delete(scalarField)
 call Delete(aParticles)
 close(WRITE_UNIT_1)
 call Delete(exeLog)
+
+if (testPass) print*, "TEST PASSED."
 
 contains 
 

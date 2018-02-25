@@ -7,6 +7,6 @@
 /
 
 &fileIO
-	outputDir='/Users/pabosle/modelData/tests'
+	outputDir='./'
 	outputRoot='spherePSEConvTest'
 /

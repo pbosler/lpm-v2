@@ -80,6 +80,7 @@ call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test 1 : ", " constructing cubed s
 	do i = 1, sphere%particles%N
 		if ( sphere%particles%isActive(i) .AND. sphere%particles%isPassive(i) ) then
 			call LogMessage(exeLog, WARNING_LOGGING_LEVEL,"sphere Particles WARNING : both active and passive = .TRUE. at particle ", i)
+			testPass = .FALSE.
 		endif
 	enddo
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test 1 : ", " complete.")
@@ -235,6 +236,7 @@ close(WRITE_UNIT_1)
 !----------------
 !
 call Delete(sphere)
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test result: ", "PASSED.")
 call Delete(exeLog)
 
 end program 

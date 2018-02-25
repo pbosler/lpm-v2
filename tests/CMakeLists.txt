@@ -2,6 +2,7 @@ INCLUDE(CTest)
 
 macro (create_test targetFile)
     add_test(NAME ${targetFile} COMMAND $<TARGET_FILE:${targetFile}>)
+    set_tests_properties(${targetFile} PROPERTIES PASS_REGULAR_EXPRESSION "PASSED")
 endmacro (create_test)
 
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src)
@@ -39,7 +40,8 @@ create_test(icosTriSphereTest.exe 2)
 create_test(cubedSphereTest.exe 4)
 
 # Regression tests
-#create_test(BivarConvergenceTest.exe)
-add_test(NAME ssrfpacTest COMMAND mpirun "-np" 4 $<TARGET_FILE:ssrfpackTest.exe> 3 4)
+create_test(BivarConvergenceTest.exe)
+add_test(NAME ssrfpackTest COMMAND mpirun "-np" 4 $<TARGET_FILE:ssrfpackTest.exe> 3 4)
+set_tests_properties(ssrfpackTest PROPERTIES PASS_REGULAR_EXPRESSION "interp err =       0.00016686")
 add_test(NAME spherePSETest COMMAND mpirun "-np" 4 $<TARGET_FILE:spherePSETest.exe> ${PROJECT_BINARY_DIR}/../tests/spherePSEDefault.namelist)
-
+set_tests_properties(spherePSETest PROPERTIES PASS_REGULAR_EXPRESSION "PASSED")
