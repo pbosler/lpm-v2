@@ -27,7 +27,6 @@ use STDIntVectorModule
 use ParticlesModule
 use SphereGeomModule, only : crossProduct, SphereMidpoint, SphereTriArea, SphereDistance, ChordDistance
 use PlaneGeomModule, only : Midpoint, TriArea
-use ParticlesModule
 
 implicit none
 
@@ -718,8 +717,8 @@ subroutine GetLeafEdgesFromParent( anEdges, parentIndex, leafEdges )
     do while (keepGoing)
         do i = 1, nLeaves
             if ( anEdges%hasChildren( leafEdges%int(i) ) ) then
-                call leafEdges%replace(i, anEdges%child1(i) )
-                call leafEdges%insert(i+1, anEdges%child2(i))
+                call leafEdges%replace(i, anEdges%child1(leafEdges%int(i)) )
+                call leafEdges%insert(i+1, anEdges%child2(leafEdges%int(i)))
             endif
         enddo
         nLeaves = leafEdges%N

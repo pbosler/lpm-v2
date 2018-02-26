@@ -11,7 +11,9 @@ add_library( lpmFortran TypeDefs.f90 OutputWriter.f90 Logger.f90 STDIntVector.f9
 						Refinement.f90 SphereSWE.f90 SphereSWESolver.f90
 						SphereBVE.f90 SphereBVESolver.f90 
 						SphereTransport.f90 SphereTransportSolver.f90 SphereTransportVelocities.f90
-						SphereTracers.f90 )
+						SphereTracers.f90 
+						ParticlesOO.f90 EdgesOO.f90
+						)
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})
 
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src)

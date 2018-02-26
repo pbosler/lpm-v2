@@ -73,6 +73,8 @@ module NumberKindsModule
 	
 	logical(klog), save :: testPass = .TRUE.
 	
+	real(kreal), parameter :: dzero = 0.0_kreal
+	
 	real(kreal), parameter :: sqrt5 = sqrt(5.0_kreal), oosqrt5 = 1.0_kreal / sqrt5, oo6 = 1.0_kreal / 6.0_kreal
 	real(kreal), dimension(4), parameter :: cubic_gll_coords = (/ -1.0_kreal, -oosqrt5, oosqrt5, 1.0_kreal /)
 	real(kreal), dimension(4), parameter :: cubic_gll_weights = (/oo6, 1.0_kreal - oo6, 1.0_kreal - oo6, oo6/)

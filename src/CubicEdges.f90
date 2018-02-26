@@ -97,7 +97,6 @@ subroutine divideCubicEdge(self, edgeIndex, aParticles)
     real(kreal), dimension(3) :: midPt, lagMidPt, origXyz, destXyz, lagOrig, lagDest
     real(kreal), dimension(3,4) :: newCoords, newLagCoords
     integer(kint) :: j, particleInsertIndex
-    real(kreal), parameter :: denomsqrt5 = 1.0_kreal /sqrt(5.0_kreal)
     integer(kint), dimension(4) :: parentParticles
     
     if ( self%N + 2 > self%N_Max ) then
@@ -118,28 +117,28 @@ subroutine divideCubicEdge(self, edgeIndex, aParticles)
         midPt = SphereMidpoint(origXyz, destXyz)
         lagMidPt = SphereMidpoint(lagOrig, lagDest)
         
-        newCoords(:,1) = pointAlongSphereVector(origXyz, midPt, -denomsqrt5)
-        newCoords(:,2) = pointAlongSphereVector(origXyz, midPt, denomsqrt5)
-        newCoords(:,3) = pointAlongSphereVector(midPt, destXyz, -denomsqrt5)
-        newCoords(:,4) = pointAlongSphereVector(midPt, destXyz, denomsqrt5)
+        newCoords(:,1) = pointAlongSphereVector(origXyz, midPt, -oosqrt5)
+        newCoords(:,2) = pointAlongSphereVector(origXyz, midPt, oosqrt5)
+        newCoords(:,3) = pointAlongSphereVector(midPt, destXyz, -oosqrt5)
+        newCoords(:,4) = pointAlongSphereVector(midPt, destXyz, oosqrt5)
         
-        newLagCoords(:,1) = pointAlongSphereVector(lagOrig, lagMidpt, -denomsqrt5)
-        newLagCoords(:,2) = pointAlongSphereVector(lagOrig, lagMidpt, denomsqrt5)
-        newLagCoords(:,3) = pointAlongSphereVector(lagMidpt, lagDest, -denomsqrt5)
-        newLagCoords(:,4) = pointAlongSphereVector(lagMidpt, lagDest, denomsqrt5)
+        newLagCoords(:,1) = pointAlongSphereVector(lagOrig, lagMidpt, -oosqrt5)
+        newLagCoords(:,2) = pointAlongSphereVector(lagOrig, lagMidpt, oosqrt5)
+        newLagCoords(:,3) = pointAlongSphereVector(lagMidpt, lagDest, -oosqrt5)
+        newLagCoords(:,4) = pointAlongSphereVector(lagMidpt, lagDest, oosqrt5)
     else
         midPt = 0.5_kreal * (origXyz + destXyz)
         lagMidPt = 0.5_kreal * (lagOrig + lagDest)
         
-        newCoords(:,1) = pointAlongChordVector(origXyz, midPt, -denomsqrt5)
-        newCoords(:,2) = pointAlongChordVector(origXyz, midPt, denomsqrt5)
-        newCoords(:,3) = pointAlongChordVector(midPt, destXyz, -denomsqrt5)
-        newCoords(:,4) = pointAlongChordVector(midPt, destXyz, denomsqrt5)
+        newCoords(:,1) = pointAlongChordVector(origXyz, midPt, -oosqrt5)
+        newCoords(:,2) = pointAlongChordVector(origXyz, midPt, oosqrt5)
+        newCoords(:,3) = pointAlongChordVector(midPt, destXyz, -oosqrt5)
+        newCoords(:,4) = pointAlongChordVector(midPt, destXyz, oosqrt5)
         
-        newLagCoords(:,1) = pointAlongChordVector(lagOrig, lagMidpt, -denomsqrt5)
-        newLagCoords(:,2) = pointAlongChordVector(lagOrig, lagMidpt, denomsqrt5)
-        newLagCoords(:,3) = pointAlongChordVector(lagMidpt, lagDest, -denomsqrt5)
-        newLagCoords(:,4) = pointAlongChordVector(lagMidpt, lagDest, denomsqrt5)
+        newLagCoords(:,1) = pointAlongChordVector(lagOrig, lagMidpt, -oosqrt5)
+        newLagCoords(:,2) = pointAlongChordVector(lagOrig, lagMidpt, oosqrt5)
+        newLagCoords(:,3) = pointAlongChordVector(lagMidpt, lagDest, -oosqrt5)
+        newLagCoords(:,4) = pointAlongChordVector(lagMidpt, lagDest, oosqrt5)
     endif
     
     particleInsertIndex = aParticles%N + 1
