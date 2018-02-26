@@ -388,12 +388,77 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
 	        !
 	        !   edge has already been divided by adjacent panel
 	        !
+	        childEdge1 = anEdges%child1(parentEdge)
+	        childEdge2 = anEdges%child2(parentEdge)
 	    else
 	        !
 	        !   divide parent edge
 	        !
+	        childEdge1 = anEdges%N+1
+	        childEdge2 = anEdges%N+2
+	        call anEdges%divide(parentEdge, aParticles)
+	    endif
+	    
+	    !
+	    !   connect child edges to new child faces
+	    !
+	    if (anEdges%positiveOrientation(parentEdge, index)) then
+	        newFaceEdges(i,i) = childEdge1
+	        anEdges%leftFace(childEdge1) = self%N+i
+	        
+	        newFaceEdges(i, mod(i,4)+1) = childEdge2
+	        anEdges%leftFace(childEdge2) = self%N + mod(i,4) + 1
+	    else
+	        newFaceEdges(i,i) = childEdge2
+	        anEdges%rightFace(childEdge2) = self%N+i
+	        
+	        newFaceEdges(i, mod(i,4)+1) = childEdge1
+	        anEdges%rightFace(childEdge1) = self%N + mod(i,4) + 1
 	    endif
 	enddo
+	
+    if (anEdges%positiveOrientation(parentEdge,1)) then
+        newFaceVerts(1:4, self%N+1) = &
+            (/ anEdges%orig(newFaceEdges(1,1)), anEdges%interiorParticles(:,newFaceEdges(1,1)), anEdges%dest(newFaceEdges(1,1)) /)
+        
+        newFaceVerts(1:4, self%N+2) = &
+            (/ anEdges%orig(newFaceEdges(1,2)), anEdges%interiorParticles(:,newFaceEdges(1,2)), anEdges%dest(newFaceEdges(1,2)) /)
+    else
+        newFaceVerts(1:4, self%N+1) = &
+            (/ anEdges%dest(newFaceEdges(1,1)), anEdges%interiorParticles(2,newFaceEdges(1,1)), &
+               anEdges%interiorParticles(1,newFaceEdges(1,1)), anEdges%orig(newFaceEdges(1,1)) /)
+        
+        newFaceVerts(1:4, self%N+2) = &
+            (/ anEdges%dest(newFaceEdges(1,2)), anEdges%interiorParticles(2,newFaceEdges(1,2)), &
+               anEdges%interiorParticles(2,newFaceEdges(1,2)), anEdges%orig(newFaceEdges(1,2)) /)
+    endif
+    if (anEdges%positiveOrientation(parentEdge,2)) then
+        newFaceVerts(4:7, self%N+2) = & 
+            (/anEdges%orig(newFaceEdges(2,2)), &
+            anEdges%interiorParticles(:, newFaceEdges(2,2)), &
+            anEdges%dest(newFaceEdges(2,2)) /)
+        
+        newFaceVerts(4:7, self%N+3) = & 
+            (/anEdges%orig(newFaceEdges(2,3)), &
+            anEdges%interiorParticles(:, newFaceEdges(2,3)), &
+            anEdges%dest(newFaceEdges(2,3)) /) 
+    else
+        newFaceVerts(4:7, self%N+2) = & 
+            (/anEdges%dest(newFaceEdges(2,2)), &
+            anEdges%interiorParticles(2, newFaceEdges(2,2)), anEdges%interiorParticles(1, newFaceEdges(2,2)), &
+            anEdges%orig(newFaceEdges(2,2)) /)
+        
+        newFaceVerts(4:7, self%N+3) = & 
+            (/anEdges%dest(newFaceEdges(2,3)), &
+            anEdges%interiorParticles(2, newFaceEdges(2,3)), anEdges%interiorParticles(1, newFaceEdges(2,3)), &
+            anEdges%orig(newFaceEdges(2,3)) /)        
+    endif
+    if (anEdges%positiveOrientation(parentEdge,3)) then
+    else
+    endif
+    if (anEdges%positiveOrientation(parentEdge,4)) then
+    else
+    endif
 end subroutine
 
 pure function physCentroid(self, index, aParticles)

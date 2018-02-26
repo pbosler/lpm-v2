@@ -14,6 +14,7 @@ public Edges, CubicEdges
 
 type, abstract :: Edges
     integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles     
+    integer(kint), allocatable :: interiorParticles(:,:)
     integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles 
     integer(kint), allocatable :: rightFace(:) !< Integer array containing indices of facesmodule::faces
     integer(kint), allocatable :: leftFace(:) !< Integer array containing indices of facesmodule::faces
@@ -60,7 +61,6 @@ type, extends(Edges) :: LinearEdges
 end type
 
 type, extends(Edges) :: CubicEdges
-    integer(kint), allocatable :: interiorParticles(:,:)
     contains
         procedure :: copy => copyCubic
         procedure :: insert => insertCubic
