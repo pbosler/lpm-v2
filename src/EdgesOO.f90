@@ -10,9 +10,9 @@ use STDIntVectorModule
 implicit none
 private
 
-public Edges
+public Edges, CubicEdges
 
-type Edges
+type, abstract :: Edges
     integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles     
     integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles 
     integer(kint), allocatable :: rightFace(:) !< Integer array containing indices of facesmodule::faces
@@ -25,13 +25,12 @@ type Edges
     integer(kint) :: N_Max = 0 !< Max number of edges allowed in memory
     
     contains
-        final :: deleteLinear
         procedure :: init 
         procedure :: copy => copyLinear
         procedure :: insert => insertLinear
-        procedure :: divide => divideLinear
+        procedure(divide), deferred :: divide
         procedure :: onBoundary
-        procedure :: positiveEdge
+        procedure :: positiveOrientation
         procedure :: getLeafEdges
         procedure :: length
         procedure :: maxLength
@@ -42,23 +41,32 @@ type Edges
         procedure :: areaFromLeaves
 end type
 
+interface
+    subroutine divide(self, index, aParticles)
+        import :: Edges
+        import :: kint
+        import :: Particles
+        implicit none
+        class(Edges), intent(inout) :: self
+        integer(kint), intent(in) :: index
+        class(Particles), intent(inout) :: aParticles
+    end subroutine
+end interface
+
+type, extends(Edges) :: LinearEdges
+    contains
+        final :: deleteLinear
+        procedure :: divide => divideLinear
+end type
+
 type, extends(Edges) :: CubicEdges
     integer(kint), allocatable :: interiorParticles(:,:)
     contains
         procedure :: copy => copyCubic
         procedure :: insert => insertCubic
-!        procedure :: divide => divideCubic
+        procedure :: divide => divideCubic
         final :: deleteCubic
 end type
-
-!interface
-!    subroutine insert(self, origIndex, destIndex, leftFace, rightFace, intrInds)
-!        import Edges, kint
-!        class(Edges), intent(inout) :: self
-!        integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
-!        integer(kint), dimension(:), intent(in), optional :: intrInds
-!    end subroutine
-!end interface
 
 !
 !----------------
@@ -104,10 +112,10 @@ subroutine init(self, nMax)
 	self%parent = 0
 	
 	select type (self)
-	type is (Edges)
+	class is (LinearEdges)
 	    ! initialize base class (already done)
 	class is (CubicEdges)
-	    allocate(self%interiorParticles(4,nMax))
+	    allocate(self%interiorParticles(2,nMax))
 	    self%interiorParticles = 0
 	class default
 	    call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " init error: invalid type.")
@@ -116,7 +124,7 @@ subroutine init(self, nMax)
 end subroutine
 
 subroutine deleteLinear(self)
-    type(Edges), intent(inout) :: self
+    type(LinearEdges), intent(inout) :: self
     if (allocated(self%orig)) deallocate(self%orig)
     if (allocated(self%dest)) deallocate(self%dest)
     if (allocated(self%leftFace)) deallocate(self%leftFace)
@@ -130,7 +138,14 @@ end subroutine
 subroutine deleteCubic(self)
     type(CubicEdges), intent(inout) :: self
     if (allocated(self%interiorParticles)) deallocate(self%interiorParticles)
-    call deleteLinear(self%edges)
+    if (allocated(self%orig)) deallocate(self%orig)
+    if (allocated(self%dest)) deallocate(self%dest)
+    if (allocated(self%leftFace)) deallocate(self%leftFace)
+    if (allocated(self%rightFace)) deallocate(self%rightFace)
+    if (allocated(self%child1)) deallocate(self%child1)
+    if (allocated(self%child2)) deallocate(self%child2)
+    if (allocated(self%hasChildren)) deallocate(self%hasChildren)
+    if (allocated(self%parent)) deallocate(self%parent)
 end subroutine
 
 subroutine copyLinear(self, other)
@@ -166,7 +181,7 @@ end subroutine
 subroutine insertLinear(self, origIndex, destIndex, leftFace, rightFace, intrinds)
     class(Edges), intent(inout) :: self
     integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
-    integer(kint), dimension(:), intent(in), optional :: intrinds
+    integer(kint), dimension(:), intent(in), optional :: intrinds ! ignored for linear edges
     !
     integer(kint) :: nn
     
@@ -216,11 +231,11 @@ pure function onBoundary(self, index)
     onBoundary = (self%leftFace(index) < 1 .or. self%rightFace(index) < 1)
 end function
 
-pure function positiveEdge(self, edgeIndex, faceIndex)
-    logical(klog) :: positiveEdge
+pure function positiveOrientation(self, edgeIndex, faceIndex)
+    logical(klog) :: positiveOrientation
     class(Edges), intent(in) :: self
     integer(kint), intent(in) :: edgeIndex, faceIndex
-    positiveEdge = (self%leftFace(edgeIndex) == faceIndex)
+    positiveOrientation = (self%leftFace(edgeIndex) == faceIndex)
 end function
 
 function getLeafEdges(self, index)
@@ -254,7 +269,7 @@ function getLeafEdges(self, index)
 end function
 
 subroutine divideLinear(self, index, aParticles)
-    class(Edges), intent(inout) :: self
+    class(LinearEdges), intent(inout) :: self
     integer(kint), intent(in) :: index
     class(Particles), intent(inout) :: aParticles
     !
@@ -292,6 +307,84 @@ subroutine divideLinear(self, index, aParticles)
     self%orig(self%N+1) = self%orig(index)
     self%dest(self%N+1) = nParticles+1
     self%orig(self%N+2) = nParticles+1
+    self%dest(self%N+2) = self%dest(index)
+    
+    self%leftFace(self%N+1) = self%leftFace(index)
+    self%leftFace(self%N+2) = self%leftFace(index)
+    self%rightFace(self%N+1) = self%rightFace(index)
+    self%rightFace(self%N+2) = self%rightFace(index)
+    
+    self%N = self%N + 2
+end subroutine
+
+subroutine divideCubic(self, index, aParticles)
+    class(CubicEdges), intent(inout) :: self
+    integer(kint), intent(in) :: index
+    class(Particles), intent(inout) :: aParticles
+    !
+    real(kreal), dimension(3) :: midPt, lagMidPt, physOrig, physDest, lagOrig, lagDest
+    integer(kint) :: nParticles
+    real(kreal), dimension(3,4) :: newPts, newLagPts
+    
+    if (self%N + 2 > self%N_Max) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divideEdge error : not enough memory.")
+        return
+    endif
+    
+    physOrig = aParticles%physCoord(self%orig(index))
+    physDest = aParticles%physCoord(self%dest(index))
+    
+    lagOrig = aParticles%lagCoord(self%orig(index))
+    lagDest = aParticles%lagCoord(self%dest(index))
+    
+    if (aParticles%geomKind == SPHERE_GEOM) then
+        midPt = SphereMidpoint(physOrig, physDest)
+        lagMidPt = SphereMidpoint(lagOrig, lagDest)
+        
+        newPts(:,1) = pointAlongSphereVector(physOrig, midPt, -oosqrt5)
+        newPts(:,2) = pointAlongSphereVector(physOrig, midPt, oosqrt5)
+        newPts(:,3) = pointAlongSphereVector(midPt, physDest, -oosqrt5)
+        newPts(:,4) = pointAlongSphereVector(midPt, physDest, oosqrt5)
+        
+        newLagPts(:,1) = pointAlongSphereVector(lagOrig, lagMidPt, -oosqrt5)
+        newLagPts(:,2) = pointAlongSphereVector(lagOrig, lagMidPt, oosqrt5)
+        newLagPts(:,3) = pointAlongSphereVector(lagMidPt, lagDest, -oosqrt5)
+        newLagPts(:,4) = pointAlongSphereVector(lagMidPt, lagDest, oosqrt5)
+    else
+        midPt = 0.5_kreal * (physOrig + physDest)
+        lagMidPt = 0.5_kreal * (lagOrig + lagDest)
+        
+        newPts(:,1) = pointAlongChordVector(physOrig, midPt, -oosqrt5)
+        newPts(:,2) = pointAlongChordVector(physOrig, midPt, oosqrt5)
+        newPts(:,3) = pointAlongChordVector(midPt, physDest, -oosqrt5)
+        newPts(:,4) = pointAlongChordVector(midPt, physDest, oosqrt5)
+        
+        newLagPts(:,1) = pointAlongChordVector(lagOrig, lagMidPt, -oosqrt5)
+        newLagPts(:,2) = pointAlongChordVector(lagOrig, lagMidPt, oosqrt5)
+        newLagPts(:,3) = pointAlongChordVector(lagMidPt, lagDest, -oosqrt5)
+        newLagPts(:,4) = pointAlongChordVector(lagMidPt, lagDest, oosqrt5)
+    endif
+    
+    nParticles = aParticles%N
+    
+    call aParticles%replace(self%interiorParticles(1,index), newPts(:,1), newLagPts(:,1))
+    call aParticles%insert(newPts(:,2), newLagPts(:,2)) ! nParticles + 1
+    call aParticles%insert(midPt, lagMidPt) ! nParticles + 2 = midpoint
+    call aParticles%insert(newPts(:,3), newLagPts(:,3)) ! nParticles + 3
+    call aParticles%replace(self%interiorParticles(2, index), newPts(:,4), newLagPts(:,4))
+    
+    self%hasChildren(index) = .TRUE.
+    self%child1(index) = self%N+1
+    self%child2(index) = self%N+2
+    self%parent(self%N+1) = index
+    self%parent(self%N+2) = index
+    
+    self%orig(self%N+1) = self%orig(index)
+    self%interiorParticles(:,self%N+1) = (/ self%interiorParticles(1,index), nParticles+1 /)
+    self%dest(self%N+1) = nParticles+2
+    
+    self%orig(self%N+2) = nParticles+2
+    self%interiorParticles(:,self%N+2) = (/ nParticles+3, self%interiorParticles(2, index) /)
     self%dest(self%N+2) = self%dest(index)
     
     self%leftFace(self%N+1) = self%leftFace(index)

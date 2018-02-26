@@ -49,6 +49,7 @@ module NumberKindsModule
 	
 	integer(KINT), parameter ::	QUAD_PANEL = 4 !< panelKind parameter for quadrilateral panels @ingroup MeshConstants
 	integer(KINT), parameter ::	TRI_PANEL = 3 !< panelKind parameter for triangular panels @ingroup MeshConstants
+	integer(KINT), parameter :: QUAD_CUBIC_PANEL = 16
 	integer(KINT), parameter :: PLANAR_GEOM = 81 
 	integer(KINT), parameter :: SPHERE_GEOM = 82
 	integer(KINT), parameter :: EUCLIDEAN_3D = 83

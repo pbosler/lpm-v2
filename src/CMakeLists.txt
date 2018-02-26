@@ -12,7 +12,7 @@ add_library( lpmFortran TypeDefs.f90 OutputWriter.f90 Logger.f90 STDIntVector.f9
 						SphereBVE.f90 SphereBVESolver.f90 
 						SphereTransport.f90 SphereTransportSolver.f90 SphereTransportVelocities.f90
 						SphereTracers.f90 
-						ParticlesOO.f90 EdgesOO.f90
+						ParticlesOO.f90 EdgesOO.f90 FacesOO.f90
 						)
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})
 
