@@ -10,7 +10,7 @@ use STDIntVectorModule
 implicit none
 private
 
-public Edges, CubicEdges
+public Edges, CubicEdges, LinearEdges
 
 type, abstract :: Edges
     integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles     

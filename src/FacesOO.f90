@@ -11,7 +11,7 @@ use SphereGeomModule
 implicit none
 private
 
-public Faces, bilinearMap
+public Faces, bilinearMap, TriLinearFaces, QuadLinearFaces, QuadCubicFaces
 
 type, abstract :: Faces
     integer(kint), allocatable :: centerParticles(:,:)
