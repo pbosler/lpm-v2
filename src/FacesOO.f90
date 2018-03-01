@@ -363,8 +363,8 @@ pure function bilinearMap(vertXyz, s1, s2)
     real(kreal), dimension(3,4), intent(in) :: vertXyz
     real(kreal), intent(in) :: s1, s2
     
-    bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,1) + (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
-        (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,3) + (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,4))
+    bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,1) + (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
+        (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
 end function
 
 function getVerticesFromEdge(self, faceIndex, edgeIndex, anEdges)
