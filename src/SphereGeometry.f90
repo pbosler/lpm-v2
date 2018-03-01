@@ -78,7 +78,7 @@ pure function pointAlongChordVector(p0, p1, s)
     real(kreal), intent(in) :: s
     
     pointAlongChordVector = 0.5_kreal * ( (1-s) * p0 + (1+s) * p1)
-end function 
+end function
 
 pure function pointAlongSphereVector(p0, p1, s)
     real(kreal), dimension(3) :: pointAlongSphereVector
@@ -545,6 +545,31 @@ pure function atan4(y,x)
 		endif
 	endif
 end function
+
+pure function EuclideanCentroid(xyzs)
+    real(kreal), dimension(3) :: EuclideanCentroid
+    real(kreal), dimension(:,:), intent(in) :: xyzs
+    !
+    integer(kint) :: i, nv
+    
+    nv = size(xyzs,2)
+    EuclideanCentroid = dzero
+    do i=1,nv
+        EuclideanCentroid = EuclideanCentroid + xyzs(:,i)
+    enddo
+    EuclideanCentroid = EuclideanCentroid / real(nv, kreal)
+end function
+
+pure function SphereCentroid(xyzs)
+    real(kreal), dimension(3) :: SphereCentroid
+    real(kreal), dimension(:,:), intent(in) :: xyzs
+    !
+    real(kreal) :: norm
+    SphereCentroid = EuclideanCentroid(xyzs)
+    norm = sqrt(sum(SphereCentroid*SphereCentroid))
+    SphereCentroid = SphereCentroid / norm
+end function
+
 
 !> @brief Constructs the projection matrix for a vector tangent to the sphere at location xyz.
 !> @param xyz
