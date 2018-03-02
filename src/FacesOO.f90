@@ -23,17 +23,20 @@ type, abstract :: Faces
 	integer(kint) :: N !< Number of faces currently in use
 	integer(kint) :: N_Active !< Number of undivided faces; these define the spatial discretization
 	integer(kint) :: N_Max !< Maximum number of faces allowed in memory
+	real(kreal), allocatable :: area(:)
 	
 	contains
 	    procedure :: init
 	    procedure :: copy
         procedure :: insert
         procedure(divide), deferred :: divide
+        procedure(setArea), deferred :: setArea
         procedure :: physCentroid
         procedure :: lagCentroid
         procedure :: countParents
-        procedure :: area
+!        procedure :: area
         procedure :: sharedEdge
+        procedure :: logStats
 end type
 
 interface
@@ -50,25 +53,40 @@ interface
     end subroutine
 end interface
 
+interface 
+    pure function setArea(self, index, aParticles)
+        import :: Faces
+        import :: Particles
+        import :: kint
+        import :: kreal
+        implicit none
+        real(kreal) :: setArea
+        class(Faces), intent(in) :: self
+        integer(kint), intent(in) :: index
+        class(Particles), intent(in) :: aParticles
+    end function
+end interface
+
 
 type, extends(Faces) :: TriLinearFaces
     contains
         procedure :: divide => divideTri
         final :: deleteTri
         procedure :: particleOppositeTriEdge
-        procedure, private :: triFaceArea
+        procedure :: setarea => triFaceArea
 end type
 
 type, extends(Faces) :: QuadLinearFaces
     contains    
         procedure :: divide => divideQuadLinear
         final :: deleteQuad
-        procedure, private :: quadFaceArea
+        procedure :: setarea => quadFaceArea
 end type
 
 type, extends(QuadLinearFaces) :: QuadCubicFaces
     contains
         procedure :: divide => divideQuadCubic
+        procedure :: setarea => quadCubicArea
         final :: deleteQuadCubic
         procedure, private :: calcInteriorPts
         procedure, private :: getVerticesFromEdge
@@ -121,9 +139,11 @@ subroutine init(self, faceKind, nMax)
     allocate(self%children(4,nMax))
     allocate(self%hasChildren(nMax))
     allocate(self%parent(nMax))
+    allocate(self%area(nMax))
     self%children = 0
     self%hasChildren = .FALSE.
     self%parent = 0
+    self%area = dzero
     self%N = 0
     self%N_Active = 0
     self%N_Max = nMax
@@ -138,6 +158,7 @@ subroutine deleteTri(self)
     if (allocated(self%children)) deallocate(self%children)
     if (allocated(self%hasChildren)) deallocate(self%hasChildren)
     if (allocated(self%parent)) deallocate(self%parent)
+    if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
 subroutine deleteQuad(self)
@@ -148,6 +169,7 @@ subroutine deleteQuad(self)
     if (allocated(self%children)) deallocate(self%children)
     if (allocated(self%hasChildren)) deallocate(self%hasChildren)
     if (allocated(self%parent)) deallocate(self%parent)
+    if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
 subroutine deleteQuadCubic(self)
@@ -158,6 +180,7 @@ subroutine deleteQuadCubic(self)
     if (allocated(self%children)) deallocate(self%children)
     if (allocated(self%hasChildren)) deallocate(self%hasChildren)
     if (allocated(self%parent)) deallocate(self%parent)
+    if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
 subroutine copy(self, other)
@@ -180,13 +203,27 @@ subroutine copy(self, other)
     self%children(:,1:other%N) = other%children(:,1:other%N)
     self%hasChildren(1:other%N) = other%hasChildren(1:other%N)
     self%parent(1:other%N) = other%parent(1:other%N)
+    self%area(1:other%N) = other%area(1:other%N)
+end subroutine
+
+subroutine logStats(self, alog)
+    class(Faces), intent(in) :: self
+    type(Logger), intent(inout) :: alog
+    !
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, logkey, " Faces stats:")
+    call StartSection(aLog)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "N = ", self%N)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "N_Active = ", self%N_Active)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "N_Max = ", self%N_Max)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "total area = ", sum(self%area(1:self%N)))
+    call EndSection(aLog)
 end subroutine
 
 subroutine insert(self, centerInds, vertInds, edgeInds)
     class(Faces), intent(inout) :: self
     integer(kint), dimension(:), intent(in) :: centerInds, vertInds, edgeInds
     
-    if (self%N+1 >= self%N_Max) then
+    if (self%N+1 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " insert error : not enough memory.")
         return
     endif
@@ -350,7 +387,7 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 	    self%edges(:,self%N+i) = newFaceEdges(:,i)
 	    self%children(i, index) = self%N+i
 	    self%parent(self%N+i) = index
-	    aParticles%weight(self%centerParticles(1,self%N+i)) = self%quadFaceArea(self%N+i, aParticles)
+	    !aParticles%weight(self%centerParticles(1,self%N+i)) = self%quadFaceArea(self%N+i, aParticles)
 	enddo
 	aParticles%weight(self%centerParticles(1,index)) = dzero
 	self%hasChildren(index) = .TRUE.
@@ -864,7 +901,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 !         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divide tri face error : invalid facekind.")
 !         return
 !    endif
-    if (self%N + 4 >= self%N_Max) then
+    if (self%N + 4 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divide tri face error : not enough memory.")
         return
     endif
@@ -991,7 +1028,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 	    self%edges(:, self%N+i) = newFaceEdges(:,i)
 	    self%children(i, index) = self%N+i
 	    self%parent(self%N+i) = index
-	    aParticles%weight(self%centerParticles(1,self%N+i)) = self%triFaceArea(self%N+i, aParticles)
+	    !aParticles%weight(self%centerParticles(1,self%N+i)) = self%triFaceArea(self%N+i, aParticles)
 	enddo
 	! special case for child 4: re-use parent face centerParticles
 	self%centerParticles(1,self%N+4) = self%centerParticles(1,index)
@@ -999,7 +1036,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 	self%edges(:,self%N+4) = newFaceEdges(:,4)
 	self%children(4,index) = self%N+4
 	self%parent(self%N+4) = index
-	aParticles%weight(self%centerParticles(1,self%N+4)) = self%triFaceArea(self%N+4, aParticles)
+	!aParticles%weight(self%centerParticles(1,self%N+4)) = self%triFaceArea(self%N+4, aParticles)
 	
 	self%hasChildren(index) = .TRUE.
 	self%N = self%N + 4
@@ -1028,6 +1065,32 @@ pure function triFaceArea(self, index, aParticles)
             v1 = aParticles%physCoord(self%vertices(i, index))
             v2 = aParticles%physCoord(self%vertices(mod(i,3)+1, index))
             triFaceArea = triFaceArea + SphereTriArea(v1, center, v2)
+        enddo
+    endif
+end function
+
+pure function quadCubicArea(self, index, aParticles)
+    real(kreal) :: quadCubicArea
+    class(QuadCubicFaces), intent(in) :: self
+    integer(kint), intent(in) :: index
+    class(Particles), intent(in) :: aParticles
+    !
+    integer(kint) :: i
+    real(kreal) :: center(3), v1(3), v2(3)
+    
+    quadCubicArea = dzero
+    center = self%physCentroid(i, aParticles)
+    if (aParticles%geomKind == PLANAR_GEOM) then
+        do i=1,4
+            v1 = aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
+            v2 = aParticles%physCoord(self%vertices(mod(3*i,12)+1,index))
+            quadCubicArea = quadCubicArea + TriArea(v1(1:2), center(1:2), v2(1:2))
+        enddo
+    elseif (aParticles%geomKind == SPHERE_GEOM) then
+        do i=1,4
+            v1 = aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
+            v2 = aParticles%physCoord(self%vertices(mod(3*i,12)+1,index))
+            quadCubicArea = quadCubicArea + SphereTriArea(v1, center, v2)
         enddo
     endif
 end function

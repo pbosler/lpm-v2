@@ -181,7 +181,7 @@ subroutine insert(self, physX, lagX)
     class(Particles), intent(inout) :: self
     real(kreal), dimension(:), intent(in) :: physX, lagX
     
-    if (self%N+1 >= self%N_Max) then
+    if (self%N+1 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " insert error : not enough memory.")
         return
     endif

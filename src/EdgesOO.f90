@@ -187,7 +187,7 @@ subroutine insertLinear(self, origIndex, destIndex, leftFace, rightFace, intrind
     
     nn = self%N
     
-    if ( self%N >= self%N_Max ) then
+    if ( self%N > self%N_Max ) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " InsertEdge : out of memory. ")
         return
     endif
@@ -209,7 +209,7 @@ subroutine insertCubic(self, origIndex, destIndex, leftFace, rightFace, intrInds
     
     nn = self%N
     
-    if ( self%N >= self%N_Max ) then
+    if ( self%N > self%N_Max ) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " InsertEdge : out of memory. ")
         return
     endif

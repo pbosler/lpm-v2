@@ -16,7 +16,7 @@ private
 public PolyMesh2d
 
 type PolyMesh2d
-    character(len=56) :: mesh_type
+    integer(kint) :: meshSeed
     class(Particles), pointer :: particles
     class(Edges), pointer :: edges
     class(Faces), pointer :: faces
@@ -30,6 +30,7 @@ type PolyMesh2d
     
     contains
         procedure :: init
+        procedure :: logStats
         procedure, private :: getSeed
         procedure, private :: readSeedFile
         procedure, private :: nVerticesInMesh
@@ -49,6 +50,26 @@ character(len=MAX_STRING_LENGTH) :: logstring
 
 contains
 
+function meshKindFromString(str)
+    integer(kint) :: meshKindFromString
+    character(len=*), intent(in) :: str
+    
+    meshKindFromString = 0
+    if (trim(str) == "planar_tri") then
+        meshKindFromString = TRI_HEX_SEED
+    elseif (trim(str) == "planar_quad") then
+        meshKindFromString = QUAD_RECT_SEED
+    elseif (trim(str) == "planar_cubic_quad") then
+        meshKindFromString = CUBIC_PLANE_SEED
+    elseif (trim(str) == "cubed_sphere") then
+        meshKindFromString = CUBED_SPHERE_SEED
+    elseif (trim(str) == "icos_tri_sphere") then
+        meshKindFromString = ICOS_TRI_SPHERE_SEED
+    else
+        call LogMessage(log, ERROR_LOGGING_LEVEL, "invalid mesh_type string: ", str)
+    endif
+end function
+
 subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     class(PolyMesh2d), intent(inout) :: self
     character(len=*), intent(in) ::  mesh_type
@@ -59,7 +80,7 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     
     if ( .NOT. logInit) call InitLogger(log, procRank)
     
-    self%mesh_type = trim(mesh_type)
+    self%meshSeed = meshKindFromString(mesh_type)
     self%initNest = initNest
     self%maxNest = maxNest
     self%amrLimit = amrLimit
@@ -81,6 +102,23 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     enddo
 end subroutine
 
+subroutine logStats(self, aLog)
+    class(PolyMesh2d), intent(in) :: self
+    type(Logger), intent(inout) :: aLog
+    !
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, logKey, " PolyMesh2d stats:")
+    call StartSection(aLog)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "meshSeed = ", self%meshSeed)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "initNest = ", self%initNest)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "maxNest = ", self%maxNest)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "amrLimit = ", self%amrLimit)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "maxRadius = ", self%maxRadius)
+    call self%particles%logStats(aLog)
+    call self%edges%logStats(alog)
+    call self%faces%logStats(aLog)
+    call EndSection(aLog)
+end subroutine
+
 pure function nVerticesInMesh(self, nestLevel)
     integer(kint) :: nVerticesInMesh
     class(PolyMesh2d), intent(in) :: self
@@ -88,21 +126,23 @@ pure function nVerticesInMesh(self, nestLevel)
     !
     integer(kint) :: i
     nVerticesInMesh = 0
-    select case (self%mesh_type)
-        case ("planar_tri")
+    select case (self%meshSeed)
+        case (TRI_HEX_SEED)
             do i = 2**nestLevel +1, 2**(nestLevel+1)
                 nVerticesInMesh = nVerticesInMesh + i
             enddo
             nVerticesInMesh = 2*nVerticesInMesh + 2**(nestLevel+1) + 1
-        case ("planar_quad")
+        case (QUAD_RECT_SEED)
             nVerticesInMesh = 3
             do i=1,nestLevel
                 nVerticesInMesh = nVerticesInMesh + 2**i
             enddo
-        case ("planar_cubic_quad")
-        case ("icosTriSphere")
+            nVerticesInMesh = nVerticesInMesh * nVerticesInMesh
+        case (CUBIC_PLANE_SEED)
+            nVerticesInMesh = 600
+        case (ICOS_TRI_SPHERE_SEED)
             nVerticesInMesh = 2 + 10*4**nestLevel
-        case ("cubedSphere")
+        case (CUBED_SPHERE_SEED)
             nVerticesInMesh = 2 + 6*4**nestLevel
     end select
 end function
@@ -115,16 +155,16 @@ pure function nFacesInMesh(self, nestLevel)
     integer(kint) :: i
     
     nFacesInMesh = 0
-    select case (self%mesh_type)
-        case ("planar_tri")
+    select case (self%meshSeed)
+        case (TRI_HEX_SEED)
             nFacesInMesh = 6*4**nestLevel
-        case ("planar_quad")
+        case (QUAD_RECT_SEED)
             nFacesInMesh = 4*4**nestLevel
-        case ("planar_cubic_quad")
+        case (CUBIC_PLANE_SEED)
             nFacesInMesh = 4*4**nestLevel
-        case ("icosTriSphere")
+        case (ICOS_TRI_SPHERE_SEED)
             nFacesInMesh = 20*4**nestLevel
-        case ("cubedSphere")
+        case (CUBED_SPHERE_SEED)
             nFacesInMesh = 6*4**nestLevel
     end select
 end function
@@ -147,7 +187,7 @@ subroutine getSeed(self)
     class(PolyMesh2d), intent(inout) :: self
     !
     character(len=128) :: seedfilename
-    integer(kint) :: i, nSeedParticles, nSeedEdges, nSeedFaces, nSeedVerts, nv, nc
+    integer(kint) :: i, j, nSeedParticles, nSeedEdges, nSeedFaces, nSeedVerts, nv, nc
     integer(kint), allocatable :: seedEdgeOrigs(:), seedEdgeDests(:), seedEdgeLefts(:), seedEdgeRights(:)
     integer(kint), allocatable :: seedEdgeInts(:,:), seedFaceEdges(:,:), seedFaceVerts(:,:), seedFaceCenters(:,:)
     real(kreal), allocatable :: seedXYZ(:,:)
@@ -159,7 +199,7 @@ subroutine getSeed(self)
     
     allocate( Particles :: self%particles)
     
-    if (self%mesh_type == "planar_tri") then
+    if (self%meshSeed == TRI_HEX_SEED) then
          allocate( LinearEdges :: self%edges)
          allocate( TriLinearFaces :: self%faces)
          
@@ -174,7 +214,7 @@ subroutine getSeed(self)
         self%geomKind = PLANAR_GEOM
         nv = 3
         nc=1
-    elseif (self%mesh_type == "planar_quad") then
+    elseif (self%meshSeed == QUAD_RECT_SEED) then
         allocate(LinearEdges :: self%edges)
         allocate(QuadLinearFaces :: self%faces)
         
@@ -186,7 +226,7 @@ subroutine getSeed(self)
         nc=1
         self%faceKind = QUAD_PANEL
         self%geomKind = PLANAR_GEOM
-    elseif (self%mesh_type == "planar_cubic_quad") then
+    elseif (self%meshSeed == CUBIC_PLANE_SEED) then
         allocate(CubicEdges :: self%edges)
         allocate(QuadCubicFaces :: self%faces)
         seedfilename = "quadCubicSeed.dat"
@@ -197,11 +237,11 @@ subroutine getSeed(self)
         nc=4
         self%faceKind= QUAD_CUBIC_PANEL
         self%geomKind = PLANAR_GEOM
-    elseif (self%mesh_type == "icosTriSphere") then
+    elseif (self%meshSeed == ICOS_TRI_SPHERE_SEED) then
         allocate(LinearEdges :: self%edges)
         allocate(TriLinearFaces :: self%faces)
         
-        seedfilename = "icosTriSeed.dat"
+        seedfilename = "icosTriSphereSeed.dat"
         nSeedParticles = 32
         nSeedEdges = 30
         nSeedFaces = 20
@@ -209,7 +249,7 @@ subroutine getSeed(self)
         nc=1
         self%faceKind = TRI_PANEL
         self%geomKind = SPHERE_GEOM
-    elseif (self%mesh_type == "cubedSphere") then
+    elseif (self%meshSeed == CUBED_SPHERE_SEED) then
         allocate(LinearEdges :: self%edges)
         allocate(QuadLinearFaces :: self%faces)
         
@@ -221,14 +261,14 @@ subroutine getSeed(self)
         nc=1
         self%faceKind = QUAD_PANEL
         self%geomKind = SPHERE_GEOM
-    elseif (self%mesh_type == "cubedSphereCubic") then
-        allocate(CubicEdges :: self%edges)
-        allocate(QuadCubicFaces :: self%faces)
-        
-        self%faceKind = QUAD_CUBIC_PANEL
-        self%geomKind = SPHERE_GEOM
-        nv = 12
-        nc = 4
+!    elseif (self%mesh_type == "cubedSphereCubic") then
+!        allocate(CubicEdges :: self%edges)
+!        allocate(QuadCubicFaces :: self%faces)
+!        
+!        self%faceKind = QUAD_CUBIC_PANEL
+!        self%geomKind = SPHERE_GEOM
+!        nv = 12
+!        nc = 4
     endif
     
     nMaxParticles = self%nVerticesInMesh(self%maxNest) + self%nFacesInMesh(self%maxNest)
@@ -238,6 +278,8 @@ subroutine getSeed(self)
         nMaxFaces = nMaxFaces + self%nFacesInMesh(i)
         nMaxEdges = nMaxEdges + self%nEdgesInMesh(self%nVerticesInMesh(i), self%nFacesInMesh(i))
     enddo
+    
+!    print *, "nMaxParticles = ", nMaxParticles, ", nMaxFaces = ", nMaxFaces, ", nMaxEdges = ", nMaxEdges
     
     call self%particles%init(nMaxParticles, self%geomKind)
     call self%edges%init(nMaxEdges)
@@ -288,6 +330,20 @@ subroutine getSeed(self)
 	do i=1, nSeedFaces
 	    call self%faces%insert(seedFaceCenters(:,i), seedFaceVerts(:,i), seedFaceEdges(:,i))
 	enddo
+	
+	!
+	!   set face areas and particle weights
+	!
+	self%faces%N_Active = nSeedFaces
+	self%faces%area = dzero
+    do i=1, nSeedFaces
+        self%faces%area(i) = self%faces%setArea(i, self%particles)
+    enddo
+    if (self%faceKind == QUAD_PANEL .or. self%faceKind == TRI_PANEL) then
+        do i=1, nSeedFaces
+            self%particles%weight(self%faces%centerParticles(1,i)) = self%faces%area(i)
+        enddo
+    endif
 end subroutine
 
 subroutine readSeedFile(self, seedfilename, nSeedParticles, nSeedEdges, nSeedFaces, nv, nc, &
@@ -322,7 +378,7 @@ subroutine readSeedFile(self, seedfilename, nSeedParticles, nSeedEdges, nSeedFac
         enddo
     elseif(self%geomKind == SPHERE_GEOM) then
         do i=1, nSeedParticles
-            read(READ_UNIT,*) seedXYZ(:,i)
+            read(READ_UNIT,*) seedXYZ(1,i), seedXYZ(2,i), seedXYZ(3,i)
         enddo
     endif
     
@@ -342,6 +398,7 @@ subroutine readSeedFile(self, seedfilename, nSeedParticles, nSeedEdges, nSeedFac
     else
         do i=1, nSeedEdges
             read(READ_UNIT,*) seedEdgeOrigs(i), seedEdgeDests(i), seedEdgeLefts(i), seedEdgeRights(i), seedEdgeInts(:,i) 
+            print *, seedEdgeOrigs(i), seedEdgeDests(i), seedEdgeLefts(i), seedEdgeRights(i), seedEdgeInts(:,i) 
         enddo
     endif
     !
@@ -357,23 +414,28 @@ subroutine readSeedFile(self, seedfilename, nSeedParticles, nSeedEdges, nSeedFac
     !   read root faces
     !
     read(READ_UNIT,*) linestring ! faceverts
+    print *, linestring
     seedFaceCenters = 0
     seedFaceEdges = 0
     seedFaceVerts = 0
+    print *, "shape seedFaceVerts = ", size(seedFaceVerts,1), size(seedFaceVerts,2)
     do i=1, nSeedFaces
+        print *, "i = ", i
         read(READ_UNIT,*) seedFaceVerts(:,i)
+        print *, seedFaceVerts(:,i)
     enddo
     read(READ_UNIT,*) linestring    ! faceedges
+    print *, linestring 
     do i=1, nSeedFaces
         read(READ_UNIT,*) seedFaceEdges(:,i)
     enddo
     
-    if (self%faceKind == QUAD_CUBIC_PANEL) then
-        read(READ_UNIT, *) linestring ! facecenters
-        do i=1, nSeedFaces
-            read(READ_UNIT,*) seedFaceCenters(:,i)
-        enddo
-    endif
+
+    read(READ_UNIT, *) linestring ! facecenters
+    print *, linestring
+    do i=1, nSeedFaces
+        read(READ_UNIT,*) seedFaceCenters(:,i)
+    enddo
     seedFaceCenters = seedFaceCenters + 1
     seedFaceEdges = seedFaceEdges + 1
     seedFaceVerts = seedFaceVerts +1

@@ -35,6 +35,9 @@ TARGET_LINK_LIBRARIES( spherePSETest.exe lpmFortran )
 ADD_EXECUTABLE(cubicMeshTest.exe CubicMeshTest.f90)
 TARGET_LINK_LIBRARIES(cubicMeshTest.exe lpmFortran)
 
+ADD_EXECUTABLE(ooMeshTest.exe OOMeshTest.f90)
+TARGET_LINK_LIBRARIES(ooMeshTest.exe lpmFortran)
+
 # Unit Tests
 create_test(particlesAndFieldTest.exe)
 create_test(stdIntVectorTest.exe)
@@ -42,6 +45,7 @@ create_test(planarMeshTest.exe 3)
 create_test(icosTriSphereTest.exe 2)
 create_test(cubedSphereTest.exe 4)
 create_test(cubicMeshTest.exe 3)
+create_test(ooMeshTest.exe 3)
 
 # Regression tests
 create_test(BivarConvergenceTest.exe)

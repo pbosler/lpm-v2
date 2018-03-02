@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+import codecs
 
 
 def bilinearPlaneMap( v0, v1, v2, v3, r1, r2 ):
@@ -250,35 +251,35 @@ def writeSeedFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     eformat += '\n'
     with open(fname, 'w') as f:
         if np.shape(xyz)[1]==2:
-            f.write("x     y \n")
+            f.write(("x     y \n").encode('utf8'))
             for x, y in xyz:
-                f.write('%.17f  %.17f\n'%(x,y))
+                f.write(('%.17f  %.17f\n'%(x,y)).encode('utf8'))
         else:
-            f.write("x   y   z\n")
+            f.write(("x   y   z\n").encode('utf8'))
             for x, y, z in xyz:
-                f.write('%.17f  %.17f  %.17f\n'%(x,y,z))
-        f.write("edgeO      edgeD       edgeLeft        edgeRight    edgeInts \n")
+                f.write(('%.17f  %.17f  %.17f\n'%(x,y,z)).encode('utf8'))
+        f.write(("edgeO      edgeD       edgeLeft        edgeRight    edgeInts \n").encode('utf8'))
         if ints is not None:
             for i in range(nedges):
-                f.write(eformat%(origs[i], dests[i], lefts[i], rights[i], ints[i,0], ints[i,1]))
+                f.write((eformat%(origs[i], dests[i], lefts[i], rights[i], ints[i,0], ints[i,1])).encode('utf8'))
         else:
             for i in range(nedges):
-                f.write(eformat%(origs[i], dests[i], lefts[i], rights[i]))
+                f.write((eformat%(origs[i], dests[i], lefts[i], rights[i])).encode('utf8'))
         
-        f.write("faceverts\n")
+        f.write(("faceverts\n").encode('utf8'))
         for v in faceVerts:
-            f.write(str(v)[1:-1])
-            f.write('\n')
-        f.write('faceedges\n')
+            f.write(((str(v)[1:-1]+'\n').lstrip()).encode('utf8'))
+            
+        f.write(('faceedges\n').encode('utf8'))
         for e in faceEdges:
-            f.write(str(e)[1:-1]+"\n")
-        f.write('facecenters\n')
+            f.write(((str(e)[1:-1]+"\n").lstrip()).encode('utf8'))
+        f.write(('facecenters\n').encode('utf8'))
         if ints is None:
             for c in faceCenters:
-                f.write(str(c) + '\n')
+                f.write((str(c) + '\n').encode('utf8'))
         else:
             for c in faceCenters:
-                f.write(str(c)[1:-1] + "\n")
+                f.write((str(c)[1:-1] + "\n").encode('utf8'))
 
 def make_ticklabels_invisible(fig):
     for i, ax in enumerate(fig.axes):
