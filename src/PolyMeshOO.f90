@@ -30,8 +30,11 @@ type PolyMesh2d
     
     contains
         procedure :: init
-        procedure :: createFromSeed
+        procedure, private :: getSeed
         procedure, private :: readSeedFile
+        procedure, private :: nVerticesInMesh
+        procedure, private :: nEdgesInMesh
+        procedure, private :: nFacesInMesh
 !        procedure :: copy
 !        procedure :: refine
         
@@ -51,6 +54,8 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     character(len=*), intent(in) ::  mesh_type
     integer(kint), intent(in) :: initNest, maxNest, amrLimit
     real(kreal), intent(in) :: maxRadius
+    !
+    integer(kint) :: i,j, nFacesOld, startIndex
     
     if ( .NOT. logInit) call InitLogger(log, procRank)
     
@@ -63,9 +68,82 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     self%particles => null()
     self%edges => null()
     self%faces => null()
+    
+    call self%getSeed()
+    
+    startIndex = 1
+    do i=1, initNest
+        nFacesOld = self%faces%N
+        do j=startIndex, nFacesOld
+            call self%faces%divide(j, self%particles, self%edges)
+        enddo
+        startIndex = nFacesOld + 1
+    enddo
 end subroutine
 
-subroutine createFromSeed(self)
+pure function nVerticesInMesh(self, nestLevel)
+    integer(kint) :: nVerticesInMesh
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: nestLevel
+    !
+    integer(kint) :: i
+    nVerticesInMesh = 0
+    select case (self%mesh_type)
+        case ("planar_tri")
+            do i = 2**nestLevel +1, 2**(nestLevel+1)
+                nVerticesInMesh = nVerticesInMesh + i
+            enddo
+            nVerticesInMesh = 2*nVerticesInMesh + 2**(nestLevel+1) + 1
+        case ("planar_quad")
+            nVerticesInMesh = 3
+            do i=1,nestLevel
+                nVerticesInMesh = nVerticesInMesh + 2**i
+            enddo
+        case ("planar_cubic_quad")
+        case ("icosTriSphere")
+            nVerticesInMesh = 2 + 10*4**nestLevel
+        case ("cubedSphere")
+            nVerticesInMesh = 2 + 6*4**nestLevel
+    end select
+end function
+
+pure function nFacesInMesh(self, nestLevel)
+    integer(kint) :: nFacesInMesh
+    class(PolyMesh2d),intent(in) :: self
+    integer(kint), intent(in) :: nestLevel
+    !
+    integer(kint) :: i
+    
+    nFacesInMesh = 0
+    select case (self%mesh_type)
+        case ("planar_tri")
+            nFacesInMesh = 6*4**nestLevel
+        case ("planar_quad")
+            nFacesInMesh = 4*4**nestLevel
+        case ("planar_cubic_quad")
+            nFacesInMesh = 4*4**nestLevel
+        case ("icosTriSphere")
+            nFacesInMesh = 20*4**nestLevel
+        case ("cubedSphere")
+            nFacesInMesh = 6*4**nestLevel
+    end select
+end function
+
+pure function nEdgesInMesh(self, nVerts, nFaces)
+    integer(kint) :: nEdgesInMesh
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: nVerts, nFaces
+    
+    nEdgesInMesh = 0
+    select case (self%geomKind)
+        case (PLANAR_GEOM)
+            nEdgesInMesh = nFaces + nVerts -1
+        case (SPHERE_GEOM)
+            nEdgesInMesh = nFaces + nVerts -2
+    end select
+end function
+
+subroutine getSeed(self)
     class(PolyMesh2d), intent(inout) :: self
     !
     character(len=128) :: seedfilename
@@ -73,6 +151,7 @@ subroutine createFromSeed(self)
     integer(kint), allocatable :: seedEdgeOrigs(:), seedEdgeDests(:), seedEdgeLefts(:), seedEdgeRights(:)
     integer(kint), allocatable :: seedEdgeInts(:,:), seedFaceEdges(:,:), seedFaceVerts(:,:), seedFaceCenters(:,:)
     real(kreal), allocatable :: seedXYZ(:,:)
+    integer(kint) :: nMaxParticles, nMaxEdges, nMaxFaces
     
     if (associated(self%particles)) deallocate(self%particles)
     if (associated(self%edges)) deallocate(self%edges)
@@ -151,6 +230,18 @@ subroutine createFromSeed(self)
         nv = 12
         nc = 4
     endif
+    
+    nMaxParticles = self%nVerticesInMesh(self%maxNest) + self%nFacesInMesh(self%maxNest)
+    nMaxFaces = 0
+    nMaxEdges = 0
+    do i=0, self%maxNest
+        nMaxFaces = nMaxFaces + self%nFacesInMesh(i)
+        nMaxEdges = nMaxEdges + self%nEdgesInMesh(self%nVerticesInMesh(i), self%nFacesInMesh(i))
+    enddo
+    
+    call self%particles%init(nMaxParticles, self%geomKind)
+    call self%edges%init(nMaxEdges)
+    call self%faces%init(self%faceKind, nMaxFaces)
     
     allocate(seedXYZ(3,nSeedParticles))
     allocate(seedEdgeOrigs(nSeedEdges))
