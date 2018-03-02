@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.gridspec import GridSpec
+
 
 def bilinearPlaneMap( v0, v1, v2, v3, r1, r2 ):
     result = np.zeros(2)
@@ -257,13 +258,6 @@ def writeSeedFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
             for x, y, z in xyz:
                 f.write('%.17f  %.17f  %.17f\n'%(x,y,z))
         f.write("edgeO      edgeD       edgeLeft        edgeRight    edgeInts \n")
-#         for i in range(nedges):
-#             f.write(str(origs[i]) + " " + str(dests[i]) + " " + str(lefts[i]) + " " + str(rights[i]) + " ")
-#             if ints is not None:
-#                 for cs in ints:
-#                     f.write(str(cs)[1:-1] + "\n")
-#             else:
-#                 f.write("\n")
         if ints is not None:
             for i in range(nedges):
                 f.write(eformat%(origs[i], dests[i], lefts[i], rights[i], ints[i,0], ints[i,1]))
@@ -285,72 +279,173 @@ def writeSeedFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         else:
             for c in faceCenters:
                 f.write(str(c)[1:-1] + "\n")
+
+def make_ticklabels_invisible(fig):
+    for i, ax in enumerate(fig.axes):
+        for tl in ax.get_xticklabels() + ax.get_yticklabels():
+            tl.set_visible(False)
             
-# def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
-#     nparticles = len(xyz)
-#     nedges = len(origs)
-#     nfaces = len(faceVerts)
-#     ncenters = len(faceCenters)
-#     nverts = len(faceVerts[0])
-#     nints = 0
-#     if ints is not None:
-#         nints = len(ints[0])
-#     m_size = 4.0
-#     m_width = m_size / 4.0
-#     l_width= 2.0
-# #     fig0 = plt.figure()
-# #     ax00 = fig0.add_subplot(2,2,1, projection='3d')
-# #     ax00.plot(xyz[:,0], xyz[:,1], xyz[:,2], 'ko')
-# #     for i in range(nedges):
-# #         exyz = sphereEdgeXyz(xyz, origs[i], dests[i])
-# #         ax00.plot(exyz[:,0], exyz[:,1], exyz[:,2], 'r-')
-# #     ax00 = fig0.add_subplot(2,2,1)
-# #     lam = np.linspace(0.0, 2*np.pi, 180, endpoint=False)
-# #     the = np.linspace(-0.5*np.pi, 0.5*np.pi, 91)
-# #     lon, lat = np.meshgrid(lam,the)
-#     crossesPi = np.zeros(nedges, dtype=bool)
-#     if 'cubed' in oname:
-#         crossesPi[7] = True
-#         crossesPi[9] = True
-#     elif 'icos' in oname:
-#         pass
-#     fig0, (ax0, ax1) = plt.subplots(2,1)
-#     plt.tight_layout(pad=0.1, w_pad=6)
-#     plon = np.arctan2(xyz[:,1], xyz[:,0])
-#     plat = np.arctan2(xyz[:,2], np.sqrt(np.sum(np.square(xyz[:,0]) + np.square(xyz[:,1]))))
-#     ax0.plot(plon, plat,'ko', markersize=m_size)
-#     
-#     for i in range(nedges):
-#         exyz = sphereEdgeXyz(xyz, origs[i], dests[i], crossesPi[i])
-#         elon = np.arctan2(exyz[:,1], exyz[:,0])
-#         elat = np.arctan(exyz[:,2] / np.sqrt(np.sum(np.square(exyz[:,0]) + np.square(exyz[:,1]))))
-#         if crossesPi[i]:
-#             pos = np.where(elon>0.0)
-#             neg = np.where(elon<0.0)
-#             ax0.plot(elon[pos], elat[pos], 'r-')
-#             ax0.plot(elon[neg], elat[neg], 'r-')
-#         else:
-#             ax0.plot(elon, elat, 'r-')
-#     ax0.set(title='edges & particles', xlabel='x', ylabel='y')  
-#     #ax0.set_aspect('equal','box') 
-# #    ax00.plot_surface(0.99*np.cos(lat)*np.cos(lon), 0.99*np.cos(lat)*np.sin(lon), 0.99*np.sin(lat),
-# #        color='white',edgecolor='white',facecolor='white',shade=False)
-#     
-#     fig0.savefig(oname, bbox_inches='tight')    
-#     plt.close(fig0)
-# 
-# def sphereEdgeXyz(xyz, orig, dest, crossPi=False):
-#     ptsPerEdge = 5
-#     result = np.zeros([ptsPerEdge,3])
-#     tparam = np.linspace(0.0, 1.0, ptsPerEdge)
-#     evec = xyz[dest] - xyz[orig]
-#     for i,t in enumerate(tparam):
-#         result[i,0] = xyz[orig][0] + t * evec[0]
-#         result[i,1] = xyz[orig][1] + t * evec[1]
-#         result[i,2] = xyz[orig][2] + t * evec[2]
-#         norm = np.sqrt(np.sum(np.square(result[i])))
-#         result[i] /= norm
-#     return result
+def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
+    nparticles = len(xyz)
+    nedges = len(origs)
+    nfaces = len(faceVerts)
+    ncenters = len(faceCenters)
+    nverts = len(faceVerts[0])
+    nints = 0
+    if ints is not None:
+        nints = len(ints[0])
+    m_size = 4.0
+    m_width = m_size / 4.0
+    l_width= 2.0
+    
+    fig0 = plt.figure()
+    
+    gs = GridSpec(2,1)
+    ax0 = plt.subplot(gs[0,0])
+    ax0.axis('off')
+    ax1 = plt.subplot(gs[1,0])
+    ax1.axis('off')
+    
+    if 'cubed' in oname:
+        if 'cubic' in oname:
+            pass
+        else:
+            pxy = np.zeros([20,2])
+            pxy[0] = (-0.5, 0.5)
+            pxy[1] = (-0.5, -0.5)
+            pxy[2] = (0.5, -0.5)
+            pxy[3] = (0.5, 0.5)
+            pxy[4] = (1.5, -0.5)
+            pxy[5] = (1.5, 0.5)
+            pxy[6] = (2.5, -0.5)
+            pxy[7] = (2.5, 0.5)
+            pxy[8] = (-1.5, -0.5) # 6
+            pxy[9] = (-1.5, 0.5) # 7
+            pxy[10] = (-0.5, 1.5) #7
+            pxy[11] = (-0.5, -1.5) #6
+            pxy[12] = (0.5, -1.5) #4
+            pxy[13] = (0.5, 1.5) #5
+            pxy[14] = (0.,0.)
+            pxy[15] = (1.0, 0.)
+            pxy[16] = (2.0, 0.)
+            pxy[17] = (-1.0, 0.)
+            pxy[18] = (0.,1.)
+            pxy[19] = (0.,-1)
+            pinds = np.array([0,1,2,3,4,5,6,7,6,7,7,6,4,5,8,9,10,11,12,13],dtype=int)
+            einds =  np.array([0,1,2,3,4,5,6,7,8,9,10,11,8,11, 9,6,10, 7,4],dtype=int)
+            pdests = np.array([1,2,3,0,4,5,3,6,7,5, 1, 9,9,10,13,3, 1,11,12],dtype=int)
+            porigs = np.array([0,1,2,3,2,4,5,4,6,7, 8, 0,8, 0,10,13,11,12,2],dtype=int)
+            for i in range(ncenters):
+                ax1.text(pxy[14+i,0], pxy[14+i,1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+    elif 'icos' in oname:
+        pio3 = np.pi/3.0
+        pxy = np.zeros([42,2])
+        pinds = np.zeros(42,dtype=int)
+        #1st row
+        y = np.sin(pio3)
+        pxy[0] = (np.cos(2*pio3), y)
+        pxy[1] = (np.cos(pio3), y)
+        pxy[2] = (1+np.cos(pio3), y)
+        pxy[3] = (2+np.cos(pio3), y)
+        pxy[4] = (3+np.cos(pio3), y)
+        pinds[0:5] = 0
+        #2nd row)
+        pxy[5] = (-1.,0.) #1)
+        pxy[6] = (0.,0.) #2)
+        pxy[7] = (1.,0.) #3)
+        pxy[8] = (2.,0.)#4)
+        pxy[9] = (3.,0.)#5)
+        pxy[10]= (4.,0)#1)
+        pinds[5:11] = (1,2,3,4,5,1)
+        #3rd row)
+        y = np.sin(4*pio3)
+        pxy[11] = (-1.0 + np.cos(4*pio3),y) #6)
+        pxy[12] = (np.cos(4*pio3), y) #7)
+        pxy[13] = (np.cos(5*pio3), y) #8)
+        pxy[14] = (1 + np.cos(5*pio3), y) #9)
+        pxy[15] = (2 + np.cos(5*pio3), y) #10)
+        pxy[16] = (3 + np.cos(5*pio3), y) #6)
+        pinds[11:17] = (6,7,8,9,10,6) 
+        #4th row)
+        y *= 2
+        pxy[17] = (-1.,y)
+        pxy[18] = (0.,y)
+        pxy[19] = (1.,y)
+        pxy[20] = (2.,y)
+        pxy[21] = (3.,y)
+        pinds[17:22] = 11
+        # centers
+        pxy[22] = (pxy[0] + pxy[5] + pxy[6]) / 3.0 #0
+        pxy[23] = (pxy[1] + pxy[6] + pxy[7]) / 3.0 #1
+        pxy[24] = (pxy[2] + pxy[7] + pxy[8]) / 3.0 #2 
+        pxy[25] = (pxy[3] + pxy[8] + pxy[9]) / 3.0 #3 
+        pxy[26] = (pxy[4] + pxy[9] + pxy[10]) / 3.0 #4
+        #
+        pxy[27] = (pxy[5] + pxy[11] + pxy[12])/3.0 #5
+        pxy[28] = (pxy[5] + pxy[6] + pxy[12])/3.0 #6
+        pxy[29] = (pxy[6] + pxy[12] + pxy[13])/3.0 #7
+        pxy[30] = (pxy[6] + pxy[7] + pxy[13])/3.0 #8
+        pxy[31] = (pxy[7] + pxy[13] + pxy[14])/3.0 #9
+        pxy[32] = (pxy[7] + pxy[8] + pxy[14])/3.0 #10
+        pxy[33] = (pxy[8] + pxy[14] + pxy[15])/3.0 #11
+        pxy[34] = (pxy[8] + pxy[9] + pxy[15])/3.0 #12
+        pxy[35] = (pxy[9] + pxy[15] + pxy[16])/3.0 #13
+        pxy[36] = (pxy[9] + pxy[10] + pxy[16])/3.0 #14
+        #
+        pxy[37] = (pxy[11] + pxy[12] + pxy[17]) / 3.0 #15
+        pxy[38] = (pxy[12] + pxy[13] + pxy[18]) / 3.0 #16
+        pxy[39] = (pxy[13] + pxy[14] + pxy[19]) / 3.0 #17
+        pxy[40] = (pxy[14] + pxy[15] + pxy[20]) / 3.0 #18
+        pxy[41] = (pxy[15] + pxy[16] + pxy[21]) / 3.0 #19
+        pinds[22:27] = range(12,17)
+        pinds[27:37] = range(17,27)
+        pinds[37:42] = range(27,32)
+        einds  = np.array([0,1,2,2,3,4,4,5,6,6,7,8,8, 9,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,10,25,26,26,27,27,28,28,29,29,25], dtype=int)
+        porigs = np.array([0,5,6,6,6,1,2,7,8,8,8,9,9, 9,4, 5,11,12,12,12,13,13,13, 7,14,14,15,15,15,16,10,17,17,18,13,13,19,20,15,15,21], dtype=int)
+        pdests = np.array([5,6,0,1,7,7,7,8,2,3,9,3,4,10,10,11,12, 5, 6,13, 6, 7,14,14, 8,15, 8, 9,16, 9,16,11,12,12,18,19,14,14,20,21,16], dtype=int)
+        for i in range(ncenters):
+            ax1.text(pxy[22+i,0]-0.05, pxy[22+i,1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+    make_ticklabels_invisible(plt.gcf())
+    
+    ax0.plot(pxy[:,0], pxy[:,1], 'ko', markersize=m_size)
+    for i in range(len(pinds)):
+        ax0.text(pxy[i,0], pxy[i,1], str(pinds[i]), color='k')
+    ax0.set(title='edges & particles')
+    ax1.set(title='edges & faces')
+    for i in range(len(einds)):
+        if ints is not None:
+            exy = edgeXyz(pxy, porigs[i], pdests[i], ints[i])
+        else:
+            exy = edgeXyz(pxy, porigs[i], pdests[i], None)
+        dx = exy[1:,0] - exy[0:-1,0]
+        dy = exy[1:,1] - exy[0:-1,1]
+        midpt = 0.5 * (exy[0] + exy[-1])
+        ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+            head_length=0.05, fc='r', ec='r', length_includes_head=False)
+        ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
+        ax0.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
+        ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+            head_length=0.05, fc='r', ec='r', length_includes_head=False)
+        ax1.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
+        ax1.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
+    
+        
+    
+    fig0.savefig(oname, bbox_inches='tight')    
+    plt.close(fig0)
+
+def sphereEdgeXyz(xyz, orig, dest, crossPi=False):
+    ptsPerEdge = 5
+    result = np.zeros([ptsPerEdge,3])
+    tparam = np.linspace(0.0, 1.0, ptsPerEdge)
+    evec = xyz[dest] - xyz[orig]
+    for i,t in enumerate(tparam):
+        result[i,0] = xyz[orig][0] + t * evec[0]
+        result[i,1] = xyz[orig][1] + t * evec[1]
+        result[i,2] = xyz[orig][2] + t * evec[2]
+        norm = np.sqrt(np.sum(np.square(result[i])))
+        result[i] /= norm
+    return result
     
 def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
     m_size = 4.0
@@ -378,9 +473,6 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         dx = exy[1:,0] - exy[0:-1,0]
         dy = exy[1:,1] - exy[0:-1,1]
         midpt = 0.5 * (exy[0] + exy[-1])
-#         ax0.arrow(exy[0,0], exy[0,1], dx[0], dy[0],head_width=0.1, head_length=0.05, fc='r', ec='r', overhang=0.2)
-#         ax0.arrow(exy[1,0], exy[1,1], dx[1], dy[1],head_width=0.1, head_length=0.05, fc='r', ec='r')
-#         ax0.arrow(exy[2,0], exy[2,1], dx[2], dy[2],head_width=0.1, head_length=0.05, fc='r', ec='r')
         ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
@@ -431,9 +523,10 @@ if (__name__ == "__main__"):
     print "cubed sphere seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = cubedSphereSeed()
     writeSeedFile('cubedSphereSeed.dat', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
-    #plotSphereSeed('cubedSphereSeed.pdf',xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+    plotSphereSeed('cubedSphereSeed.pdf',xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     
     print "icosahedral triangle sphere seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = icosTriSeed()
     writeSeedFile('icosTriSphereSeed.dat', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+    plotSphereSeed('icosTriSphereSeed.pdf', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     
