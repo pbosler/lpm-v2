@@ -6,11 +6,38 @@ import codecs
 
 def bilinearPlaneMap( v0, v1, v2, v3, r1, r2 ):
     result = np.zeros(2)
-    result[0] = 0.25 * ( (1.0-r1)*(1.0+r2)*v0[0] + (1.0-r1)*(1.0-r2)*v1[0] + 
+    result[0] = 0.25 * ( (1.0-r1)*(1.0+r2)*v0[0] + (1.0-r1)*(1.0-r2)*v1[0] +
         (1.0+r1)*(1.0-r2)*v2[0] + (1.0+r1)*(1.0+r2)*v3[0])
-    result[1] = 0.25 * ( (1.0-r1)*(1.0+r2)*v0[1] + (1.0-r1)*(1.0-r2)*v1[1] + 
+    result[1] = 0.25 * ( (1.0-r1)*(1.0+r2)*v0[1] + (1.0-r1)*(1.0-r2)*v1[1] +
         (1.0+r1)*(1.0-r2)*v2[1] + (1.0+r1)*(1.0+r2)*v3[1])
     return result
+
+def quadRectSeed():
+    xyz = np.zeros([13,2])
+    xyz[0] = (-1.0, 1.0 )
+    xyz[1] = (-1.0, 0.0 )
+    xyz[2] = (-1.0,-1.0 )
+    xyz[3] = (0.0,-1.0 )
+    xyz[4] = (1.0,-1.0 )
+    xyz[5] = (1.0, 0.0 )
+    xyz[6] = (1.0, 1.0 )
+    xyz[7] = (0.0, 1.0 )
+    xyz[8] = (0.0, 0.0 )
+    xyz[9] = (-0.5, 0.5 )
+    xyz[10] = (-0.5,-0.5 )
+    xyz[11] = (0.5,-0.5 )
+    xyz[12] = (0.5, 0.5)
+    edgeOrigs = np.array([ 0, 1,2,3,4,5,6,7,1,8,3,8],dtype=int)
+    edgeDests = np.array([ 1, 2,3,4,5,6,7,0,8,5,8,7],dtype=int)
+    edgeLefts = np.array([ 0, 1, 1, 2, 2, 3, 3, 0,0,3,1,0],dtype=int)
+    edgeRights= np.array([-1,-1,-1,-1,-1,-1,-1,-1,1,2,2,3], dtype=int)
+    faceVerts = np.array([[0,1,8,7],[1,2,3,8],[8,3,4,5],[7,8,5,6]],dtype=int)
+    faceEdges = np.array([[0,8,11,7],[1,2,10,8],[10,3,4,9],[11,9,5,6]],dtype=int)
+    faceCenters = np.array([9,10,11,12],dtype=int)
+    edgeInteriors = None
+    return xyz, edgeOrigs, edgeDests, edgeLefts, edgeRights, edgeInteriors, \
+        faceVerts, faceCenters, faceEdges
+
 
 def cubedSphereSeed():
     oor3 = 1.0 / np.sqrt(3.0)
@@ -45,7 +72,7 @@ def sphereTriCenter(v0, v1, v2):
     norm = np.sqrt(np.sum(np.square(result)))
     result /= norm
     return result
-        
+
 def icosTriSeed():
     xyz = np.zeros([32,3])
     xyz[0] = (0.0,0.0,1.0)
@@ -107,12 +134,12 @@ def icosTriSeed():
     faceEdges[17] = (28,17,27)
     faceEdges[18] = (29,20,28)
     faceEdges[19] = (25,23,29)
-    faceCenters = range(12,32)
+    faceCenters = np.array(range(12,32),dtype=int)
     for i in range(20):
         xyz[i+12] = sphereTriCenter(xyz[faceVerts[i][0]], xyz[faceVerts[i][1]], xyz[faceVerts[i][2]])
     return xyz, edgeOrigs, edgeDests, edgeLefts, edgeRights, edgeInteriors, \
         faceVerts, faceCenters, faceEdges
- 
+
 def triHexSeed():
     pio3 = np.pi/3.0
     xyz = np.zeros([13,2])
@@ -148,18 +175,18 @@ def quadCubicSeed():
     f1verts = np.array([3,16,17,18,19,20,21,22,23,6,5,4],dtype=int)
     f2verts = np.array([6,23,22,21,28,29,30,31,32,33,34,35],dtype=int)
     f3verts = np.array([9,8,7,6,35,34,33,40,41,42,43,44],dtype=int)
-    
+
     faceVerts = np.array([f0verts, f1verts, f2verts, f3verts], dtype=int)
-    
+
     f0centers = np.array([12,13,14,15],dtype=int)
     f1centers = np.array([24,25,26,27],dtype=int)
     f2centers = np.array([36,37,38,39],dtype=int)
     f3centers = np.array([45,46,47,48],dtype=int)
-    
+
     faceCenters = np.array([f0centers, f1centers, f2centers, f3centers], dtype=int)
-    
+
     faceEdges = np.array([[0,8,11,7], [1,2,10,8], [10,3,4,9], [11,9,5,6]], dtype=int)
-    
+
     edgeOrigs = np.array([0,3,18,21,30,33,42,9,3,6,21,6],dtype=int)
     edgeDests = np.array([3,18,21,30,33,42,9,0,6,33,6,9],dtype=int)
     edgeInteriors = np.array([[1,2],[16,17], [19,20], [28,29], [31,32], [40,41], [43,44], [10,11],
@@ -176,7 +203,7 @@ def quadCubicSeed():
     xyz[42] = (1.0, 1.0)
     xyz[9] = (0.0, 1.0)
     xyz[6] = (0.0,0.0)
-    
+
     xyz[1] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], -1.0, 1.0/sqrt5)
     xyz[2] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], -1.0, -1.0/sqrt5)
     xyz[4] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], -1.0/sqrt5, -1.0)
@@ -189,7 +216,7 @@ def quadCubicSeed():
     xyz[13] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], -1.0/sqrt5, -1.0/sqrt5)
     xyz[14] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], 1.0/sqrt5, -1.0/sqrt5)
     xyz[15] = bilinearPlaneMap(xyz[0], xyz[3], xyz[6], xyz[9], 1.0/sqrt5, 1.0/sqrt5)
-    
+
     xyz[16] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], -1.0, 1.0/sqrt5)
     xyz[17] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], -1.0, -1.0/sqrt5)
     xyz[19] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], -1.0/sqrt5, -1.0)
@@ -200,7 +227,7 @@ def quadCubicSeed():
     xyz[25] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], -1.0/sqrt5, -1.0/sqrt5)
     xyz[26] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], 1.0/sqrt5, -1.0/sqrt5)
     xyz[27] = bilinearPlaneMap(xyz[3], xyz[18], xyz[21], xyz[6], 1.0/sqrt5, 1.0/sqrt5)
-    
+
     xyz[28] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], -1.0/sqrt5, -1.0)
     xyz[29] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], 1.0/sqrt5, -1.0)
     xyz[31] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], 1.0, -1.0/sqrt5)
@@ -211,7 +238,7 @@ def quadCubicSeed():
     xyz[37] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], -1.0/sqrt5, -1.0/sqrt5)
     xyz[38] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], 1.0/sqrt5, -1.0/sqrt5)
     xyz[39] = bilinearPlaneMap(xyz[6], xyz[21], xyz[30], xyz[33], 1.0/sqrt5, 1.0/sqrt5)
-    
+
     xyz[40] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], 1.0, -1.0/sqrt5)
     xyz[41] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], 1.0, 1.0/sqrt5)
     xyz[43] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], 1.0/sqrt5, 1.0)
@@ -220,7 +247,7 @@ def quadCubicSeed():
     xyz[46] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], -1.0/sqrt5, -1.0/sqrt5)
     xyz[47] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], 1.0/sqrt5, -1.0/sqrt5)
     xyz[48] = bilinearPlaneMap(xyz[9], xyz[6], xyz[33], xyz[42], 1.0/sqrt5, 1.0/sqrt5)
-    
+
     return xyz, edgeOrigs, edgeDests, edgeLefts, edgeRights, edgeInteriors, \
         faceVerts, faceCenters, faceEdges
 
@@ -235,7 +262,77 @@ def edgeXyz(xyz, orig, dest, ints):
             result[i+1] = xyz[ints[i]]
     result[-1] = xyz[dest]
     return result
-    
+
+def writeNamelistFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
+    nparticles = len(xyz)
+    nedges = len(origs)
+    nfaces = len(faceVerts)
+    ncenters = len(faceCenters)
+    nverts = len(faceVerts[0])
+    with open(fname, 'w') as f:
+        f.write('&seed\n')
+        f.write('xyz = ')
+        if np.shape(xyz)[1]==2:
+            for i,[x,y] in enumerate(xyz):
+                if i<nparticles-1:
+                    ws = '%.17f,%.17f,%.17f,'%(x,y,0.0)
+                else:
+                    ws = '%.17f,%.17f,%.17f\n'%(x,y,0.0)
+                f.write(ws)
+        else:
+            for i,[x,y,z] in enumerate(xyz):
+                if i<nparticles-1:
+                    ws = '%.17f,%.17f,%.17f,'%(x,y,z)
+                else:
+                    ws = '%.17f,%.17f,%.17f\n'%(x,y,z)
+                f.write(ws)
+        f.write('origs = ')
+        ws = ','.join(str(o) for o in origs)
+        f.write(ws+'\n')
+
+        ws = 'dests = ' + ','.join(str(d) for d in dests) + '\n'
+        f.write(ws)
+        ws = 'lefts = ' + ','.join(str(l) for l in lefts) + '\n'
+        f.write(ws)
+        ws = 'rights = '+ ','.join(str(r) for r in rights) + '\n'
+        f.write(ws)
+        if ints is not None:
+            f.write('ints = ')
+            nints = len(ints)
+            for i, inds in enumerate(ints):
+                if i<nints-1:
+                    ws = ','.join(str(j) for j in inds) + ','
+                else:
+                    ws = ','.join(str(j) for j in inds) + '\n'
+                f.write(ws)
+        f.write('faceverts = ')
+        for i, face in enumerate(faceVerts):
+            if i<nfaces-1:
+                ws = ','.join(str(v) for v in face) + ','
+            else:
+                ws = ','.join(str(v) for v in face) + '\n'
+            f.write(ws)
+        f.write('faceedges = ')
+        for i, face in enumerate(faceEdges):
+            if i < nfaces-1:
+                ws = ','.join(str(e) for e in face) + ','
+            else:
+                ws = ','.join(str(e) for e in face) + '\n'
+            f.write(ws)
+        f.write('facecenters = ')
+        if len(faceCenters.shape) > 1:
+            for i, face in enumerate(faceCenters):
+                if i < nfaces-1:
+                    ws = ','.join(str(c) for c in face) + ','
+                else:
+                    ws = ','.join(str(c) for c in face) + '\n'
+                f.write(ws)
+        else:
+            ws = ','.join(str(c) for c in faceCenters) + '\n'
+            f.write(ws)
+        # last line
+        f.write('/\n')
+
 def writeSeedFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
     nparticles = len(xyz)
     nedges = len(origs)
@@ -265,11 +362,11 @@ def writeSeedFile(fname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         else:
             for i in range(nedges):
                 f.write((eformat%(origs[i], dests[i], lefts[i], rights[i])).encode('utf8'))
-        
+
         f.write(("faceverts\n").encode('utf8'))
         for v in faceVerts:
             f.write(((str(v)[1:-1]+'\n').lstrip()).encode('utf8'))
-            
+
         f.write(('faceedges\n').encode('utf8'))
         for e in faceEdges:
             f.write(((str(e)[1:-1]+"\n").lstrip()).encode('utf8'))
@@ -285,7 +382,7 @@ def make_ticklabels_invisible(fig):
     for i, ax in enumerate(fig.axes):
         for tl in ax.get_xticklabels() + ax.get_yticklabels():
             tl.set_visible(False)
-            
+
 def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
     nparticles = len(xyz)
     nedges = len(origs)
@@ -298,15 +395,15 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
     m_size = 4.0
     m_width = m_size / 4.0
     l_width= 2.0
-    
+
     fig0 = plt.figure()
-    
+
     gs = GridSpec(2,1)
     ax0 = plt.subplot(gs[0,0])
     ax0.axis('off')
     ax1 = plt.subplot(gs[1,0])
     ax1.axis('off')
-    
+
     if 'cubed' in oname:
         if 'cubic' in oname:
             pass
@@ -366,7 +463,7 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         pxy[14] = (1 + np.cos(5*pio3), y) #9)
         pxy[15] = (2 + np.cos(5*pio3), y) #10)
         pxy[16] = (3 + np.cos(5*pio3), y) #6)
-        pinds[11:17] = (6,7,8,9,10,6) 
+        pinds[11:17] = (6,7,8,9,10,6)
         #4th row)
         y *= 2
         pxy[17] = (-1.,y)
@@ -378,8 +475,8 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         # centers
         pxy[22] = (pxy[0] + pxy[5] + pxy[6]) / 3.0 #0
         pxy[23] = (pxy[1] + pxy[6] + pxy[7]) / 3.0 #1
-        pxy[24] = (pxy[2] + pxy[7] + pxy[8]) / 3.0 #2 
-        pxy[25] = (pxy[3] + pxy[8] + pxy[9]) / 3.0 #3 
+        pxy[24] = (pxy[2] + pxy[7] + pxy[8]) / 3.0 #2
+        pxy[25] = (pxy[3] + pxy[8] + pxy[9]) / 3.0 #3
         pxy[26] = (pxy[4] + pxy[9] + pxy[10]) / 3.0 #4
         #
         pxy[27] = (pxy[5] + pxy[11] + pxy[12])/3.0 #5
@@ -407,7 +504,7 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         for i in range(ncenters):
             ax1.text(pxy[22+i,0]-0.05, pxy[22+i,1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
     make_ticklabels_invisible(plt.gcf())
-    
+
     ax0.plot(pxy[:,0], pxy[:,1], 'ko', markersize=m_size)
     for i in range(len(pinds)):
         ax0.text(pxy[i,0], pxy[i,1], str(pinds[i]), color='k')
@@ -421,18 +518,18 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         dx = exy[1:,0] - exy[0:-1,0]
         dy = exy[1:,1] - exy[0:-1,1]
         midpt = 0.5 * (exy[0] + exy[-1])
-        ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+        ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
         ax0.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
-        ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+        ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax1.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
         ax1.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
-    
-        
-    
-    fig0.savefig(oname, bbox_inches='tight')    
+
+
+
+    fig0.savefig(oname, bbox_inches='tight')
     plt.close(fig0)
 
 def sphereEdgeXyz(xyz, orig, dest, crossPi=False):
@@ -447,7 +544,7 @@ def sphereEdgeXyz(xyz, orig, dest, crossPi=False):
         norm = np.sqrt(np.sum(np.square(result[i])))
         result[i] /= norm
     return result
-    
+
 def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges):
     m_size = 4.0
     m_width = m_size / 4.0
@@ -457,7 +554,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     ax0.plot(xyz[:,0], xyz[:,1], 'ko', markersize=m_size)
     ax0.set(title='edges & particles', xlabel='x', ylabel='y')
     ax0.set_aspect('equal','box')
-    
+
     nparticles = np.shape(xyz)[0]
     nedges = np.shape(origs)[0]
     nfaces = np.shape(faceVerts)[0]
@@ -465,7 +562,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     nverts = np.shape(faceVerts)[1]
     for i in range(nparticles):
         ax0.text(xyz[i,0], xyz[i,1], str(i), color='k')
-    
+
     for i in range(nedges):
         if ints is not None:
             exy = edgeXyz(xyz, origs[i], dests[i], ints[i])
@@ -474,11 +571,11 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         dx = exy[1:,0] - exy[0:-1,0]
         dy = exy[1:,1] - exy[0:-1,1]
         midpt = 0.5 * (exy[0] + exy[-1])
-        ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+        ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
         ax0.text(midpt[0], midpt[1]+0.05, str(i), color='r')
-    
+
     ax1.set_aspect('equal','box')
     ax1.set(title='faces & edges',xlabel='x',ylabel='y')
     for i in range(nedges):
@@ -489,11 +586,11 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         dx = exy[1:,0] - exy[0:-1,0]
         dy = exy[1:,1] - exy[0:-1,1]
         midpt = 0.5 * (exy[0] + exy[-1])
-        ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1, 
+        ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax1.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
         ax1.text(midpt[0], midpt[1]+0.1, str(i), color='r')
-    
+
     for i in range(nfaces):
         cntd = np.zeros(2)
         for j in range(nverts):
@@ -505,29 +602,38 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
                 cntd += xyz[faceCenters[i]]
         cntd /= (nverts+ncenters)
         ax1.text(cntd[0], cntd[1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
-    
+
     fig0.savefig(oname, bbox_inches='tight')
-    plt.close(fig0)    
-    
+    plt.close(fig0)
+
 if (__name__ == "__main__"):
-    
+
     print "tri hex seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = triHexSeed()
     writeSeedFile("triHexSeed.dat", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     plotPlaneSeed("triHexSeed.pdf", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
-    
+    writeNamelistFile("triHex.namelist", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+
+    print "quad rect seed"
+    xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = quadRectSeed()
+    writeSeedFile("quadRectSeed.dat", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+    plotPlaneSeed("quadRectSeed.pdf", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+    writeNamelistFile("quadRect.namelist", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+
     print "quad cubic seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = quadCubicSeed()
     writeSeedFile("quadCubicSeed.dat", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     plotPlaneSeed("quadCubicSeed.pdf", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
-    
+    writeNamelistFile('quadCubic.namelist', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+
     print "cubed sphere seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = cubedSphereSeed()
     writeSeedFile('cubedSphereSeed.dat', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     plotSphereSeed('cubedSphereSeed.pdf',xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
-    
+    writeNamelistFile("cubedSphere.namelist", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
+
     print "icosahedral triangle sphere seed"
     xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges = icosTriSeed()
     writeSeedFile('icosTriSphereSeed.dat', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
     plotSphereSeed('icosTriSphereSeed.pdf', xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)
-    
+    writeNamelistFile("icosTri.namelist", xyz, origs, dests, lefts, rights, ints, faceVerts, faceCenters, faceEdges)

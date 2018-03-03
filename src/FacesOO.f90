@@ -1,6 +1,7 @@
 module FacesOOModule
 
 use NumberKindsModule
+use UtilitiesModule
 use STDIntVectorModule
 use LoggerModule
 use ParticlesOOModule
@@ -11,7 +12,7 @@ use SphereGeomModule
 implicit none
 private
 
-public Faces, bilinearMap, TriLinearFaces, QuadLinearFaces, QuadCubicFaces
+public Faces, TriLinearFaces, QuadLinearFaces, QuadCubicFaces
 
 type, abstract :: Faces
     integer(kint), allocatable :: centerParticles(:,:)
@@ -24,7 +25,7 @@ type, abstract :: Faces
 	integer(kint) :: N_Active !< Number of undivided faces; these define the spatial discretization
 	integer(kint) :: N_Max !< Maximum number of faces allowed in memory
 	real(kreal), allocatable :: area(:)
-	
+
 	contains
 	    procedure :: init
 	    procedure :: copy
@@ -53,7 +54,7 @@ interface
     end subroutine
 end interface
 
-interface 
+interface
     pure function setArea(self, index, aParticles)
         import :: Faces
         import :: Particles
@@ -77,13 +78,13 @@ type, extends(Faces) :: TriLinearFaces
 end type
 
 type, extends(Faces) :: QuadLinearFaces
-    contains    
+    contains
         procedure :: divide => divideQuadLinear
         final :: deleteQuad
         procedure :: setarea => quadFaceArea
 end type
 
-type, extends(QuadLinearFaces) :: QuadCubicFaces
+type, extends(Faces) :: QuadCubicFaces
     contains
         procedure :: divide => divideQuadCubic
         procedure :: setarea => quadCubicArea
@@ -108,13 +109,13 @@ contains
 subroutine init(self, faceKind, nMax)
     class(Faces), intent(inout) :: self
     integer(kint), intent(in) :: faceKind, nMax
-    
+
     if (.not. logInit) call InitLogger(log, procRank)
-    
+
 	if ( nMax <= 0 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " NewFaces ERROR : invalid nMax.")
 		return
-	endif	
+	endif
 
 	if ( faceKind == QUAD_PANEL) then
 		allocate(self%vertices(4,nMax))
@@ -133,9 +134,9 @@ subroutine init(self, faceKind, nMax)
 		return
 	endif
 	self%centerParticles = 0
-    self%vertices = 0 
+    self%vertices = 0
     self%edges = 0
-    
+
     allocate(self%children(4,nMax))
     allocate(self%hasChildren(nMax))
     allocate(self%parent(nMax))
@@ -186,7 +187,7 @@ end subroutine
 subroutine copy(self, other)
     class(Faces), intent(inout) :: self
     class(Faces), intent(in) :: other
-    
+
     if (self%N < other%N) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " copy error : not enough memory.")
         return
@@ -219,23 +220,26 @@ subroutine logStats(self, alog)
     call EndSection(aLog)
 end subroutine
 
-subroutine insert(self, centerInds, vertInds, edgeInds)
+subroutine insert(self, centerInds, vertInds, edgeInds, area)
     class(Faces), intent(inout) :: self
     integer(kint), dimension(:), intent(in) :: centerInds, vertInds, edgeInds
-    
+    real(kreal), intent(in), optional :: area
+
     if (self%N+1 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " insert error : not enough memory.")
         return
     endif
-    if (size(centerInds) /= size(self%centerParticles,1) .or. size(vertInds) /= size(self%vertices,1) .or. &
-        size(edgeInds) /= size(vertInds) ) then
+    if (size(centerInds) /= size(self%centerParticles,1) .or. size(vertInds) /= size(self%vertices,1) ) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " insert error : size mismatch.")
         return
     endif
-    
+
     self%centerParticles(:,self%N+1) = centerInds
     self%vertices(:,self%N+1) = vertInds
     self%edges(:,self%N+1) = edgeInds
+    if (present(area)) then
+        self%area(self%N+1) = area
+    endif
     self%N = self%N + 1
 end subroutine
 
@@ -248,12 +252,12 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
     integer(kint) :: i, j, newFaceVerts(4,4), newFaceEdges(4,4)
     integer(kint) :: parentEdge, childEdge1, childEdge2
     real(kreal) :: quadCoords(3,4), lagQuadCoords(3,4), newFaceCenters(3,4), newFaceLagCenters(3,4)
-    
+
     if (self%N + 4 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, " divideQuadLinear error : ", "not enough memory.")
         return
     endif
-    
+
     newFaceVerts = 0
     newFaceEdges = 0
     !
@@ -262,7 +266,7 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
     do i=1, 4
         newFaceVerts(i,i) = self%vertices(i,index)
     enddo
-    
+
     !
     !   loop over parent edges
     !
@@ -282,35 +286,35 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
             childEdge2 = anEdges%N+2
             call anEdges%divide(parentEdge, aParticles)
         endif
-        
+
         !
         !   connect child edges to new child faces
         !
         if (anEdges%positiveOrientation(parentEdge, index)) then
             newFaceEdges(i,i) = childEdge1
             anEdges%leftFace(childEdge1) = self%N + i
-            
+
             newFaceEdges(i, mod(i,4)+1) = childEdge2
             anEdges%leftFace(childedge2) = self%N + mod(i,4) + 1
         else
             newFaceEdges(i,i) = childEdge2
             anEdges%rightFace(childEdge2) = self%N+i
-            
+
             newFaceEdges(i, mod(i,4)+1) = childEdge1
             anEdges%rightFace(childEdge1) = self%N + mod(i,4) + 1
         endif
-        
+
         newFaceVerts(mod(i,4)+1, i) = anEdges%dest(childEdge1)
         newFaceVerts(i, mod(i,4)+1) = anEdges%dest(childEdge1)
     enddo
-    
+
     !
     !   change parent center particle to vertex of new child panels
     !
     do i=1,4
         newFaceVerts(mod(i+1,4)+1, i) = self%centerParticles(1,index)
     enddo
-    
+
     !
 	!	debugging : check vertex connectivity
 	!
@@ -322,26 +326,26 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 			endif
 		enddo
 	enddo
-	
+
 	!
 	!   create new interior edges
 	!
 	call anEdges%insert(newFaceVerts(2,1), newFaceVerts(3,1), self%N+1, self%N+2)
 	newFaceEdges(2,1) = anEdges%N
 	newFaceEdges(4,2) = anEdges%N
-	
+
 	call anEdges%insert(newFaceVerts(1,3), newFaceVerts(4,3), self%N+4, self%N+3)
 	newFaceEdges(4,3) = anEdges%N
 	newFaceEdges(2,4) = anEdges%N
-	
+
 	call anEdges%insert(newFaceVerts(3,2), newFaceVerts(4,2), self%N+2, self%N+3)
 	newFaceEdges(3,2) = anEdges%N
 	newFaceEdges(1,3) = anEdges%N
-	
+
 	call anEdges%insert(newFaceVerts(2,4), newFaceVerts(1,4), self%N+1, self%N+4)
 	newFaceEdges(1,4) = anEdges%N
 	newFaceEdges(3,1) = anEdges%N
-	
+
 	!
 	! debugging : check edge connectivity
 	!
@@ -349,11 +353,11 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 		do j = 1, 4
 			if ( newFaceEdges(j,i) < 1 ) then
 				write(logstring,*) " edge connectivity ERROR at parent face ", index, ", child ", i, ", vertex ", j
-				call LogMessage(log, ERROR_LOGGING_LEVEL, logkey//" DivideQuadFace :",logstring)	
+				call LogMessage(log, ERROR_LOGGING_LEVEL, logkey//" DivideQuadFace :",logstring)
 			endif
 		enddo
 	enddo
-	
+
 	!
 	!   create new particles for child face centers
 	!
@@ -376,7 +380,7 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 	             lagQuadCoords(:,4))
 	    endif
 	enddo
-	
+
 	!
 	!   create child faces
 	!
@@ -395,21 +399,14 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 	self%N_Active = self%N_Active + 3
 end subroutine
 
-pure function bilinearMap(vertXyz, s1, s2)
-    real(kreal), dimension(3) :: bilinearMap
-    real(kreal), dimension(3,4), intent(in) :: vertXyz
-    real(kreal), intent(in) :: s1, s2
-    
-    bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,1) + (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
-        (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
-end function
+
 
 function getVerticesFromEdge(self, faceIndex, edgeIndex, anEdges)
     integer(kint), dimension(4) :: getVerticesFromEdge
     class(QuadCubicFaces), intent(in) :: self
     integer(kint), intent(in) :: faceIndex, edgeIndex
     class(CubicEdges), intent(in) :: anEdges
-    
+
     if (anEdges%positiveOrientation(edgeIndex, faceIndex)) then
         getVerticesFromEdge(1) = anEdges%orig(edgeIndex)
         getVerticesFromEdge(2:3) = anEdges%interiorParticles(:,edgeIndex)
@@ -438,7 +435,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
     integer(kint), dimension(8) :: edgePtInds
     real(kreal), dimension(3,4) :: quadCoords, lagQuadCoords
     real(kreal), dimension(3,4) :: newPhysCenters, newLagCenters
-    
+
     if ( self%N_Max < self%N + 4 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " DivideQuadFace ERROR : not enough memory.")
 		return
@@ -452,7 +449,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         do i=1,4
             newFaceCenters(i,i) = self%centerParticles(i,index)
         enddo
-    
+
         !
         !   loop over parent edges to divide face boundaries
         !
@@ -472,24 +469,24 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                 childEdge2 = anEdges%N+2
                 call anEdges%divide(parentEdge, aParticles)
             endif
-        
+
             !
             !   connect child edges to new child faces
             !
             if (anEdges%positiveOrientation(parentEdge, index)) then
                 newFaceEdges(i,i) = childEdge1
                 anEdges%leftFace(childEdge1) = self%N+i
-            
+
                 newFaceEdges(i, mod(i,4)+1) = childEdge2
                 anEdges%leftFace(childEdge2) = self%N + mod(i,4) + 1
             else
                 newFaceEdges(i,i) = childEdge2
                 anEdges%rightFace(childEdge2) = self%N+i
-            
+
                 newFaceEdges(i, mod(i,4)+1) = childEdge1
                 anEdges%rightFace(childEdge1) = self%N + mod(i,4) + 1
             endif
-            
+
             parentEdgeMidpoint(i) = anEdges%dest(childEdge1)
         enddo
         !
@@ -514,15 +511,15 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                         call LogMessage(log, ERROR_LOGGING_LEVEL, &
                             trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, int. p1")
                     endif
-            
+
                     newFaceVerts(1,1) = anEdges%orig(childEdge1)
                     newFaceVerts(2:3,1) = anEdges%interiorParticles(:,childEdge1)
                     newFaceVerts(4,1) = anEdges%dest(childEdge1)
-                    
+
                     newFaceVerts(1,2) = anEdges%orig(childEdge2)
                     newFaceVerts(2:3,2) = anEdges%interiorParticles(:, childEdge2)
                     newFaceVerts(4,2) = anEdges%dest(childEdge2)
-                    
+
                     if (newFaceVerts(3,2) /= anEdges%interiorParticles(2,childEdge2)) then
                         call LogMessage(log, ERROR_LOGGING_LEVEL, &
                             trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 3, child2 int. p2")
@@ -538,7 +535,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                     endif
                     newFaceVerts(5:6,2) = anEdges%interiorParticles(:,childEdge1)
                     newFaceVerts(7,2) = anEdges%dest(childEdge1)
-                    
+
                     newFaceVerts(4,3) = anEdges%orig(childEdge2)
                     newFaceVerts(5:6,3) = anEdges%interiorParticles(:,childEdge2)
                     newFaceVerts(7,3) = anEdges%dest(childEdge2)
@@ -553,7 +550,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                     endif
                     newFaceVerts(8:9,3) = anEdges%interiorParticles(:, childEdge1)
                     newFaceVerts(10,3) = anEdges%dest(childEdge1)
-                    
+
                     newFaceVerts(7,4) = anEdges%orig(childEdge2)
                     newFaceVerts(8:9,4) = anEdges%interiorParticles(:,childedge2)
                     newFaceVerts(10,4) = anEdges%dest(childEdge2)
@@ -567,7 +564,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                             trim(logkey)//" connectivity error, dividequadpanel, subpanel 4 ", "vertex 11, child1 int. p1")
                     endif
                     newFaceVerts(11:12,4) = anEdges%interiorParticles(:,childEdge1)
-                    
+
                     newFaceVerts(11:12,1) = anEdges%interiorParticles(:,childEdge2)
                     if (anEdges%dest(childEdge2) /= newFaceVerts(1,1)) then
                         call LogMessage(log, ERROR_LOGGING_LEVEL, &
@@ -585,17 +582,17 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                         call LogMessage(log, ERROR_LOGGING_LEVEL, &
                             trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, int. p2")
                     endif
-                    
+
                     newFaceVerts(1,1) = anEdges%dest(childEdge2)
                     newFaceVerts(2,1) = anEdges%interiorParticles(2,childEdge2)
                     newFaceVerts(3,1) = anEdges%interiorParticles(1,childEdge2)
                     newFaceVerts(4,1) = anEdges%orig(childEdge2)
-                    
+
                     newFaceVerts(1,2) = anEdges%dest(childEdge1)
                     newFaceVerts(2,2) = anEdges%interiorParticles(2, childEdge1)
                     newFaceVerts(3,2) = anEdges%interiorParticles(1, childEdge1)
                     newFaceVerts(4,2) = anEdges%orig(childEdge1)
-                    
+
                     if (newFaceVerts(3,2) /= anEdges%interiorParticles(1,childEdge1)) then
                         call LogMessage(log, ERROR_LOGGING_LEVEL, &
                             trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 3, child1 int. p1")
@@ -612,7 +609,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                     newFaceVerts(5,2) = anEdges%interiorParticles(2,childEdge2)
                     newFaceVerts(6,2) = anEdges%interiorParticles(1,childEdge2)
                     newFaceVerts(7,2) = anEdges%orig(childEdge2)
-                    
+
                     newFaceVerts(4,3) = anEdges%dest(childEdge1)
                     newFaceVerts(5,3) = anEdges%interiorParticles(2,childEdge1)
                     newFaceVerts(6,3) = anEdges%interiorParticles(1,childEdge1)
@@ -629,7 +626,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                     newFaceVerts(8,3) = anEdges%interiorParticles(2, childEdge2)
                     newFaceVerts(9,3) = anEdges%interiorParticles(1, childEdge2)
                     newFaceVerts(10,3) = anEdges%orig(childEdge2)
-                    
+
                     newFaceVerts(7,4) = anEdges%dest(childEdge1)
                     newFaceVerts(8,4) = anEdges%interiorParticles(2,childedge1)
                     newFaceVerts(9,4) = anEdges%interiorParticles(1,childedge1)
@@ -645,7 +642,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                     endif
                     newFaceVerts(11,4) = anEdges%interiorParticles(2,childEdge2)
                     newFaceVerts(12,4) = anEdges%interiorParticles(1,childEdge2)
-                    
+
                     newFaceVerts(11,1) = anEdges%interiorParticles(2,childEdge1)
                     newFaceVerts(12,1) = anEdges%interiorParticles(1,childEdge1)
                     if (anEdges%orig(childEdge1) /= newFaceVerts(1,1)) then
@@ -655,7 +652,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                 end select
             endif
         enddo
-        
+
         !
         !   create new interior edges
         !
@@ -666,7 +663,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         if(aParticles%geomKind == SPHERE_GEOM) then
             quadCtr = SphereCentroid(quadCoords)
             lagQuadCtr = SphereCentroid(lagQuadCoords)
-            
+
             edgePts(:,1) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oosqrt5)
             edgePts(:,2) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oosqrt5)
             edgePts(:,3) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oosqrt5)
@@ -682,11 +679,11 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
             lagEdgePts(:,5) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
             lagEdgePts(:,6) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
             lagEdgePts(:,7) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            lagEdgePts(:,8) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5)            
+            lagEdgePts(:,8) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5)
         else
             quadCtr = EuclideanCentroid(quadCoords)
             lagQuadCtr = EuclideanCentroid(lagQuadCoords)
-            
+
             edgePts(:,1) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oosqrt5)
             edgePts(:,2) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oosqrt5)
             edgePts(:,3) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oosqrt5)
@@ -702,7 +699,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
             lagEdgePts(:,5) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
             lagEdgePts(:,6) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
             lagEdgePts(:,7) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            lagEdgePts(:,8) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5) 
+            lagEdgePts(:,8) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5)
         endif
         nParticles = aParticles%N
         call aParticles%insert(quadCtr, lagQuadCtr)
@@ -715,7 +712,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         call anEdges%insert(nParticles+1, parentEdgeMidpoint(3), self%N+4, self%N+3, edgePtInds(3:4))
         call anEdges%insert(parentEdgeMidpoint(2), nParticles+1, self%N+2, self%N+3, edgePtInds(5:6))
         call anEdges%insert(nParticles+1, parentEdgeMidpoint(4), self%N+1, self%N+4, edgePtInds(7:8))
-        
+
         newFaceEdges(2,1) = nEdges+1
         newFaceEdges(4,2) = nEdges+1
 
@@ -727,7 +724,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
 
         newFaceEdges(3,1) = nEdges+4
         newFaceEdges(1,4) = nEdges+4
-        
+
         !
         !   center particles
         !
@@ -753,8 +750,8 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
                 endif
             enddo
         enddo
-        
-        
+
+
        !
        !    create child faces
        !
@@ -767,10 +764,10 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
        self%N = self%N + 4
        self%N_Active = self%N_Active + 3
        self%hasChildren(index) = .TRUE.
-              
+
     class default
         call logMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" divideCubicFace error : ", " cubic edges required.")
-        return 
+        return
     end select
 end subroutine
 
@@ -790,14 +787,15 @@ pure function physCentroid(self, index, aParticles)
     integer(kint), intent(in) :: index
     class(Particles), intent(in) :: aParticles
     !
-    integer(kint) :: i
+    integer(kint) :: i, nv
     real(kreal) :: norm
-    
+
     physCentroid = dzero
-    do i=1, size(self%vertices,1)
+    nv = size(self%vertices,1)
+    do i=1, nv
         physCentroid = physCentroid + aParticles%physCoord(self%vertices(i, index))
     enddo
-    physCentroid = physCentroid / real(size(self%vertices,1), kreal)
+    physCentroid = physCentroid / real(nv, kreal)
     if (aParticles%geomKind == SPHERE_GEOM) then
         norm = sqrt(sum(physCentroid*physCentroid))
         physCentroid = physCentroid / norm
@@ -810,14 +808,19 @@ pure function lagCentroid(self, index, aParticles)
     integer(kint), intent(in) :: index
     class(Particles), intent(in) :: aParticles
     !
-    integer(kint) :: i
+    integer(kint) :: i, nv, nc
     real(kreal) :: norm
-    
+
     lagCentroid = dzero
-    do i=1, size(self%vertices,1)
+    nv = size(self%vertices,1)
+    nc = size(self%centerParticles,1)
+    do i=1, nv
         lagCentroid = lagCentroid + aParticles%lagCoord(self%vertices(i, index))
     enddo
-    lagCentroid = lagCentroid / real(size(self%vertices,1), kreal)
+    do i=1,nc
+        lagCentroid = lagCentroid + aParticles%lagCoord(self%centerParticles(i, index))
+    enddo
+    lagCentroid = lagCentroid / real(nv + nc, kreal)
     if (aParticles%geomKind == SPHERE_GEOM) then
         norm = sqrt(sum(lagCentroid*lagCentroid))
         lagCentroid = lagCentroid / norm
@@ -831,7 +834,7 @@ function countParents(self, index)
     !
     logical(klog) :: keepGoing
     integer(kint) :: parentIndex
-    
+
     countParents = 0
     keepGoing = (self%parent(index) > 0)
     parentIndex = self%parent(index)
@@ -852,7 +855,7 @@ function area(self, index, aParticles, anEdges)
     integer(kint) :: i, nEdges
     type(STDIntVector) :: leafEdges
     real(kreal), dimension(3) :: cntd
-    
+
     nEdges = size(self%edges,1)
     area = dzero
     cntd = self%physCentroid(index, aParticles)
@@ -868,11 +871,11 @@ function sharedEdge(self, face1, face2)
     integer(kint), intent(in) :: face1, face2
     !
     integer(kint) :: i, j, shareCount, nEdges
-    
+
     sharedEdge = 0
     shareCount = 0
     nEdges = size(self%edges,1)
-    
+
     do i=1, nEdges
         do j=1, nEdges
             if (self%edges(i, face1) == self%edges(j, face2)) then
@@ -896,7 +899,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
     integer(kint) :: i, j, newFaceVerts(3,4), newFaceEdges(3,4)
     integer(kint) :: parentEdge, childEdge1, childEdge2
     real(kreal) :: triCoords(3,3), lagTriCoords(3,3), newFaceCenters(3,4), newFaceLagCenters(3,4)
-    
+
 !    if (self%faceKind /= TRI_PANEL) then
 !         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divide tri face error : invalid facekind.")
 !         return
@@ -905,7 +908,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " divide tri face error : not enough memory.")
         return
     endif
-    
+
     newFaceVerts = 0
     newFaceEdges = 0
     !
@@ -914,7 +917,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
     do i=1,3
         newFaceVerts(i,i) = self%vertices(i, index)
     enddo
-    
+
     !
     !   loop over parent edges
     !
@@ -934,30 +937,30 @@ subroutine divideTri(self, index, aParticles, anEdges)
             childEdge2 = anEdges%N + 2
             call anEdges%divide(parentEdge, aParticles)
         endif
-        
+
         !
         !   connect child edges to child faces
         !
         if (anEdges%positiveOrientation(parentEdge, index)) then
             newFaceEdges(i, i) = childEdge1
             anEdges%leftFace(childEdge1) = self%N + i
-            
+
             newFaceEdges(i, mod(i,3)+1) = childEdge2
             anEdges%leftFace(childedge2) = self%N + mod(i,3) + 1
         else
             newFaceEdges(i,i) = childEdge2
             anEdges%rightFace(childEdge2) = self%N + i
-            
+
             newFaceEdges(i, mod(i,3) + 1) = childEdge1
             anEdges%rightFace(childEdge1) = self%N + mod(i,3) + 1
         endif
-        
+
         newFaceVerts(i, mod(i,3) + 1) = anEdges%dest(childEdge1)
         newFaceVerts(mod(i,3)+1, i) = anEdges%dest(childEdge1)
     enddo
-    
+
     newFaceVerts(:,4) = (/ newFaceVerts(3,2), newFaceVerts(1,3), newFaceVerts(2,1) /)
-    
+
     !
 	! debugging : check vertex connectivity
 	!
@@ -969,22 +972,22 @@ subroutine divideTri(self, index, aParticles, anEdges)
 			endif
 		enddo
 	enddo
-	
+
 	!
 	!   create new interior edges
 	!
 	call anEdges%insert(newFaceVerts(1,4), newFaceVerts(2,4), self%N + 4, self%N+3)
 	newFaceEdges(1,4) = anEdges%N
 	newFaceEdges(1,3) = anEdges%N
-	
+
 	call anEdges%insert(newFaceVerts(2,4), newFaceVerts(3,4), self%N+4, self%N+1)
 	newFaceEdges(2,4) = anEdges%N
 	newFaceEdges(2,1) = anEdges%N
-	
+
 	call anEdges%insert(newFaceVerts(3,4), newFaceVerts(1,4), self%N+4, self%N+2)
 	newFaceEdges(3,4) = anEdges%N
 	newFaceEdges(3,2) = anEdges%N
-	
+
 	!
 	! debugging : check edge connectivity
 	!
@@ -996,7 +999,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 			endif
 		enddo
 	enddo
-	
+
 	!
 	!   create new center particles for child faces 1:3
 	!
@@ -1017,7 +1020,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 	        newFaceLagCenters(:,i) = SphereTriCenter(lagTriCoords(:,1), lagTriCoords(:,2), lagTriCoords(:,3))
 	    endif
 	enddo
-	
+
 	!
 	!   create child faces
 	!
@@ -1037,7 +1040,7 @@ subroutine divideTri(self, index, aParticles, anEdges)
 	self%children(4,index) = self%N+4
 	self%parent(self%N+4) = index
 	!aParticles%weight(self%centerParticles(1,self%N+4)) = self%triFaceArea(self%N+4, aParticles)
-	
+
 	self%hasChildren(index) = .TRUE.
 	self%N = self%N + 4
 	self%N_Active = self%N_Active + 3
@@ -1051,7 +1054,7 @@ pure function triFaceArea(self, index, aParticles)
     !
     integer(kint) :: i
     real(kreal) :: center(3), v1(3), v2(3)
-    
+
     triFaceArea = dzero
     center = aParticles%physCoord(self%centerParticles(1,index))
     if (aParticles%geomKind == PLANAR_GEOM) then
@@ -1076,20 +1079,24 @@ pure function quadCubicArea(self, index, aParticles)
     class(Particles), intent(in) :: aParticles
     !
     integer(kint) :: i
-    real(kreal) :: center(3), v1(3), v2(3)
-    
+    real(kreal) :: center(3), verts(3,4), v1(3), v2(3)
+
     quadCubicArea = dzero
-    center = self%physCentroid(i, aParticles)
+    center = self%physCentroid(index, aParticles)
+    verts(:,1) = aParticles%physCoord(self%vertices(1,index))
+    verts(:,2) = aParticles%physCoord(self%vertices(4,index))
+    verts(:,3) = aParticles%physCoord(self%vertices(7,index))
+    verts(:,4) = aParticles%physCoord(self%vertices(10,index))
     if (aParticles%geomKind == PLANAR_GEOM) then
         do i=1,4
-            v1 = aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
-            v2 = aParticles%physCoord(self%vertices(mod(3*i,12)+1,index))
+            v1 = verts(:,i)
+            v2 = verts(:,mod(i,4)+ 1)
             quadCubicArea = quadCubicArea + TriArea(v1(1:2), center(1:2), v2(1:2))
         enddo
     elseif (aParticles%geomKind == SPHERE_GEOM) then
         do i=1,4
-            v1 = aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
-            v2 = aParticles%physCoord(self%vertices(mod(3*i,12)+1,index))
+            v1 = verts(:,i)
+            v2 = verts(:,mod(i,4)+ 1)
             quadCubicArea = quadCubicArea + SphereTriArea(v1, center, v2)
         enddo
     endif
@@ -1103,7 +1110,7 @@ pure function quadFaceArea(self, index, aParticles)
     !
     integer(kint) :: i
     real(kreal) :: center(3), v1(3), v2(3)
-    
+
     quadFaceArea = dzero
     center = aParticles%physCoord(self%centerParticles(1,index))
     if (aParticles%geomKind == PLANAR_GEOM) then
@@ -1127,7 +1134,7 @@ function particleOppositeTriEdge(self, faceIndex, edgeIndex)
     integer(kint), intent(in) :: faceIndex, edgeIndex
     !
     integer(kint) :: i, foundEdge
-    
+
     foundEdge = 0
     particleOppositeTriEdge = 0
     do i=1,3
@@ -1146,7 +1153,7 @@ end function
 
 
 !> @brief Initializes a logger for the Faces module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param[out] aLog Target Logger object
 !> @param[in] rank Rank of this processor

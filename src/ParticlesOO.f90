@@ -8,7 +8,7 @@ implicit none
 private
 public Particles
 
-type Particles 
+type Particles
     real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
 	real(kreal), allocatable :: z(:)   !< physical coordinate
@@ -19,7 +19,7 @@ type Particles
 	integer(kint) :: N = 0
 	integer(kint) :: N_Max = 0
 	integer(kint) :: geomkind = 0
-	
+
 	contains
 	    procedure :: init
 	    final :: deletePrivate
@@ -32,6 +32,7 @@ type Particles
 	    procedure :: lagCoord
 	    procedure :: insert
 	    procedure :: replace
+	    procedure :: writeMatlab
 end type
 !
 !----------------
@@ -50,9 +51,9 @@ subroutine init(self, nMax, geomKind)
     class(Particles), intent(inout) :: self
     integer(kint), intent(in) :: nMax
     integer(kint), intent(in) :: geomkind
-    
+
     if (.NOT. logInit ) call InitLogger(log, procRank)
-    
+
     ! error checking
 	if ( nMax <= 0 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " invalid nMax.")
@@ -62,7 +63,7 @@ subroutine init(self, nMax, geomKind)
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " invalid geometry.")
 		return
 	endif
-	
+
 	self%N_Max = nMax
 	self%N = 0
 	self%geomKind = geomKind
@@ -81,7 +82,7 @@ subroutine init(self, nMax, geomKind)
 		self%z = 0.0
 		allocate(self%z0(nMax))
 		self%z0 = 0.0
-	endif	
+	endif
 end subroutine
 
 subroutine deletePrivate(self)
@@ -98,7 +99,7 @@ end subroutine
 subroutine copy(self, other)
     class(Particles), intent(inout) :: self
     class(Particles), intent(in) :: other
-    
+
     if ( self%N_Max < other%N ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " not enough memory.")
 		return
@@ -107,7 +108,7 @@ subroutine copy(self, other)
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " dimension mismatch.")
 		return
 	endif
-	
+
 	self%x(1:other%N) = other%x(1:other%N)
 	self%x0(1:other%N) = other%x0(1:other%N)
 	self%y(1:other%N) = other%y(1:other%N)
@@ -122,7 +123,7 @@ end subroutine
 subroutine logStats(self, alog)
     class(Particles), intent(in) :: self
     type(Logger), intent(inout) :: alog
-    
+
     call LogMessage(aLog, TRACE_LOGGING_LEVEL, logKey, " Particles Stats:")
     call StartSection(aLog)
     call LogMessage(aLog, TRACE_LOGGING_LEVEL, "particles.N = ", self%N )
@@ -180,12 +181,12 @@ end function
 subroutine insert(self, physX, lagX)
     class(Particles), intent(inout) :: self
     real(kreal), dimension(:), intent(in) :: physX, lagX
-    
+
     if (self%N+1 > self%N_Max) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " insert error : not enough memory.")
         return
     endif
-    
+
     self%x(self%N+1) = physX(1)
     self%y(self%N+1) = physX(2)
     self%x0(self%N+1) = lagX(1)
@@ -201,7 +202,7 @@ subroutine replace(self, index, physx, lagx)
     class(Particles), intent(inout) :: self
     integer(kint), intent(in) :: index
     real(kreal), dimension(3), intent(in) :: physx, lagx
-    
+
     self%x(index) = physx(1)
     self%y(index) = physx(2)
     self%x0(index) = lagx(1)
@@ -212,8 +213,44 @@ subroutine replace(self, index, physx, lagx)
     endif
 end subroutine
 
+subroutine writeMatlab(self, fileunit)
+    class(Particles), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i
+
+    if (allocated(self%z)) then
+        write(fileunit,'(A)',advance='no') 'xyz = ['
+        do i=1,self%N-1
+            write(fileunit,*) self%x(i), ',', self%y(i),',',self%z(i),';'
+        enddo
+        write(fileunit,*) self%x(self%N), ',', self%y(self%N),',',self%z(self%N),'];'
+        write(fileunit,'(A)', advance='no') 'xyz0 = ['
+        do i=1,self%N-1
+            write(fileunit,*) self%x0(i), ',', self%y0(i),',',self%z0(i),';'
+        enddo
+        write(fileunit,*) self%x0(self%N), ',', self%y0(self%N),',',self%z0(self%N),'];'
+    else
+        write(fileunit,'(A)',advance='no') 'xy = ['
+        do i=1,self%N-1
+            write(fileunit,*) self%x(i), ',', self%y(i),';'
+        enddo
+        write(fileunit,*) self%x(self%N), ',', self%y(self%N),'];'
+        write(fileunit,'(A)', advance='no') 'xyz0 = ['
+        do i=1,self%N-1
+            write(fileunit,*) self%x0(i), ',', self%y0(i),';'
+        enddo
+        write(fileunit,*) self%x0(self%N), ',', self%y0(self%N),'];'
+    endif
+    write(fileunit,'(A)',advance='no') 'weight = ['
+    do i=1,self%N-1
+        write(fileunit,*) self%weight(i), ','
+    enddo
+    write(fileunit,*) self%weight(self%N), '];'
+end subroutine
+
 !> @brief Initializes a logger for the Particles module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor
