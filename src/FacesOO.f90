@@ -393,8 +393,10 @@ subroutine divideQuadLinear(self, index, aParticles, anEdges)
 	    self%edges(:,self%N+i) = newFaceEdges(:,i)
 	    self%children(i, index) = self%N+i
 	    self%parent(self%N+i) = index
-	    !aParticles%weight(self%centerParticles(1,self%N+i)) = self%quadFaceArea(self%N+i, aParticles)
+	    aParticles%weight(self%centerParticles(1,self%N+i)) = self%setArea(self%N+i, aParticles)
+	    self%area(self%N+i) = self%setArea(self%N+i,aParticles)
 	enddo
+	self%area(index) = dzero
 	aParticles%weight(self%centerParticles(1,index)) = dzero
 	self%hasChildren(index) = .TRUE.
 	self%N = self%N+4
@@ -666,42 +668,42 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
             quadCtr = SphereCentroid(quadCoords)
             lagQuadCtr = SphereCentroid(lagQuadCoords)
 
-            edgePts(:,1) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oosqrt5)
-            edgePts(:,2) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oosqrt5)
-            edgePts(:,3) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oosqrt5)
-            edgePts(:,4) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oosqrt5)
-            edgePts(:,5) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oosqrt5)
-            edgePts(:,6) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oosqrt5)
-            edgePts(:,7) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            edgePts(:,8) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oosqrt5)
-            lagEdgePts(:,1) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,2) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oosqrt5)
-            lagEdgePts(:,3) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oosqrt5)
-            lagEdgePts(:,4) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oosqrt5)
-            lagEdgePts(:,5) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,6) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,7) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            lagEdgePts(:,8) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5)
+            edgePts(:,1) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oor5)
+            edgePts(:,2) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oor5)
+            edgePts(:,3) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oor5)
+            edgePts(:,4) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oor5)
+            edgePts(:,5) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
+            edgePts(:,6) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
+            edgePts(:,7) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oor5)
+            edgePts(:,8) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oor5)
+            lagEdgePts(:,1) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oor5)
+            lagEdgePts(:,2) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oor5)
+            lagEdgePts(:,3) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oor5)
+            lagEdgePts(:,4) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oor5)
+            lagEdgePts(:,5) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
+            lagEdgePts(:,6) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
+            lagEdgePts(:,7) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oor5)
+            lagEdgePts(:,8) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oor5)
         else
             quadCtr = EuclideanCentroid(quadCoords)
             lagQuadCtr = EuclideanCentroid(lagQuadCoords)
 
-            edgePts(:,1) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oosqrt5)
-            edgePts(:,2) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oosqrt5)
-            edgePts(:,3) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oosqrt5)
-            edgePts(:,4) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oosqrt5)
-            edgePts(:,5) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oosqrt5)
-            edgePts(:,6) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oosqrt5)
-            edgePts(:,7) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            edgePts(:,8) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oosqrt5)
-            lagEdgePts(:,1) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,2) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oosqrt5)
-            lagEdgePts(:,3) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oosqrt5)
-            lagEdgePts(:,4) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oosqrt5)
-            lagEdgePts(:,5) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,6) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oosqrt5)
-            lagEdgePts(:,7) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oosqrt5)
-            lagEdgePts(:,8) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oosqrt5)
+            edgePts(:,1) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oor5)
+            edgePts(:,2) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oor5)
+            edgePts(:,3) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oor5)
+            edgePts(:,4) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oor5)
+            edgePts(:,5) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
+            edgePts(:,6) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
+            edgePts(:,7) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oor5)
+            edgePts(:,8) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oor5)
+            lagEdgePts(:,1) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oor5)
+            lagEdgePts(:,2) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oor5)
+            lagEdgePts(:,3) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oor5)
+            lagEdgePts(:,4) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oor5)
+            lagEdgePts(:,5) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
+            lagEdgePts(:,6) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
+            lagEdgePts(:,7) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oor5)
+            lagEdgePts(:,8) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oor5)
         endif
         nParticles = aParticles%N
         call aParticles%insert(quadCtr, lagQuadCtr)
@@ -777,10 +779,10 @@ pure function calcInteriorPts(self, vertXyz)
     class(QuadCubicFaces), intent(in) :: self
     real(kreal), dimension(3,4) :: calcInteriorPts
     real(kreal), dimension(3,4), intent(in) :: vertXyz
-    calcInteriorPts(:,1) = bilinearMap(vertXyz, -oosqrt5, oosqrt5)
-    calcInteriorPts(:,2) = bilinearMap(vertXyz, -oosqrt5, -oosqrt5)
-    calcInteriorPts(:,3) = bilinearMap(vertXyz, oosqrt5, -oosqrt5)
-    calcInteriorPts(:,4) = bilinearMap(vertXyz, oosqrt5, oosqrt5)
+    calcInteriorPts(:,1) = bilinearMap(vertXyz, -oor5, oor5)
+    calcInteriorPts(:,2) = bilinearMap(vertXyz, -oor5, -oor5)
+    calcInteriorPts(:,3) = bilinearMap(vertXyz, oor5, -oor5)
+    calcInteriorPts(:,4) = bilinearMap(vertXyz, oor5, oor5)
 end function
 
 pure function physCentroid(self, index, aParticles)
@@ -1033,16 +1035,19 @@ subroutine divideTri(self, index, aParticles, anEdges)
 	    self%edges(:, self%N+i) = newFaceEdges(:,i)
 	    self%children(i, index) = self%N+i
 	    self%parent(self%N+i) = index
-	    !aParticles%weight(self%centerParticles(1,self%N+i)) = self%triFaceArea(self%N+i, aParticles)
+	    self%area(self%N+i) = self%setArea(self%N+i,aParticles)
+	    aParticles%weight(self%centerParticles(1,self%N+i)) = self%setArea(self%N+i, aParticles)
 	enddo
-	! special case for child 4: re-use parent face centerParticles
+	! special case for child 4: re-use parent face centerParticle
 	self%centerParticles(1,self%N+4) = self%centerParticles(1,index)
 	self%vertices(:,self%N+4) = newFaceVerts(:,4)
 	self%edges(:,self%N+4) = newFaceEdges(:,4)
 	self%children(4,index) = self%N+4
 	self%parent(self%N+4) = index
-	!aParticles%weight(self%centerParticles(1,self%N+4)) = self%triFaceArea(self%N+4, aParticles)
+	self%area(self%N+4) = self%setArea(self%N+4, aParticles)
+	aParticles%weight(self%centerParticles(1,self%N+4)) = self%setArea(self%N+4, aParticles)
 
+    self%area(index) = dzero
 	self%hasChildren(index) = .TRUE.
 	self%N = self%N + 4
 	self%N_Active = self%N_Active + 3

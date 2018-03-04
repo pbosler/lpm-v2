@@ -29,34 +29,34 @@ call EndSection(exeLog)
 !-------------------------------------
 !   Test Planar mesh, linear quads
 !-------------------------------------
-
+!
 mesh_type = "planar_quad"
 write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
 call StartSection(exeLog, "TEST START", mesh_type)
 call runTest(mesh, mesh_type, initNest, mfile)
 call EndSection(exeLog)
-
-!-------------------------------------
-!   Test Planar mesh, cubic quads
-!-------------------------------------
-mesh_type = "planar_cubic_quad"
-write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-call StartSection(exeLog, "TEST START", mesh_type)
-call runTest(mesh, mesh_type, initNest, mfile)
-call EndSection(exeLog)
-
-!-------------------------------------
-!   Test Spherical mesh, linear triangles
-!-------------------------------------
+!
+!!-------------------------------------
+!!   Test Planar mesh, cubic quads
+!!-------------------------------------
+!mesh_type = "planar_cubic_quad"
+!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+!call StartSection(exeLog, "TEST START", mesh_type)
+!call runTest(mesh, mesh_type, initNest, mfile)
+!call EndSection(exeLog)
+!
+!!-------------------------------------
+!!   Test Spherical mesh, linear triangles
+!!-------------------------------------
 mesh_type = "icos_tri_sphere"
 write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
 call StartSection(exeLog, "TEST START", mesh_type)
 call runTest(mesh, mesh_type, initNest, mfile)
 call EndSection(exeLog)
-
-!-------------------------------------
-!   Test Spherical mesh, linear quads
-!-------------------------------------
+!
+!!-------------------------------------
+!!   Test Spherical mesh, linear quads
+!!-------------------------------------
 mesh_type = "cubed_sphere"
 write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
 call StartSection(exeLog, "TEST START", mesh_type)
@@ -110,7 +110,9 @@ function surfAreaFaces(ptr)
 
     surfAreaFaces = dzero
     do i=1,ptr%faces%n
-        surfAreaFaces = surfAreaFaces + ptr%faces%area(i)
+        !if (.not. ptr%faces%hasChildren(i)) then
+            surfAreaFaces = surfAreaFaces + ptr%faces%area(i)
+        !endif
     enddo
 end function
 
@@ -125,12 +127,14 @@ function surfAreaParticles(ptr)
 
     surfAreaParticles = dzero
     do i = 1, ptr%faces%n
-        do j=1,nv
-            surfAreaParticles = surfAreaParticles + ptr%particles%weight(ptr%faces%vertices(j,i))
-        enddo
-        do j=1,nc
-            surfAreaParticles = surfAreaParticles + ptr%particles%weight(ptr%faces%centerParticles(j,i))
-        enddo
+        if (.not. ptr%faces%hasChildren(i)) then
+            do j=1,nv
+                surfAreaParticles = surfAreaParticles + ptr%particles%weight(ptr%faces%vertices(j,i))
+            enddo
+            do j=1,nc
+                surfAreaParticles = surfAreaParticles + ptr%particles%weight(ptr%faces%centerParticles(j,i))
+            enddo
+        endif
     enddo
 end function
 

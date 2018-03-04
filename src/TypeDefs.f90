@@ -46,11 +46,11 @@ module NumberKindsModule
 	integer(KINT), parameter :: WRITE_UNIT_2 = 13
 	integer(KINT), parameter :: WRITE_UNIT_3 = 14
 	integer(KINT), parameter :: MAX_STRING_LENGTH = 256
-	
+
 	integer(KINT), parameter ::	QUAD_PANEL = 4 !< panelKind parameter for quadrilateral panels @ingroup MeshConstants
 	integer(KINT), parameter ::	TRI_PANEL = 3 !< panelKind parameter for triangular panels @ingroup MeshConstants
 	integer(KINT), parameter :: QUAD_CUBIC_PANEL = 16
-	integer(KINT), parameter :: PLANAR_GEOM = 81 
+	integer(KINT), parameter :: PLANAR_GEOM = 81
 	integer(KINT), parameter :: SPHERE_GEOM = 82
 	integer(KINT), parameter :: EUCLIDEAN_3D = 83
 	integer(KINT), parameter ::	MAX_VERTEX_DEGREE = 10 !< panelKind parameter for triangular panels @ingroup MeshConstants
@@ -61,7 +61,7 @@ module NumberKindsModule
 	integer(KINT), parameter ::	MAX_POLYGON_SIDES = 20 !< defines maximum allowable polygon size in a Voronoi mesh @ingroup MeshConstants
 	integer(KINT), parameter ::	FREE_BOUNDARIES = 101 !< boundary condition parameter for planar meshes @ingroup MeshConstants
 	integer(KINT), parameter ::	PERIODIC_BOUNDARIES = 102 !< boundary condition parameter for planar meshes @ingroup MeshConstants
-	
+
 	integer(KINT), parameter :: TRI_HEX_SEED = 201
 	integer(KINT), parameter :: QUAD_RECT_SEED = 202
 	integer(KINT), parameter :: POLAR_DISC_SEED = 203
@@ -71,14 +71,10 @@ module NumberKindsModule
 	integer(KINT), parameter :: BETA_PLANE_SEED = 207
 	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208
 	real(KREAL), save :: SphereRadius = 1.0_kreal
-	
+
 	logical(klog), save :: testPass = .TRUE.
-	
+
 	real(kreal), parameter :: dzero = 0.0_kreal
-	
-	real(kreal), parameter :: sqrt5 = sqrt(5.0_kreal), oosqrt5 = 1.0_kreal / sqrt5, oo6 = 1.0_kreal / 6.0_kreal
-	real(kreal), dimension(4), parameter :: cubic_gll_coords = (/ -1.0_kreal, -oosqrt5, oosqrt5, 1.0_kreal /)
-	real(kreal), dimension(4), parameter :: cubic_gll_weights = (/oo6, 1.0_kreal - oo6, 1.0_kreal - oo6, oo6/)
 
 	integer(KINT), save :: numProcs = 1 !< number of processess @ingroup MPIVariables
 	integer(KINT), save :: procRank = 0 !< process rank @ingroup MPIVariables
@@ -96,9 +92,9 @@ module NumberKindsModule
 			real(8), intent(in) :: x, y, z
 		end function
 	end interface
-	
+
 	!> @brief Provides a generic function interface
-	interface 
+	interface
 		function scalarFnOf3DSpaceAndTime( x, y, z, t )
 			real(8) :: scalarFnOf3DSpaceAndTime
 			real(8), intent(in) :: x, y, z, t
@@ -120,9 +116,9 @@ module NumberKindsModule
 			real(8), intent(in) :: x, y, z
 		end function
 	end interface
-	
+
 	!> @brief Provides a generic function interface
-	interface 
+	interface
 		function vectorFnOf3DSpaceAndTime( x, y, z, t )
 			real(8), dimension(3) :: vectorFnOf3DSpaceAndTime
 			real(8), intent(in) :: x, y, z, t

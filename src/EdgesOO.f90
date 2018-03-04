@@ -1,6 +1,7 @@
 module EdgesOOModule
 
 use NumberKindsModule
+use UtilitiesModule
 use LoggerModule
 use ParticlesOOModule
 use SphereGeomModule
@@ -388,28 +389,28 @@ subroutine divideCubic(self, index, aParticles)
         midPt = SphereMidpoint(physOrig, physDest)
         lagMidPt = SphereMidpoint(lagOrig, lagDest)
 
-        newPts(:,1) = pointAlongSphereVector(physOrig, midPt, -oosqrt5)
-        newPts(:,2) = pointAlongSphereVector(physOrig, midPt, oosqrt5)
-        newPts(:,3) = pointAlongSphereVector(midPt, physDest, -oosqrt5)
-        newPts(:,4) = pointAlongSphereVector(midPt, physDest, oosqrt5)
+        newPts(:,1) = pointAlongSphereVector(physOrig, midPt, -oor5)
+        newPts(:,2) = pointAlongSphereVector(physOrig, midPt, oor5)
+        newPts(:,3) = pointAlongSphereVector(midPt, physDest, -oor5)
+        newPts(:,4) = pointAlongSphereVector(midPt, physDest, oor5)
 
-        newLagPts(:,1) = pointAlongSphereVector(lagOrig, lagMidPt, -oosqrt5)
-        newLagPts(:,2) = pointAlongSphereVector(lagOrig, lagMidPt, oosqrt5)
-        newLagPts(:,3) = pointAlongSphereVector(lagMidPt, lagDest, -oosqrt5)
-        newLagPts(:,4) = pointAlongSphereVector(lagMidPt, lagDest, oosqrt5)
+        newLagPts(:,1) = pointAlongSphereVector(lagOrig, lagMidPt, -oor5)
+        newLagPts(:,2) = pointAlongSphereVector(lagOrig, lagMidPt, oor5)
+        newLagPts(:,3) = pointAlongSphereVector(lagMidPt, lagDest, -oor5)
+        newLagPts(:,4) = pointAlongSphereVector(lagMidPt, lagDest, oor5)
     else
         midPt = 0.5_kreal * (physOrig + physDest)
         lagMidPt = 0.5_kreal * (lagOrig + lagDest)
 
-        newPts(:,1) = pointAlongChordVector(physOrig, midPt, -oosqrt5)
-        newPts(:,2) = pointAlongChordVector(physOrig, midPt, oosqrt5)
-        newPts(:,3) = pointAlongChordVector(midPt, physDest, -oosqrt5)
-        newPts(:,4) = pointAlongChordVector(midPt, physDest, oosqrt5)
+        newPts(:,1) = pointAlongChordVector(physOrig, midPt, -oor5)
+        newPts(:,2) = pointAlongChordVector(physOrig, midPt, oor5)
+        newPts(:,3) = pointAlongChordVector(midPt, physDest, -oor5)
+        newPts(:,4) = pointAlongChordVector(midPt, physDest, oor5)
 
-        newLagPts(:,1) = pointAlongChordVector(lagOrig, lagMidPt, -oosqrt5)
-        newLagPts(:,2) = pointAlongChordVector(lagOrig, lagMidPt, oosqrt5)
-        newLagPts(:,3) = pointAlongChordVector(lagMidPt, lagDest, -oosqrt5)
-        newLagPts(:,4) = pointAlongChordVector(lagMidPt, lagDest, oosqrt5)
+        newLagPts(:,1) = pointAlongChordVector(lagOrig, lagMidPt, -oor5)
+        newLagPts(:,2) = pointAlongChordVector(lagOrig, lagMidPt, oor5)
+        newLagPts(:,3) = pointAlongChordVector(lagMidPt, lagDest, -oor5)
+        newLagPts(:,4) = pointAlongChordVector(lagMidPt, lagDest, oor5)
     endif
 
     nParticles = aParticles%N
