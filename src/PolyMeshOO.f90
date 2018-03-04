@@ -37,6 +37,7 @@ type PolyMesh2d
         procedure, private :: nVerticesInMesh
         procedure, private :: nEdgesInMesh
         procedure, private :: nFacesInMesh
+        procedure :: writeMatlab
 !        procedure :: copy
 !        procedure :: refine
 
@@ -118,6 +119,15 @@ subroutine logStats(self, aLog)
     call self%edges%logStats(alog)
     call self%faces%logStats(aLog)
     call EndSection(aLog)
+end subroutine
+
+subroutine writeMatlab(self, fileunit)
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+
+    call self%particles%writeMatlab(fileunit)
+    call self%edges%writeMatlab(fileunit)
+    call self%faces%writeMatlab(fileunit)
 end subroutine
 
 pure function nVerticesInMesh(self, nestLevel)
@@ -368,34 +378,20 @@ subroutine getSeed(self)
             seedXYZ(:,2) = self%particles%physCoord(self%faces%vertices(4,i))
             seedXYZ(:,3) = self%particles%physCoord(self%faces%vertices(7,i))
             seedXYZ(:,4) = self%particles%physCoord(self%faces%vertices(10,i))
-            jac(1) = bilinearPlaneJacobian(seedXYZ(:,1:4), -1.0_kreal, 1.0_kreal)
-            jac(2) = bilinearPlaneJacobian(seedXYZ(:,1:4), -1.0_kreal, oor5)
-            jac(3) = bilinearPlaneJacobian(seedXYZ(:,1:4), -1.0_kreal, -oor5)
-            jac(4) = bilinearPlaneJacobian(seedXYZ(:,1:4), -1.0_kreal, -1.0_kreal)
-            jac(5) = bilinearPlaneJacobian(seedXYZ(:,1:4), -oor5, -1.0_kreal)
-            jac(6) = bilinearPlaneJacobian(seedXYZ(:,1:4), oor5, -1.0_kreal)
-            jac(7) = bilinearPlaneJacobian(seedXYZ(:,1:4), 1.0_kreal, -1.0_kreal)
-            jac(8) = bilinearPlaneJacobian(seedXYZ(:,1:4), 1.0_kreal, -oor5)
-            jac(9) = bilinearPlaneJacobian(seedXYZ(:,1:4), 1.0_kreal, oor5)
-            jac(10) = bilinearPlaneJacobian(seedXYZ(:,1:4), 1.0_kreal, 1.0_kreal)
-            jac(11) = bilinearPlaneJacobian(seedXYZ(:,1:4), oor5, 1.0_kreal)
-            jac(12) = bilinearPlaneJacobian(seedXYZ(:,1:4), -oor5, 1.0_kreal)
-            jac(13) = bilinearPlaneJacobian(seedXYZ(:,1:4), -oor5, oor5)
-            jac(14) = bilinearPlaneJacobian(seedXYZ(:,1:4), -oor5, -oor5)
-            jac(15) = bilinearPlaneJacobian(seedXYZ(:,1:4), oor5, -oor5)
-            jac(16) = bilinearPlaneJacobian(seedXYZ(:,1:4), oor5, oor5)
-
-            self%particles%weight(self%faces%vertices(1,i)) = self%faces%area(i) / square(6.0_kreal) * jac(1)
-            self%particles%weight(self%faces%vertices(2:3,i)) = self%faces%area(i) * 5.0_kreal /square(6.0_kreal) *jac(2:3)
-            self%particles%weight(self%faces%vertices(4,i)) = self%faces%area(i) / square(6.0_kreal) * jac(4)
-            self%particles%weight(self%faces%vertices(5:6,i)) = self%faces%area(i) * 5.0_kreal /square(6.0_kreal) * jac(5:6)
-            self%particles%weight(self%faces%vertices(7,i)) = self%faces%area(i) /square(6.0_kreal) * jac(7)
-            self%particles%weight(self%faces%vertices(8:9,i)) = self%faces%area(i) * 5.0_kreal / square(6.0_kreal) *jac(8:9)
-            self%particles%weight(self%faces%vertices(10,i)) = self%faces%area(i) / square(6.0_kreal) * jac(10)
-            self%particles%weight(self%faces%vertices(11:12,i)) = self%faces%area(i) * 5.0_kreal /square(6.0_kreal)*jac(11:12)
+            do j=1,12
+                jac(j) = bilinearPlaneJacobian(seedXYZ(:,1:4), quad16_vertex_qp(1,j), quad16_vertex_qp(2,j))
+            enddo
             do j=1,4
-                self%particles%weight(self%faces%centerParticles(j,i)) = &
-                    self%faces%area(i)*square(5.0_kreal) / square(6.0_kreal) * jac(12+j)
+                jac(12+j) = bilinearPlaneJacobian(seedXYZ(:,1:4), quad16_center_qp(1,j), quad16_center_qp(2,j))
+            enddo
+!            do j=1,16
+!                print *, "jac(",j,") = ", jac(j)
+!            enddo
+            do j=1,12
+                self%particles%weight(self%faces%vertices(j,i)) = self%faces%area(i) * quad16_vertex_qw(j) * jac(j)
+            enddo
+            do j=1,4
+                self%particles%weight(self%faces%centerParticles(j,i)) = self%faces%area(i) * quad16_center_qw(j)*jac(12+j)
             enddo
         enddo
     endif

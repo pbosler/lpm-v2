@@ -38,6 +38,7 @@ type, abstract :: Faces
 !        procedure :: area
         procedure :: sharedEdge
         procedure :: logStats
+        procedure :: writeMatlab
 end type
 
 interface
@@ -148,6 +149,7 @@ subroutine init(self, faceKind, nMax)
     self%N = 0
     self%N_Active = 0
     self%N_Max = nMax
+
 !    self%faceKind = faceKind
 end subroutine
 
@@ -1150,7 +1152,77 @@ function particleOppositeTriEdge(self, faceIndex, edgeIndex)
     endif
 end function
 
+subroutine writeMatlab(self, fileunit)
+    class(Faces), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i, j, nv, nc, ne
 
+    nv = size(self%vertices,1)
+    nc = size(self%centerParticles,1)
+    ne = size(self%edges,1)
+
+    write(fileunit,'(A)',advance='no') 'face_verts = ['
+    do i=1, self%N-1
+        do j=1, nv-1
+            write(fileunit, '(I8,A)', advance='no') self%vertices(j,i), ','
+        enddo
+        write(fileunit,*) self%vertices(nv,i), ';'
+    enddo
+    do j=1, nv-1
+        write(fileunit,'(I8,A)',advance='no') self%vertices(j,self%N),','
+    enddo
+    write(fileunit, *) self%vertices(nv,self%N), '];'
+
+    write(fileunit,'(A)', advance='no') 'face_edges = ['
+    do i=1, self%N-1
+        do j=1, ne-1
+            write(fileunit, '(I8,A)', advance='no') self%edges(j,i), ','
+        enddo
+        write(fileunit,*) self%edges(ne,i), ';'
+    enddo
+    do j=1, ne-1
+        write(fileunit,'(I8,A)',advance='no') self%edges(j,self%N),','
+    enddo
+    write(fileunit, *) self%edges(ne,self%N), '];'
+
+    write(fileunit,'(A)', advance='no') 'face_centers = ['
+    do i=1, self%N-1
+        do j=1, nc-1
+            write(fileunit, '(I8,A)', advance='no') self%centerParticles(j,i), ','
+        enddo
+        write(fileunit,*) self%centerParticles(nc,i), ';'
+    enddo
+    do j=1, nc-1
+        write(fileunit,'(I8,A)',advance='no') self%centerParticles(j,self%N),','
+    enddo
+    write(fileunit, *) self%centerParticles(nc,self%N), '];'
+
+    write(fileunit,'(A)', advance='no') 'face_children = ['
+    do i=1, self%N-1
+        do j=1,3
+            write(fileunit,'(I8,A)',advance='no') self%children(j,i), ','
+        enddo
+        write(fileunit,*) self%children(4,i), ';'
+    enddo
+    do j=1,3
+        write(fileunit,'(I8,A)',advance='no') self%children(j,self%N), ','
+    enddo
+    write(fileunit,*) self%children(4,self%N), '];'
+
+    write(fileunit, '(A)',advance='no') 'face_parent = ['
+    do i=1, self%N-1
+        write(fileunit, '(I8,A)',advance='no') self%parent(i), ','
+    enddo
+    write(fileunit, *) self%parent(self%N), '];'
+
+    write(fileunit,'(A)',advance='no') 'face_area = ['
+    do i=1, self%N-1
+        write(fileunit,'(F24.12,A)',advance='no') self%area(i), ','
+    enddo
+    write(fileunit,*) self%area(self%N), '];'
+
+end subroutine
 
 !> @brief Initializes a logger for the Faces module
 !>

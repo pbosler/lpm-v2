@@ -45,7 +45,7 @@ create_test(planarMeshTest.exe 3)
 create_test(icosTriSphereTest.exe 2)
 create_test(cubedSphereTest.exe 4)
 create_test(cubicMeshTest.exe 3)
-create_test(ooMeshTest.exe 3)
+create_test(ooMeshTest.exe 0)
 
 # Regression tests
 create_test(BivarConvergenceTest.exe)

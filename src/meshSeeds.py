@@ -210,6 +210,9 @@ def quadCubicSeed():
         [4,5],[35,34],[22,23],[7,8]])
     edgeLefts = np.array([0,1,1,2,2,3,3,0,0,3,1,2],dtype=int)
     edgeRights = np.array([-1,-1,-1,-1,-1,-1,-1,-1,1,2,2,3],dtype=int)
+
+    #rpts, qp, qw = refQuadCubic()
+
     xyz = np.zeros([49,2])
     xyz[0] = (-1.0, 1.0)
     xyz[3] = (-1.0, 0.0)
