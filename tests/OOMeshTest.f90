@@ -20,48 +20,48 @@ call getInput(initNest)
 !-------------------------------------
 !   Test Planar mesh, linear triangles
 !-------------------------------------
-mesh_type = "planar_tri"
-write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-call StartSection(exeLog, "TEST START", mesh_type)
-call runTest(mesh, mesh_type, initNest, mfile)
-call EndSection(exeLog)
-
-!-------------------------------------
-!   Test Planar mesh, linear quads
-!-------------------------------------
-!
-mesh_type = "planar_quad"
-write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-call StartSection(exeLog, "TEST START", mesh_type)
-call runTest(mesh, mesh_type, initNest, mfile)
-call EndSection(exeLog)
-!
-!!-------------------------------------
-!!   Test Planar mesh, cubic quads
-!!-------------------------------------
-!mesh_type = "planar_cubic_quad"
+!mesh_type = "planar_tri"
 !write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
 !call StartSection(exeLog, "TEST START", mesh_type)
 !call runTest(mesh, mesh_type, initNest, mfile)
 !call EndSection(exeLog)
 !
 !!-------------------------------------
-!!   Test Spherical mesh, linear triangles
+!!   Test Planar mesh, linear quads
 !!-------------------------------------
-mesh_type = "icos_tri_sphere"
+!!
+!mesh_type = "planar_quad"
+!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+!call StartSection(exeLog, "TEST START", mesh_type)
+!call runTest(mesh, mesh_type, initNest, mfile)
+!call EndSection(exeLog)
+!!
+!!-------------------------------------
+!!   Test Planar mesh, cubic quads
+!!-------------------------------------
+mesh_type = "planar_cubic_quad"
 write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
 call StartSection(exeLog, "TEST START", mesh_type)
 call runTest(mesh, mesh_type, initNest, mfile)
 call EndSection(exeLog)
 !
 !!-------------------------------------
-!!   Test Spherical mesh, linear quads
+!!   Test Spherical mesh, linear triangles
 !!-------------------------------------
-mesh_type = "cubed_sphere"
-write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-call StartSection(exeLog, "TEST START", mesh_type)
-call runTest(mesh, mesh_type, initNest,mfile)
-call EndSection(exeLog)
+!mesh_type = "icos_tri_sphere"
+!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+!call StartSection(exeLog, "TEST START", mesh_type)
+!call runTest(mesh, mesh_type, initNest, mfile)
+!call EndSection(exeLog)
+!!
+!!!-------------------------------------
+!!!   Test Spherical mesh, linear quads
+!!!-------------------------------------
+!mesh_type = "cubed_sphere"
+!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+!call StartSection(exeLog, "TEST START", mesh_type)
+!call runTest(mesh, mesh_type, initNest,mfile)
+!call EndSection(exeLog)
 
 
 if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test Result: ", "PASSED")

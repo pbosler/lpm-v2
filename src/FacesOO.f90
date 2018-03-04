@@ -35,7 +35,6 @@ type, abstract :: Faces
         procedure :: physCentroid
         procedure :: lagCentroid
         procedure :: countParents
-!        procedure :: area
         procedure :: sharedEdge
         procedure :: logStats
         procedure :: writeMatlab
@@ -54,6 +53,8 @@ interface
         class(Edges), intent(inout) :: anEdges
     end subroutine
 end interface
+
+
 
 interface
     pure function setArea(self, index, aParticles)
@@ -245,6 +246,43 @@ subroutine insert(self, centerInds, vertInds, edgeInds, area)
     self%N = self%N + 1
 end subroutine
 
+!pure function triCorners(self, index, aParticles)
+!    real(kreal), dimension(:,:) :: triCorners
+!    class(TriLinearFaces), intent(in) :: self
+!    class(Particles), intent(in) :: aParticles
+!    integer(kint), intent(in) :: index
+!    !
+!    integer(kint) :: i
+!    do i=1,3
+!        triCorners(:,i) = aParticles%physCoord(self%vertices(i,index))
+!    enddo
+!end function
+!
+!pure function quadCorners(self, index, aParticles)
+!    real(kreal), dimension(:,:) :: quadCorners
+!    class(quadLinearFaces), intent(in) :: self
+!    class(Particles), intent(in) :: aParticles
+!    integer(kint), intent(in) :: index
+!    !
+!    integer(kint) :: i
+!    do i=1,4
+!        quadCorners(:,i) = aParticles%physCoord(self%vertices(i,index))
+!    enddo
+!end function
+!
+!pure function quadCubicCorners(self, index, aParticles)
+!    real(kreal), dimension(:,:) :: quadCubicCorners
+!    class(QuadCubicFaces), intent(in) :: self
+!    integer(kint), intent(in) :: index
+!    class(Particles), intent(in) :: aParticles
+!    !
+!    integer(kint) :: i
+!
+!    do i=1,4
+!        quadCubicCorners(:,i) = aParticles%physCoord(self%vertices(mod(3*i+9,12),index))
+!    enddo
+!end function
+
 subroutine divideQuadLinear(self, index, aParticles, anEdges)
     class(QuadLinearFaces), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -433,12 +471,12 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
     integer(kint) :: nParticles, nEdges
     integer(kint), dimension(12,4) :: newFaceVerts
     integer(kint), dimension(4,4) :: newFaceEdges, newFaceCenters
-    integer(kint), dimension(4) :: parentEdgeMidpoint
-    real(kreal), dimension(3) :: quadCtr, lagQuadCtr
-    real(kreal), dimension(3,8) :: edgePts, lagEdgePts
-    integer(kint), dimension(8) :: edgePtInds
-    real(kreal), dimension(3,4) :: quadCoords, lagQuadCoords
-    real(kreal), dimension(3,4) :: newPhysCenters, newLagCenters
+    real(kreal), dimension(3,4) :: physCorners, lagCorners, childCorners, lagChildCorners
+    real(kreal), dimension(3,4) :: edgeMidpts, lagEdgeMidpts
+    real(kreal), dimension(3) :: physCenter, lagCenter
+    real(kreal), dimension(3,8) :: newIntEdgePts, lagNewIntEdgePts
+    integer(kint), dimension(4) :: edgeMidptInds
+    real(kreal), dimension(3,16) :: newFaceIntPts, lagNewFaceIntPts
 
     if ( self%N_Max < self%N + 4 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " DivideQuadFace ERROR : not enough memory.")
@@ -446,328 +484,127 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
 	endif
 	select type(anEdges)
 	class is (CubicEdges)
-        newFaceVerts = 0
-        do i=1,12
-            newFaceVerts(i, mod(i/3,4) + 1) = self%vertices(i,index)
-        enddo
+	    newFaceEdges = 0
+	    newFaceVerts = 0
+	    newFaceCenters = 0
+	    !
+	    !   find corners and centroid of parent
+	    !
         do i=1,4
-            newFaceCenters(i,i) = self%centerParticles(i,index)
+            physCorners(:,i) = aParticles%physCoord(self%vertices(mod(3*i+9,12),index))
+            lagCorners(:,i) = aParticles%lagCoord(self%vertices(mod(3*i+9,12), index))
         enddo
-
+        if (aParticles%geomKind == SPHERE_GEOM) then
+            physCenter = SphereQuadCenter(physCorners(:,1), physCorners(:,2), physCorners(:,3), physCorners(:,4))
+            lagCenter = SphereQuadCenter(lagCorners(:,1), lagCorners(:,2), lagCorners(:,3), lagCorners(:,4))
+        else
+            physCenter = sum(physCorners,2) * 0.25_kreal
+            lagCenter = sum(lagCorners,2) * 0.25_kreal
+        endif
         !
-        !   loop over parent edges to divide face boundaries
+        !   loop over parent edges
         !
-        do i=1, 4
+        do i=1,4
             parentEdge = self%edges(i,index)
             if (anEdges%hasChildren(parentEdge)) then
-                !
-                !   edge has already been divided by adjacent panel
-                !
                 childEdge1 = anEdges%child1(parentEdge)
                 childEdge2 = anEdges%child2(parentEdge)
             else
-                !
-                !   divide parent edge
-                !
                 childEdge1 = anEdges%N+1
                 childEdge2 = anEdges%N+2
                 call anEdges%divide(parentEdge, aParticles)
             endif
+            edgeMidpts(:,i) = aParticles%physCoord(anEdges%dest(childEdge1))
+            lagEdgeMidpts(:,i) = aParticles%lagCoord(anEdges%dest(childEdge1))
+            edgeMidptInds(i) = anEdges%dest(childEdge1)
 
-            !
-            !   connect child edges to new child faces
-            !
             if (anEdges%positiveOrientation(parentEdge, index)) then
                 newFaceEdges(i,i) = childEdge1
                 anEdges%leftFace(childEdge1) = self%N+i
 
                 newFaceEdges(i, mod(i,4)+1) = childEdge2
-                anEdges%leftFace(childEdge2) = self%N + mod(i,4) + 1
+                anEdges%leftFace(childedge2) = self%N + mod(i,4)+1
             else
                 newFaceEdges(i,i) = childEdge2
-                anEdges%rightFace(childEdge2) = self%N+i
+                anEdges%rightFace(childedge2) = self%N+i
 
-                newFaceEdges(i, mod(i,4)+1) = childEdge1
-                anEdges%rightFace(childEdge1) = self%N + mod(i,4) + 1
-            endif
-
-            parentEdgeMidpoint(i) = anEdges%dest(childEdge1)
-        enddo
-        !
-        !   connect boundary edges and vertices to child faces
-        !
-        do i=1,4
-            parentEdge = self%edges(i,index)
-            childEdge1 = anEdges%child1(parentEdge)
-            childEdge2 = anEdges%child2(parentEdge)
-            if (anEdges%dest(childEdge1) /= anEdges%orig(childEdge2)) then
-                call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                    trim(logkey)//" connectivity error, dividequadpanel, edge children, subpanel ", i)
-            endif
-            if (anEdges%positiveOrientation(parentEdge, index)) then
-                select case (i)
-                case(1)
-                    if (anEdges%orig(childEdge1) /= self%vertices(1,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, vertex 1")
-                    endif
-                    if (anEdges%interiorParticles(1,childEdge1) /= self%vertices(2,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, int. p1")
-                    endif
-
-                    newFaceVerts(1,1) = anEdges%orig(childEdge1)
-                    newFaceVerts(2:3,1) = anEdges%interiorParticles(:,childEdge1)
-                    newFaceVerts(4,1) = anEdges%dest(childEdge1)
-
-                    newFaceVerts(1,2) = anEdges%orig(childEdge2)
-                    newFaceVerts(2:3,2) = anEdges%interiorParticles(:, childEdge2)
-                    newFaceVerts(4,2) = anEdges%dest(childEdge2)
-
-                    if (newFaceVerts(3,2) /= anEdges%interiorParticles(2,childEdge2)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 3, child2 int. p2")
-                    endif
-                case(2)
-                    if (newFaceVerts(4,2) /= anEdges%orig(childEdge1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "1 and 2")
-                    endif
-                    if (anEdges%interiorParticles(1,childEdge1) /= self%vertices(5,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 5, child1 int. p1")
-                    endif
-                    newFaceVerts(5:6,2) = anEdges%interiorParticles(:,childEdge1)
-                    newFaceVerts(7,2) = anEdges%dest(childEdge1)
-
-                    newFaceVerts(4,3) = anEdges%orig(childEdge2)
-                    newFaceVerts(5:6,3) = anEdges%interiorParticles(:,childEdge2)
-                    newFaceVerts(7,3) = anEdges%dest(childEdge2)
-                case(3)
-                    if (newFaceVerts(7,3) /= anEdges%orig(childEdge1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "2 and 3")
-                    endif
-                    if (anEdges%interiorParticles(1,childEdge1) /= self%vertices(8,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 3 ", "vertex 8, child1 int. p1")
-                    endif
-                    newFaceVerts(8:9,3) = anEdges%interiorParticles(:, childEdge1)
-                    newFaceVerts(10,3) = anEdges%dest(childEdge1)
-
-                    newFaceVerts(7,4) = anEdges%orig(childEdge2)
-                    newFaceVerts(8:9,4) = anEdges%interiorParticles(:,childedge2)
-                    newFaceVerts(10,4) = anEdges%dest(childEdge2)
-                case(4)
-                    if (newFaceVerts(10,4) /= anEdges%orig(childEdge1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "3 and 4")
-                    endif
-                    if (anEdges%interiorParticles(1,childEdge1) /= self%vertices(11,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 4 ", "vertex 11, child1 int. p1")
-                    endif
-                    newFaceVerts(11:12,4) = anEdges%interiorParticles(:,childEdge1)
-
-                    newFaceVerts(11:12,1) = anEdges%interiorParticles(:,childEdge2)
-                    if (anEdges%dest(childEdge2) /= newFaceVerts(1,1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 4 ", "vertex 12, child2 dest")
-                    endif
-                end select
-            else
-                select case (i)
-                case(1)
-                    if (anEdges%dest(childEdge2) /= self%vertices(1,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, vertex 1")
-                    endif
-                    if (anEdges%interiorParticles(2,childEdge2) /= self%vertices(2,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 1 ", "edge 1, int. p2")
-                    endif
-
-                    newFaceVerts(1,1) = anEdges%dest(childEdge2)
-                    newFaceVerts(2,1) = anEdges%interiorParticles(2,childEdge2)
-                    newFaceVerts(3,1) = anEdges%interiorParticles(1,childEdge2)
-                    newFaceVerts(4,1) = anEdges%orig(childEdge2)
-
-                    newFaceVerts(1,2) = anEdges%dest(childEdge1)
-                    newFaceVerts(2,2) = anEdges%interiorParticles(2, childEdge1)
-                    newFaceVerts(3,2) = anEdges%interiorParticles(1, childEdge1)
-                    newFaceVerts(4,2) = anEdges%orig(childEdge1)
-
-                    if (newFaceVerts(3,2) /= anEdges%interiorParticles(1,childEdge1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 3, child1 int. p1")
-                    endif
-                case(2)
-                    if (newFaceVerts(4,2) /= anEdges%dest(childEdge2)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "1 and 2")
-                    endif
-                    if (anEdges%interiorParticles(2,childEdge2) /= self%vertices(5,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 2 ", "vertex 5, child2 int. p2")
-                    endif
-                    newFaceVerts(5,2) = anEdges%interiorParticles(2,childEdge2)
-                    newFaceVerts(6,2) = anEdges%interiorParticles(1,childEdge2)
-                    newFaceVerts(7,2) = anEdges%orig(childEdge2)
-
-                    newFaceVerts(4,3) = anEdges%dest(childEdge1)
-                    newFaceVerts(5,3) = anEdges%interiorParticles(2,childEdge1)
-                    newFaceVerts(6,3) = anEdges%interiorParticles(1,childEdge1)
-                    newFaceVerts(7,3) = anEdges%orig(childEdge1)
-                case(3)
-                    if (newFaceVerts(7,3) /= anEdges%Dest(childEdge2)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "2 and 3")
-                    endif
-                    if (anEdges%interiorParticles(2,childEdge2) /= self%vertices(8,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 3 ", "vertex 8, child2 int. p2")
-                    endif
-                    newFaceVerts(8,3) = anEdges%interiorParticles(2, childEdge2)
-                    newFaceVerts(9,3) = anEdges%interiorParticles(1, childEdge2)
-                    newFaceVerts(10,3) = anEdges%orig(childEdge2)
-
-                    newFaceVerts(7,4) = anEdges%dest(childEdge1)
-                    newFaceVerts(8,4) = anEdges%interiorParticles(2,childedge1)
-                    newFaceVerts(9,4) = anEdges%interiorParticles(1,childedge1)
-                    newFaceVerts(10,4) = anEdges%orig(childEdge1)
-                case(4)
-                    if (newFaceVerts(10,4) /= anEdges%dest(childEdge2)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanels ", "3 and 4")
-                    endif
-                    if (anEdges%interiorParticles(2,childEdge2) /= self%vertices(11,index)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 4 ", "vertex 11, child2 int. p2")
-                    endif
-                    newFaceVerts(11,4) = anEdges%interiorParticles(2,childEdge2)
-                    newFaceVerts(12,4) = anEdges%interiorParticles(1,childEdge2)
-
-                    newFaceVerts(11,1) = anEdges%interiorParticles(2,childEdge1)
-                    newFaceVerts(12,1) = anEdges%interiorParticles(1,childEdge1)
-                    if (anEdges%orig(childEdge1) /= newFaceVerts(1,1)) then
-                        call LogMessage(log, ERROR_LOGGING_LEVEL, &
-                            trim(logkey)//" connectivity error, dividequadpanel, subpanel 4 ", "vertex 12, child1 orig")
-                    endif
-                end select
+                newFaceEdges(i,mod(i,4)+1) = childEdge1
+                anEdges%rightFace(childEdge1) = self%N+ mod(i,4)+1
             endif
         enddo
-
         !
-        !   create new interior edges
+        !   create interior edges
         !
-        do i=1,4
-            quadCoords(:,i) = aparticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
-            lagQuadCoords(:,i) = aParticles%lagCoord(self%vertices(mod(3*i+9,12)+1, index))
-        enddo
-        if(aParticles%geomKind == SPHERE_GEOM) then
-            quadCtr = SphereCentroid(quadCoords)
-            lagQuadCtr = SphereCentroid(lagQuadCoords)
-
-            edgePts(:,1) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oor5)
-            edgePts(:,2) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oor5)
-            edgePts(:,3) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oor5)
-            edgePts(:,4) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oor5)
-            edgePts(:,5) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
-            edgePts(:,6) = pointAlongSphereVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
-            edgePts(:,7) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oor5)
-            edgePts(:,8) = pointAlongSphereVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oor5)
-            lagEdgePts(:,1) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oor5)
-            lagEdgePts(:,2) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oor5)
-            lagEdgePts(:,3) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oor5)
-            lagEdgePts(:,4) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oor5)
-            lagEdgePts(:,5) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
-            lagEdgePts(:,6) = pointAlongSphereVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
-            lagEdgePts(:,7) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oor5)
-            lagEdgePts(:,8) = pointAlongSphereVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oor5)
-        else
-            quadCtr = EuclideanCentroid(quadCoords)
-            lagQuadCtr = EuclideanCentroid(lagQuadCoords)
-
-            edgePts(:,1) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, -oor5)
-            edgePts(:,2) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(1)), quadCtr, oor5)
-            edgePts(:,3) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), -oor5)
-            edgePts(:,4) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(3)), oor5)
-            edgePts(:,5) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
-            edgePts(:,6) = pointAlongChordVector(aParticles%physCoord(parentEdgeMidpoint(2)), quadCtr, -oor5)
-            edgePts(:,7) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), -oor5)
-            edgePts(:,8) = pointAlongChordVector(quadCtr, aParticles%physCoord(parentEdgeMidpoint(4)), oor5)
-            lagEdgePts(:,1) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, -oor5)
-            lagEdgePts(:,2) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(1)), lagQuadCtr, oor5)
-            lagEdgePts(:,3) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), -oor5)
-            lagEdgePts(:,4) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(3)), oor5)
-            lagEdgePts(:,5) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
-            lagEdgePts(:,6) = pointAlongChordVector(aParticles%lagCoord(parentEdgeMidpoint(2)), lagQuadCtr, -oor5)
-            lagEdgePts(:,7) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), -oor5)
-            lagEdgePts(:,8) = pointAlongChordVector(lagQuadCtr, aParticles%lagCoord(parentEdgeMidpoint(4)), oor5)
-        endif
-        nParticles = aParticles%N
-        call aParticles%insert(quadCtr, lagQuadCtr)
-        do i=1,8
-            edgePtInds(i) = nParticles+i+1
-            call aParticles%insert(edgePts(:,i), lagEdgePts(:,i))
-        enddo
         nEdges = anEdges%N
-        call anEdges%insert(parentEdgeMidpoint(1), nParticles+1, self%N+1, self%N+2, edgePtInds(1:2))
-        call anEdges%insert(nParticles+1, parentEdgeMidpoint(3), self%N+4, self%N+3, edgePtInds(3:4))
-        call anEdges%insert(parentEdgeMidpoint(2), nParticles+1, self%N+2, self%N+3, edgePtInds(5:6))
-        call anEdges%insert(nParticles+1, parentEdgeMidpoint(4), self%N+1, self%N+4, edgePtInds(7:8))
+        nParticles = aParticles%N
+        call aParticles%insert(physCenter, lagCenter) ! nParticles + 1
+        if (aParticles%geomKind == SPHERE_GEOM) then
+            newIntEdgePts(:,1) = pointAlongSphereVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(2))
+            newIntEdgePts(:,2) = pointAlongSphereVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(3))
+            newIntEdgePts(:,3) = pointAlongSphereVector(edgeMidpts(:,2), physCenter, gll_cubic_qp(2))
+            newIntEdgePts(:,4) = pointAlongSphereVector(edgeMidpts(:,2), physCenter, gll_cubic_qp(3))
+            newIntEdgePts(:,5) = pointAlongSphereVector(physCenter, edgeMidpts(:,3), gll_cubic_qp(2))
+            newIntEdgePts(:,6) = pointAlongSphereVector(physCenter, edgeMidpts(:,3), gll_cubic_qp(3))
+            newIntEdgePts(:,7) = pointAlongSphereVector(physCenter, edgeMidpts(:,4), gll_cubic_qp(2))
+            newIntEdgePts(:,8) = pointAlongSphereVector(physCenter, edgeMidpts(:,4), gll_cubic_qp(3))
 
+            lagNewIntEdgePts(:,1) = pointAlongSphereVector(lagEdgeMidPts(:,1), lagCenter, gll_cubic_qp(2))
+            lagNewIntEdgePts(:,2) = pointAlongSphereVector(lagEdgeMidPts(:,1), lagCenter, gll_cubic_qp(3))
+            lagNewIntEdgePts(:,3) = pointAlongSphereVector(lagEdgeMidPts(:,2), lagCenter, gll_cubic_qp(2))
+            lagNewIntEdgePts(:,4) = pointAlongSphereVector(lagEdgeMidPts(:,2), lagCenter, gll_cubic_qp(3))
+            lagNewIntEdgePts(:,5) = pointAlongSphereVector(lagCenter, lagEdgeMidPts(:,3), gll_cubic_qp(2))
+            lagNewIntEdgePts(:,6) = pointAlongSphereVector(lagCenter, lagEdgeMidPts(:,3), gll_cubic_qp(3))
+            lagNewIntEdgePts(:,7) = pointAlongSphereVector(lagCenter, lagEdgeMidPts(:,4), gll_cubic_qp(2))
+            lagNewIntEdgePts(:,8) = pointAlongSphereVector(lagCenter, lagEdgeMidPts(:,4), gll_cubic_qp(3))
+        else
+            newIntEdgePts(:,1) = pointAlongChordVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(2))
+            newIntEdgePts(:,2) = pointAlongChordVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(3))
+            newIntEdgePts(:,3) = pointAlongChordVector(edgeMidpts(:,2), physCenter, gll_cubic_qp(2))
+            newIntEdgePts(:,4) = pointAlongChordVector(edgeMidpts(:,2), physCenter, gll_cubic_qp(3))
+            newIntEdgePts(:,5) = pointAlongChordVector(physCenter, edgeMidpts(:,3), gll_cubic_qp(2))
+            newIntEdgePts(:,6) = pointAlongChordVector(physCenter, edgeMidpts(:,3), gll_cubic_qp(3))
+            newIntEdgePts(:,7) = pointAlongChordVector(physCenter, edgeMidpts(:,4), gll_cubic_qp(2))
+            newIntEdgePts(:,8) = pointAlongChordVector(physCenter, edgeMidpts(:,4), gll_cubic_qp(3))
+
+            lagNewIntEdgePts(:,1) = pointAlongChordVector(lagEdgeMidPts(:,1), lagCenter, gll_cubic_qp(2))
+            lagNewIntEdgePts(:,2) = pointAlongChordVector(lagEdgeMidPts(:,1), lagCenter, gll_cubic_qp(3))
+            lagNewIntEdgePts(:,3) = pointAlongChordVector(lagEdgeMidPts(:,2), lagCenter, gll_cubic_qp(2))
+            lagNewIntEdgePts(:,4) = pointAlongChordVector(lagEdgeMidPts(:,2), lagCenter, gll_cubic_qp(3))
+            lagNewIntEdgePts(:,5) = pointAlongChordVector(lagCenter, lagEdgeMidPts(:,3), gll_cubic_qp(2))
+            lagNewIntEdgePts(:,6) = pointAlongChordVector(lagCenter, lagEdgeMidPts(:,3), gll_cubic_qp(3))
+            lagNewIntEdgePts(:,7) = pointAlongChordVector(lagCenter, lagEdgeMidPts(:,4), gll_cubic_qp(2))
+            lagNewIntEdgePts(:,8) = pointAlongChordVector(lagCenter, lagEdgeMidPts(:,4), gll_cubic_qp(3))
+        endif
+        do i=1,8
+            call aParticles%insert(newIntEdgePts(:,i), lagNewIntEdgePts(:,i)) ! nParticles + 1 + i
+        enddo
+        call anEdges%insert(edgeMidptInds(1), nParticles+1, self%N+1, self%N+2, [nParticles+2, nParticles+3]) ! nedges +1
         newFaceEdges(2,1) = nEdges+1
         newFaceEdges(4,2) = nEdges+1
-
-        newFaceEdges(2,4) = nEdges+2
-        newFaceEdges(4,3) = nEdges+2
-
-        newFaceEdges(3,2) = nEdges+3
-        newFaceEdges(1,3) = nEdges+3
-
-        newFaceEdges(3,1) = nEdges+4
-        newFaceEdges(1,4) = nEdges+4
+        call anEdges%insert(edgeMidptInds(2), nParticles+1, self%N+2, self%N+3, [nParticles+4, nParticles+5])! nedges +2
+        newFaceEdges(3,2) = nEdges+2
+        newFaceEdges(1,3) = nEdges+2
+        call anEdges%insert(nParticles+1, edgeMidptInds(4), self%N+4, self%N+3, [nParticles+6, nParticles+7])! nedges +3
+        newFaceEdges(2,4) = nedges+3
+        newFaceEdges(4,3) = nEdges+3
+        call anEdges%insert(nParticles+1, edgeMidptInds(4), self%N+1, self%N+4, [nParticles+8, nParticles+9])! nedges +4
+        newFaceEdges(3,1) = nedges+4
+        newFaceEdges(1,4) = nedges+4
 
         !
-        !   center particles
+        !   locate face interior particles
         !
-        nParticles = aParticles%N
-        do i = 1, 4
-            do j=1,4
-                quadCoords(:,j) = aParticles%physCoord(newFaceVerts(mod(3*j+9,12)+1,i))
-                lagQuadCoords(:,j) = aParticles%lagCoord(newFaceVerts(mod(3*j+9,12)+1,i))
-            enddo
-            newPhysCenters = self%calcInteriorPts(quadCoords)
-            newLagCenters = self%calcInteriorPts(lagQuadCoords)
-            !
-            !   reposition parent particle
-            !
-            call aParticles%replace(self%centerParticles(i,index), newPhysCenters(:,i), newLagCenters(:,i))
-            !
-            !   insert new interior particles
-            !
-            do j=1,4
-                if (i/=j) then
-                    call aParticles%insert(newPhysCenters(:,j), newLagCenters(:,j))
-                    self%centerParticles(j,self%N+i) = aParticles%N
-                endif
-            enddo
-        enddo
+        childCorners(:,1) = physCorners(:,1)
+        childCorners(:,2) = edgeMidpts(:,1)
+        childCorners(:,3) = physCenter
+        childCorners(:,4) = edgeMidpts(:,4)
+        lagChildCorners(:,1) = lagCorners(:,1)
+        lagChildCorners(:,2) = lagEdgeMidpts(:,1)
+        lagChildCorners(:,3) = lagCenter
+        lagChildCorners(:,4) = lagEdgeMidpts(:,4)
+        newFaceIntPts(:,1:4) = quad16InteriorPts(childCorners)
+        lagNewFaceIntPts(:,1:4) = quad16InteriorPts(lagChildCorners)
 
-
-       !
-       !    create child faces
-       !
-       do i=1,4
-           self%vertices(:,self%N+i) = newFaceVerts(:,i)
-           self%edges(:,self%N+i) = newFaceEdges(:,i)
-           self%children(i, index) = self%N+i
-           self%parent(self%N+i) = index
-       enddo
-       self%N = self%N + 4
-       self%N_Active = self%N_Active + 3
-       self%hasChildren(index) = .TRUE.
 
     class default
         call logMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" divideCubicFace error : ", " cubic edges required.")

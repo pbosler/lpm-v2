@@ -66,6 +66,15 @@ pure function bilinearMap(vertXyz, s1, s2)
         (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
 end function
 
+pure function quad16InteriorPts(vertXYZ)
+    real(kreal), dimension(3,4) :: quad16InteriorPts
+    real(kreal), dimension(3,4), intent(in) :: vertXyz
+    quad16InteriorPts(:,1) = bilinearMap(vertXyz, gll_cubic_qp(2), gll_cubic_qp(3))
+    quad16InteriorPts(:,2) = bilinearMap(vertXyz, gll_cubic_qp(2), gll_cubic_qp(2))
+    quad16InteriorPts(:,3) = bilinearMap(vertXyz, gll_cubic_qp(3), gll_cubic_qp(2))
+    quad16InteriorPts(:,4) = bilinearMap(vertXyz, gll_cubic_qp(3), gll_cubic_qp(3))
+end function
+
 pure function bilinearPlaneJacobian(vertXyz, s1, s2)
     real(kreal) :: bilinearPlaneJacobian
     real(kreal), dimension(3,4), intent(in) :: vertXyz
