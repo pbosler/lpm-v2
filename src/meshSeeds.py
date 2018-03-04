@@ -167,10 +167,27 @@ def triHexSeed():
     return xyz, edgeOrigs, edgeDests, edgeLefts, edgeRights, edgeInteriors, \
         faceVerts, faceCenters, faceEdges
 
+def refQuadCubic():
+    r5 = np.sqrt(5.0)
+    pts = np.zeros([16,2])
+    qps = np.array([-1.0, -1.0/r5, 1.0/r5, 1.0])
+    qws = np.array([1.0/6.0, 5.0/6.0, 5.0/6.0, 1.0/6.0])
+    for i, qp in enumerate(reversed(qps)):
+        pts[i] = (-1.0, qp)
+    for i in range(3):
+        pts[4+i] = (qps[i+1], -1.0)
+        pts[7+i] = (1.0, qps[i+1])
+    pts[10] = (qps[2],1.)
+    pts[11] = (qps[1],1.)
+    pts[12] = (qps[1], qps[2])
+    pts[13] = (qps[1], qps[1])
+    pts[14] = (qps[2], qps[1])
+    pts[15] = (qps[2], qps[2])
+    return pts, qps, qws
+
 def quadCubicSeed():
     sqrt5 = np.sqrt(5.0)
-    qps = np.array([-1.0, -1.0/sqrt5, 1.0/sqrt5, 1.0])
-    qws = np.array([1.0/6.0, 5.0/6.0, 5.0/6.0, 1.0/6.0])
+
     f0verts = np.array(range(12),dtype=int)
     f1verts = np.array([3,16,17,18,19,20,21,22,23,6,5,4],dtype=int)
     f2verts = np.array([6,23,22,21,28,29,30,31,32,33,34,35],dtype=int)
@@ -549,10 +566,67 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     m_size = 4.0
     m_width = m_size / 4.0
     l_width= 2.0
-    fig0, (ax0, ax1) = plt.subplots(1,2)
-    plt.tight_layout(pad=0.1, w_pad=6)
+
+    fig0 = plt.figure()
+    plt.tight_layout(pad=0.1, w_pad=6, h_pad=6)
+    gs = GridSpec(2,2)
+
+    ax0=plt.subplot(gs[0,0])
+    ax1=plt.subplot(gs[0,1])
+    ax2=plt.subplot(gs[1,:])
+    ax2.axis('off')
+
+    # panel-relative numbering
+    if 'tri' in oname:
+        v1 = np.array([[0,np.sin(np.pi/3.0)],[-0.5,0],[0.5,0],[0.,np.sin(np.pi/3.0)/3.0]])
+        v2 = np.array([[0,0],[np.cos(np.pi/3.0),np.sin(np.pi/3.0)],[np.cos(2*np.pi/3.0),np.sin(2*np.pi/3.0)],[0,2*np.sin(np.pi/3.0)/3.0]])
+        leftshift = np.zeros([4,2])
+        rightshift = np.zeros([4,2])
+        leftshift[:,0] = -0.5
+        rightshift[:,0] = 0.5
+        v1 += leftshift
+        v2 += rightshift
+        ax2.set_aspect('equal')
+        ax2.plot(v1[:,0], v1[:,1], 'k.',markersize=8)
+        ax2.plot(v2[:,0], v2[:,1], 'k.',markersize=8)
+        uptri = plt.Polygon(v1[:3,:], facecolor='white', edgecolor='r')
+        downtri=plt.Polygon(v2[:3,:], facecolor='white',edgecolor='r')
+        ax2.add_patch(uptri)
+        ax2.add_patch(downtri)
+        ax2.text(v1[1,0],v1[1,1]+0.15,'panel-relative indexing',color='k',rotation=60,rotation_mode='anchor')
+        for i in range(3):
+            ax2.text(v1[i,0]+0.01,v1[i,1]+0.01,'v'+str(i),color='k')
+            ax2.text(v2[i,0]+0.01,v2[i,1]+0.01,'v'+str(i),color='k')
+            ax2.text(0.5*(v1[i,0]+v1[(i+1)%3,0])+0.02, 0.5*(v1[i,1]+v1[(i+1)%3,1]), 'e'+str(i),color='r')
+            ax2.text(0.5*(v2[i,0]+v2[(i+1)%3,0])+0.02, 0.5*(v2[i,1]+v2[(i+1)%3,1]), 'e'+str(i),color='r')
+        ax2.text(v1[3,0]+0.01,v1[3,1]+0.01,'c1',color='k')
+        ax2.text(v2[3,0]+0.01,v2[3,1]+0.01,'c1',color='k')
+    elif 'quad' in oname:
+        corners = np.array([[-1.,1.],[-1.,-1.],[1.,-1.],[1.,1.]])
+        ax2.set_aspect('equal')
+        rangle=ax2.transData.transform_angles(np.array((90,)),corners[0].reshape((1,2)))[0]
+        ax2.text(corners[1,0]-0.25,corners[1,1]+0.15,'panel-relative indexing',color='k',rotation=90,rotation_mode='anchor')
+        sq = plt.Polygon(corners, facecolor='white', edgecolor='r')
+        ax2.add_patch(sq)
+        for i in range(4):
+            ax2.text(0.5*(corners[i,0]+corners[(i+1)%4,0]), 0.5*(corners[i,1]+corners[(i+1)%4,1]), 'e'+str(i),color='r')
+
+        if 'cubic' in oname or 'Cubic' in oname:
+            pts, qp, qw = refQuadCubic()
+            ax2.plot(pts[:,0],pts[:,1],'k.',markersize=8)
+            for i in range(12):
+                ax2.text(pts[i,0]+0.01,pts[i,1]+0.01,'v'+str(i),color='k')
+            for i,pt in enumerate(pts[12:]):
+                ax2.text(pt[0]+0.01,pt[1]+0.01,'c'+str(i), color='k')
+        else:
+            ax2.plot(corners[:,0],corners[:,1],'k.',markersize=8)
+            ax2.plot(0,0,'k.',markersize=8)
+            for i in range(4):
+                ax2.text(corners[i,0]+0.01,corners[i,1]+0.01,'v'+str(i),color='k')
+            ax2.text(0.01,0.01,'c1')
+
     ax0.plot(xyz[:,0], xyz[:,1], 'ko', markersize=m_size)
-    ax0.set(title='edges & particles', xlabel='x', ylabel='y')
+    ax0.set(title='edges & particles') #, xlabel='x', ylabel='y')
     ax0.set_aspect('equal','box')
 
     nparticles = np.shape(xyz)[0]
@@ -577,7 +651,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         ax0.text(midpt[0], midpt[1]+0.05, str(i), color='r')
 
     ax1.set_aspect('equal','box')
-    ax1.set(title='faces & edges',xlabel='x',ylabel='y')
+    ax1.set(title='faces & edges' )#,xlabel='x',ylabel='y')
     for i in range(nedges):
         if ints is not None:
             exy = edgeXyz(xyz, origs[i], dests[i], ints[i])
@@ -602,6 +676,9 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
                 cntd += xyz[faceCenters[i]]
         cntd /= (nverts+ncenters)
         ax1.text(cntd[0], cntd[1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+
+
+
 
     fig0.savefig(oname, bbox_inches='tight')
     plt.close(fig0)
