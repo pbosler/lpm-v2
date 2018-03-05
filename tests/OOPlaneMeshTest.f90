@@ -30,6 +30,7 @@ call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logKey), " part 4: output to vt
 !-------------------------------------
 mesh_type = "planar_tri"
 mesh_type = "planar_quad"
+mesh_type = "planar_cubic_quad"
 write(vtkFile,'(A,I1,A)') trim(mesh_type), initNest, '.vtp'
 call StartSection(exeLog,'Planar Tri Test.')
 

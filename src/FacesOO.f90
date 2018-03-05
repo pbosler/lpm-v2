@@ -664,7 +664,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         if (anEdges%positiveOrientation(self%edges(1,index), index)) then
             newFaceVerts(1,1) = anEdges%orig(newFaceEdges(1,1))
             newFaceVerts(2,1) = anEdges%interiorParticles(1,newFaceEdges(1,1))
-            newFaceVerts(3,1) = anEdges%interiorParticles(2,newFaceCenters(1,1))
+            newFaceVerts(3,1) = anEdges%interiorParticles(2,newFaceEdges(1,1))
             newFaceVerts(4,1) = anEdges%dest(newFaceEdges(1,1))
             newFaceVerts(1,2) = anEdges%dest(newFaceEdges(1,1))
 

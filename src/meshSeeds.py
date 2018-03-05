@@ -572,7 +572,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     l_width= 2.0
 
     fig0 = plt.figure()
-    plt.tight_layout(pad=0.1, w_pad=6, h_pad=6)
+    #plt.tight_layout(pad=0.1, w_pad=6, h_pad=6)
     gs = GridSpec(2,2)
 
     ax0=plt.subplot(gs[0,0])
