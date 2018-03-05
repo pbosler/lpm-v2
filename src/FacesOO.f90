@@ -468,7 +468,7 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
     class(Edges), intent(inout) :: anEdges
     !
     integer(kint) :: i, j, parentEdge, childEdge1, childEdge2
-    integer(kint) :: nParticles, nEdges
+    integer(kint) :: nParticles, nEdges, nFaces
     integer(kint), dimension(12,4) :: newFaceVerts
     integer(kint), dimension(4,4) :: newFaceEdges, newFaceCenters
     real(kreal), dimension(3,4) :: physCorners, lagCorners, childCorners, lagChildCorners
@@ -477,9 +477,11 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
     real(kreal), dimension(3,8) :: newIntEdgePts, lagNewIntEdgePts
     integer(kint), dimension(4) :: edgeMidptInds
     real(kreal), dimension(3,16) :: newFaceIntPts, lagNewFaceIntPts
+    real(kreal), dimension(16) :: jac
 
-    if ( self%N_Max < self%N + 4 ) then
-		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " DivideQuadFace ERROR : not enough memory.")
+    if ( self%N+4 > self%N_Max ) then
+        write(logstring,'(2(A,I8))') 'faces.n = ', self%N, ', faces.N_Max = ', self%N_Max
+		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" DivideQuadFace ERROR : not enough memory.", logstring)
 		return
 	endif
 	select type(anEdges)
@@ -490,9 +492,10 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
 	    !
 	    !   find corners and centroid of parent
 	    !
+
         do i=1,4
-            physCorners(:,i) = aParticles%physCoord(self%vertices(mod(3*i+9,12),index))
-            lagCorners(:,i) = aParticles%lagCoord(self%vertices(mod(3*i+9,12), index))
+            physCorners(:,i) = aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
+            lagCorners(:,i) = aParticles%lagCoord(self%vertices(mod(3*i+9,12)+1, index))
         enddo
         if (aParticles%geomKind == SPHERE_GEOM) then
             physCenter = SphereQuadCenter(physCorners(:,1), physCorners(:,2), physCorners(:,3), physCorners(:,4))
@@ -538,6 +541,10 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         nEdges = anEdges%N
         nParticles = aParticles%N
         call aParticles%insert(physCenter, lagCenter) ! nParticles + 1
+        newFaceVerts(7,1) = nParticles+1
+        newFaceVerts(10,2)= nParticles+1
+        newFaceVerts(1,3) = nParticles+1
+        newFaceVerts(4,4) = nParticles+1
         if (aParticles%geomKind == SPHERE_GEOM) then
             newIntEdgePts(:,1) = pointAlongSphereVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(2))
             newIntEdgePts(:,2) = pointAlongSphereVector(edgeMidpts(:,1), physCenter, gll_cubic_qp(3))
@@ -581,15 +588,31 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         call anEdges%insert(edgeMidptInds(1), nParticles+1, self%N+1, self%N+2, [nParticles+2, nParticles+3]) ! nedges +1
         newFaceEdges(2,1) = nEdges+1
         newFaceEdges(4,2) = nEdges+1
+        newFaceVerts(5,1) = nParticles+2
+        newFaceVerts(12,2)= nParticles+2
+        newFaceVerts(6,1) = nParticles+3
+        newFaceVerts(11,2)= nParticles+3
         call anEdges%insert(edgeMidptInds(2), nParticles+1, self%N+2, self%N+3, [nParticles+4, nParticles+5])! nedges +2
         newFaceEdges(3,2) = nEdges+2
         newFaceEdges(1,3) = nEdges+2
-        call anEdges%insert(nParticles+1, edgeMidptInds(4), self%N+4, self%N+3, [nParticles+6, nParticles+7])! nedges +3
+        newFaceVerts(8,2) = nParticles+4
+        newFaceVerts(3,3) = nParticles+4
+        newFaceVerts(9,2) = nParticles+5
+        newFaceVerts(2,3) = nParticles+5
+        call anEdges%insert(nParticles+1, edgeMidptInds(3), self%N+4, self%N+3, [nParticles+6, nParticles+7])! nedges +3
         newFaceEdges(2,4) = nedges+3
         newFaceEdges(4,3) = nEdges+3
+        newFaceVerts(12,3) = nParticles+6
+        newFaceVerts(5,4) = nParticles+6
+        newFaceVerts(11,3) = nParticles+7
+        newFaceVerts(6,4) = nParticles+7
         call anEdges%insert(nParticles+1, edgeMidptInds(4), self%N+1, self%N+4, [nParticles+8, nParticles+9])! nedges +4
         newFaceEdges(3,1) = nedges+4
         newFaceEdges(1,4) = nedges+4
+        newFaceVerts(3,4) = nParticles + 8
+        newFaceVerts(8,1) = nParticles+8
+        newFaceVerts(2,4) = nParticles+9
+        newFaceVerts(9,1) = nParticles+9
 
         !
         !   locate face interior particles
@@ -605,6 +628,224 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
         newFaceIntPts(:,1:4) = quad16InteriorPts(childCorners)
         lagNewFaceIntPts(:,1:4) = quad16InteriorPts(lagChildCorners)
 
+        childCorners(:,1) = edgeMidpts(:,1)
+        childCorners(:,2) = physCorners(:,2)
+        childCorners(:,3) = edgeMidpts(:,2)
+        childCorners(:,4) = physCenter
+        lagChildCorners(:,1) = lagEdgeMidpts(:,1)
+        lagChildCorners(:,2) = lagCorners(:,2)
+        lagChildCorners(:,3) = lagEdgeMidpts(:,2)
+        lagChildCorners(:,4) = lagCenter
+        newFaceIntPts(:,5:8) = quad16InteriorPts(childCorners)
+        lagNewFaceIntPts(:,5:8) = quad16InteriorPts(lagChildCorners)
+
+        childCorners(:,1) = physCenter
+        childCorners(:,2) = edgeMidpts(:,2)
+        childCorners(:,3) = physCorners(:,3)
+        childCorners(:,4) = edgeMidpts(:,3)
+        lagChildCorners(:,1) = lagCenter
+        lagChildCorners(:,2) = lagEdgeMidpts(:,2)
+        lagChildCorners(:,3) = lagCorners(:,3)
+        lagChildCorners(:,4) = lagEdgeMidpts(:,3)
+        newFaceIntPts(:,9:12) = quad16InteriorPts(childCorners)
+        lagNewFaceIntPts(:,9:12) = quad16InteriorPts(lagChildCorners)
+
+        childCorners(:,1) = edgeMidpts(:,4)
+        childCorners(:,2) = physCenter
+        childCorners(:,3) = edgeMidpts(:,3)
+        childCorners(:,4) = physCorners(:,4)
+        lagChildCorners(:,1) = lagEdgeMidpts(:,4)
+        lagChildCorners(:,2) = lagCenter
+        lagChildCorners(:,3) = lagEdgeMidpts(:,3)
+        lagChildCorners(:,4) = lagCorners(:,4)
+        newFaceIntPts(:,13:16) = quad16InteriorPts(childCorners)
+        lagNewFaceIntPts(:,13:16) = quad16InteriorPts(lagChildCorners)
+
+        ! move parent particles to new locations in child faces
+        call aParticles%replace(self%centerParticles(1,index), newFaceIntPts(:,1), lagNewFaceIntPts(:,1))
+        call aParticles%replace(self%centerParticles(2,index), newFaceIntPts(:,6), lagNewFaceIntPts(:,6))
+        call aParticles%replace(self%centerParticles(3,index), newFaceIntPts(:,11), lagNewFaceIntPts(:,11))
+        call aParticles%replace(self%centerParticles(4,index), newFaceIntPts(:,16), lagNewFaceIntPts(:,16))
+        do i=1,4
+            newFaceCenters(i,i) = self%centerParticles(i,index)
+        enddo
+        ! insert new interior particles for child faces
+        nParticles = aParticles%N
+        do i=1,4
+            if (i /= 1 ) then
+                call aParticles%insert(newFaceIntPts(:,i), lagNewFaceIntPts(:,i))
+                newFaceCenters(i,1) = aParticles%N
+            endif
+        enddo
+        do i=1,4
+            if (i/=2) then
+                call aParticles%insert(newFaceIntPts(:,i+4), lagNewFaceIntPts(:,i+4))
+                newFaceCenters(i,2) = aParticles%N
+            endif
+        enddo
+        do i=1,4
+            if (i/=3) then
+                call aParticles%insert(newFaceIntPts(:,i+8), lagNewFaceIntPts(:,i+8))
+                newFaceCenters(i,3) = aParticles%N
+            endif
+        enddo
+        do i=1,4
+            if (i/=4) then
+                call aParticles%insert(newFaceIntPts(:,i+12), lagNewFaceIntPts(:,i+12))
+                newFaceCenters(i,4) = aParticles%N
+            endif
+        enddo
+        !
+        !   set face vertices
+        !
+        if (anEdges%positiveOrientation(self%edges(1,index), index)) then
+            newFaceVerts(1,1) = anEdges%orig(newFaceEdges(1,1))
+            newFaceVerts(2,1) = anEdges%interiorParticles(1,newFaceEdges(1,1))
+            newFaceVerts(3,1) = anEdges%interiorParticles(2,newFaceCenters(1,1))
+            newFaceVerts(4,1) = anEdges%dest(newFaceEdges(1,1))
+            newFaceVerts(1,2) = anEdges%dest(newFaceEdges(1,1))
+
+            newFaceVerts(2,2) = anEdges%interiorParticles(1,newFaceEdges(1,2))
+            newFaceVerts(3,2) = anEdges%interiorParticles(2,newFaceEdges(1,2))
+            newFaceVerts(4,2) = anEdges%dest(newFaceEdges(1,2))
+        else
+            newFaceVerts(1,1) = anEdges%dest(newFaceEdges(1,1))
+            newFaceVerts(2,1) = anEdges%interiorParticles(2,newFaceEdges(1,1))
+            newFaceVerts(3,1) = anEdges%interiorParticles(1,newFaceEdges(1,1))
+            newFaceVerts(4,1) = anEdges%orig(newFaceEdges(1,1))
+            newFaceVerts(1,2) = anEdges%orig(newFaceEdges(1,1))
+
+            newFaceVerts(2,2) = anEdges%interiorParticles(2,newFaceEdges(1,2))
+            newFaceVerts(3,2) = anEdges%interiorParticles(1,newFaceEdges(1,2))
+            newFaceVerts(4,2) = anEdges%orig(newFaceEdges(1,2))
+        endif
+        if (anEdges%positiveOrientation(self%edges(2,index), index)) then
+            newFaceVerts(5,2) = anEdges%interiorParticles(1,newFaceEdges(2,2))
+            newFaceVerts(6,2) = anEdges%interiorParticles(2,newFaceEdges(2,2))
+            newFaceVerts(7,2) = anEdges%dest(newFaceEdges(2,2))
+            newFaceVerts(4,3) = anEdges%dest(newFaceEdges(2,2))
+
+            newFaceVerts(5,3) = anEdges%interiorParticles(1,newFaceEdges(2,3))
+            newFaceVerts(6,3) = anEdges%interiorParticles(2,newFaceEdges(2,3))
+            newFaceVerts(7,3) = anEdges%dest(newFaceEdges(2,3))
+        else
+            newFaceVerts(5,2) = anEdges%interiorParticles(2,newFaceEdges(2,2))
+            newFaceVerts(6,2) = anEdges%interiorParticles(1,newFaceEdges(2,2))
+            newFaceVerts(7,2) = anEdges%orig(newFaceEdges(2,2))
+            newFaceVerts(4,3) = anEdges%orig(newFaceEdges(2,2))
+
+            newFaceVerts(5,3) = anEdges%interiorParticles(2,newFaceEdges(2,3))
+            newFaceVerts(6,3) = anEdges%interiorParticles(2,newFaceEdges(2,3))
+            newFaceVerts(7,3) = anEdges%orig(newFaceEdges(2,3))
+        endif
+        if (anEdges%positiveOrientation(self%edges(3,index), index)) then
+            newFaceVerts(8,3) = anEdges%interiorParticles(1,newFaceEdges(3,3))
+            newFaceVerts(9,3) = anEdges%interiorParticles(2,newFaceEdges(3,3))
+            newFaceVerts(10,3)= anEdges%dest(newFaceEdges(3,3))
+            newFaceVerts(7,4) = anEdges%dest(newFaceEdges(3,3))
+
+            newFaceVerts(8,4) = anEdges%interiorParticles(1,newFaceEdges(3,4))
+            newFaceVerts(9,4) = anEdges%interiorParticles(2,newFaceEdges(3,4))
+            newFaceVerts(10,4)= anEdges%dest(newFaceEdges(3,4))
+        else
+            newFaceVerts(8,3) = anEdges%interiorParticles(2,newFaceEdges(3,3))
+            newFaceVerts(9,3) = anEdges%interiorParticles(1,newFaceEdges(3,3))
+            newFaceVerts(10,3)= anEdges%orig(newFaceEdges(3,3))
+            newFaceVerts(7,4) = anEdges%orig(newFaceEdges(3,3))
+
+            newFaceVerts(8,4) = anEdges%interiorParticles(2,newFaceEdges(3,4))
+            newFaceVerts(9,4) = anEdges%interiorParticles(1,newFaceEdges(3,4))
+            newFaceVerts(10,4)= anEdges%orig(newFaceEdges(3,4))
+        endif
+        if (anEdges%positiveOrientation(self%edges(4,index), index)) then
+            newFaceVerts(11,4) = anEdges%interiorParticles(1,newFaceEdges(4,4))
+            newFaceVerts(12,4) = anEdges%interiorParticles(2,newFaceEdges(4,4))
+            newFaceVerts(1,4) = anEdges%dest(newFaceEdges(4,4))
+            newFaceVerts(10,1) = anEdges%dest(newFaceEdges(4,4))
+
+            newFaceVerts(11,1) = anEdges%interiorParticles(1,newFaceEdges(4,1))
+            newFaceVerts(12,1) = anEdges%interiorParticles(2,newFaceEdges(4,1))
+        else
+            newFaceVerts(11,4) = anEdges%interiorParticles(2,newFaceEdges(4,4))
+            newFaceVerts(12,4) = anEdges%interiorParticles(1,newFaceEdges(4,4))
+            newFaceVerts(1,4) = anEdges%orig(newFaceEdges(4,4))
+            newFaceVerts(10,1) = anEdges%orig(newFaceEdges(4,4))
+
+            newFaceVerts(11,1) = anEdges%interiorParticles(2,newFaceEdges(4,1))
+            newFaceVerts(12,1) = anEdges%interiorParticles(1,newFaceEdges(4,1))
+        endif
+
+        !check connectivity
+        do i=1,4
+            do j=1,4
+                if (newFaceEdges(j,i) == 0) then
+                    write(logstring,'(3(A,I4))') 'divideCubicFace connectivity error at parent face ', &
+                        index, '; child face ', i, ' edge ', j
+                    call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ", trim(logstring))
+                endif
+                if (newFaceCenters(j,i) == 0) then
+                    write(logstring,'(3(A,I4))') 'divideCubicFace connectivity error at parent face ',&
+                         index, '; child face ', i, ' centerParticle', j
+                    call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ", trim(logstring))
+                endif
+            enddo
+            do j=1,12
+                if (newFaceVerts(j,i) == 0) then
+                    write(logString,'(3(A,I4))') 'divideCubicFace connectivity error at parent face ', &
+                        index, '; child face ', i, ' vertex ', j
+                    call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ", trim(logstring))
+                endif
+            enddo
+        enddo
+
+!        print *, 'inserting faces'
+!        do i=1,4
+!            write(6, '(A,I2,A,I2,A,4(I4))') 'parent ', index, ', child ', i, ' centerInds ', newFaceCenters
+!            write(6, '(A, 12(I4))') '...face verts', newFaceVerts(:,i)
+!            write(6,'(A,4(I4))') '...face edges', newFaceEdges
+!            do j=1,4
+!                write(6,'(A,I2, A, 4I4)') '.../...', j, ': ', anEdges%orig(newFaceEdges(j,i)), &
+!                    anEdges%interiorParticles(:,newFaceEdges(j,i)), &
+!                    anEdges%dest(newFaceEdges(j,i))
+!            enddo
+!        enddo
+
+
+        nFaces = self%n
+        do i=1,4
+            call self%insert(newFaceCenters(:,i), newFaceVerts(:,i), newFaceEdges(:,i))
+            self%children(i,index) = self%N
+            self%parent(self%N) = index
+        enddo
+        self%hasChildren(index) = .TRUE.
+        self%area(index) = dzero
+
+
+!        call self%writeMatlab(6)
+!        call anEdges%writeMatlab(6)
+
+        do i=1,4
+            self%area(nFaces+i) = self%setArea(nFaces+i, aParticles)
+        enddo
+
+        do i=1, 4
+            do j=1,4
+                physCorners(:,j) = aParticles%physCoord(newFaceVerts(mod(3*j+9,12)+1,i))
+            enddo
+            do j=1,12
+                jac(j) = bilinearPlaneJacobian(physCorners, quad16_vertex_qp(1,j), quad16_vertex_qp(2,j))
+            enddo
+            do j=1,4
+                jac(12+j) = bilinearPlaneJacobian(physCorners, quad16_center_qp(1,j), quad16_center_qp(2,j))
+            enddo
+            do j=1,12
+                aparticles%weight(newFaceVerts(j,i)) = quad16_vertex_qw(j) * jac(j)
+            enddo
+            do j=1,4
+                aparticles%weight(newFaceCenters(j,i)) = quad16_center_qw(j)*jac(12+j)
+            enddo
+        enddo
+        self%N_Active = self%N_Active +3
 
     class default
         call logMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" divideCubicFace error : ", " cubic edges required.")
@@ -628,15 +869,28 @@ pure function physCentroid(self, index, aParticles)
     integer(kint), intent(in) :: index
     class(Particles), intent(in) :: aParticles
     !
-    integer(kint) :: i, nv
+    integer(kint) :: i
     real(kreal) :: norm
 
     physCentroid = dzero
-    nv = size(self%vertices,1)
-    do i=1, nv
-        physCentroid = physCentroid + aParticles%physCoord(self%vertices(i, index))
-    enddo
-    physCentroid = physCentroid / real(nv, kreal)
+    select type(self)
+        class is (TriLinearFaces)
+            do i=1, 3
+                physCentroid = physCentroid + aParticles%physCoord(self%vertices(i, index))
+            enddo
+            physCentroid = physCentroid / real(3, kreal)
+        class is (QuadLinearFaces)
+            do i=1, 4
+                physCentroid = physCentroid + aParticles%physCoord(self%vertices(i, index))
+            enddo
+            physCentroid = physCentroid / real(4, kreal)
+        class is (QuadCubicFaces)
+            do i=1,4
+                physCentroid = physCentroid + aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
+            enddo
+            physCentroid = 0.25_kreal * physCentroid
+    end select
+
     if (aParticles%geomKind == SPHERE_GEOM) then
         norm = sqrt(sum(physCentroid*physCentroid))
         physCentroid = physCentroid / norm
@@ -927,6 +1181,7 @@ pure function quadCubicArea(self, index, aParticles)
 
     quadCubicArea = dzero
     center = self%physCentroid(index, aParticles)
+
     verts(:,1) = aParticles%physCoord(self%vertices(1,index))
     verts(:,2) = aParticles%physCoord(self%vertices(4,index))
     verts(:,3) = aParticles%physCoord(self%vertices(7,index))

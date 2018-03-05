@@ -20,21 +20,21 @@ call getInput(initNest)
 !-------------------------------------
 !   Test Planar mesh, linear triangles
 !-------------------------------------
-!mesh_type = "planar_tri"
-!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-!call StartSection(exeLog, "TEST START", mesh_type)
-!call runTest(mesh, mesh_type, initNest, mfile)
-!call EndSection(exeLog)
+mesh_type = "planar_tri"
+write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+call StartSection(exeLog, "TEST START", mesh_type)
+call runTest(mesh, mesh_type, initNest, mfile)
+call EndSection(exeLog)
 !
 !!-------------------------------------
 !!   Test Planar mesh, linear quads
 !!-------------------------------------
 !!
-!mesh_type = "planar_quad"
-!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-!call StartSection(exeLog, "TEST START", mesh_type)
-!call runTest(mesh, mesh_type, initNest, mfile)
-!call EndSection(exeLog)
+mesh_type = "planar_quad"
+write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+call StartSection(exeLog, "TEST START", mesh_type)
+call runTest(mesh, mesh_type, initNest, mfile)
+call EndSection(exeLog)
 !!
 !!-------------------------------------
 !!   Test Planar mesh, cubic quads
@@ -48,20 +48,20 @@ call EndSection(exeLog)
 !!-------------------------------------
 !!   Test Spherical mesh, linear triangles
 !!-------------------------------------
-!mesh_type = "icos_tri_sphere"
-!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-!call StartSection(exeLog, "TEST START", mesh_type)
-!call runTest(mesh, mesh_type, initNest, mfile)
-!call EndSection(exeLog)
+mesh_type = "icos_tri_sphere"
+write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+call StartSection(exeLog, "TEST START", mesh_type)
+call runTest(mesh, mesh_type, initNest, mfile)
+call EndSection(exeLog)
 !!
 !!!-------------------------------------
 !!!   Test Spherical mesh, linear quads
 !!!-------------------------------------
-!mesh_type = "cubed_sphere"
-!write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-!call StartSection(exeLog, "TEST START", mesh_type)
-!call runTest(mesh, mesh_type, initNest,mfile)
-!call EndSection(exeLog)
+mesh_type = "cubed_sphere"
+write(mfile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+call StartSection(exeLog, "TEST START", mesh_type)
+call runTest(mesh, mesh_type, initNest,mfile)
+call EndSection(exeLog)
 
 
 if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test Result: ", "PASSED")
@@ -76,10 +76,15 @@ subroutine runTest(ptr, meshType, initNest, oname)
     !
     integer(kint), parameter :: amrLimit = 0
     real(kreal), parameter :: amp = 1.0_kreal
+    integer(kint) :: i
 
     allocate(ptr)
     call ptr%init(meshType, initNest, initNest, amrLimit, amp)
     call ptr%logStats(exeLog)
+
+    open(unit=WRITE_UNIT_1, file=oname, status='replace', action='write')
+    call ptr%writeMatlab(WRITE_UNIT_1)
+    close(WRITE_UNIT_1)
 
     if (areaTest(ptr)) then
         print *, "AreaTest: pass"
@@ -88,10 +93,6 @@ subroutine runTest(ptr, meshType, initNest, oname)
         call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(mesh_type)//" faceArea ", surfAreaFaces(ptr))
         call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(mesh_type)//" particleArea ", surfAreaParticles(ptr))
     endif
-
-    open(unit=WRITE_UNIT_1, file=oname, status='replace', action='write')
-    call ptr%writeMatlab(WRITE_UNIT_1)
-    close(WRITE_UNIT_1)
     deallocate(ptr)
     nullify(ptr)
 end subroutine

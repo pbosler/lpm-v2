@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import codecs
 
+indexBase = 1
 
 def bilinearPlaneMap( v0, v1, v2, v3, r1, r2 ):
     result = np.zeros(2)
@@ -208,7 +209,7 @@ def quadCubicSeed():
     edgeDests = np.array([3,18,21,30,33,42,9,0,6,33,6,9],dtype=int)
     edgeInteriors = np.array([[1,2],[16,17], [19,20], [28,29], [31,32], [40,41], [43,44], [10,11],
         [4,5],[35,34],[22,23],[7,8]])
-    edgeLefts = np.array([0,1,1,2,2,3,3,0,0,3,1,2],dtype=int)
+    edgeLefts = np.array([0,1,1,2,2,3,3,0,0,3,1,0],dtype=int)
     edgeRights = np.array([-1,-1,-1,-1,-1,-1,-1,-1,1,2,2,3],dtype=int)
 
     #rpts, qp, qw = refQuadCubic()
@@ -454,7 +455,7 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
             pdests = np.array([1,2,3,0,4,5,3,6,7,5, 1, 9,9,10,13,3, 1,11,12],dtype=int)
             porigs = np.array([0,1,2,3,2,4,5,4,6,7, 8, 0,8, 0,10,13,11,12,2],dtype=int)
             for i in range(ncenters):
-                ax1.text(pxy[14+i,0], pxy[14+i,1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+                ax1.text(pxy[14+i,0], pxy[14+i,1], str(i+indexBase), color='b', bbox=dict(facecolor='b', alpha=0.25))
     elif 'icos' in oname:
         pio3 = np.pi/3.0
         pxy = np.zeros([42,2])
@@ -522,12 +523,12 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         porigs = np.array([0,5,6,6,6,1,2,7,8,8,8,9,9, 9,4, 5,11,12,12,12,13,13,13, 7,14,14,15,15,15,16,10,17,17,18,13,13,19,20,15,15,21], dtype=int)
         pdests = np.array([5,6,0,1,7,7,7,8,2,3,9,3,4,10,10,11,12, 5, 6,13, 6, 7,14,14, 8,15, 8, 9,16, 9,16,11,12,12,18,19,14,14,20,21,16], dtype=int)
         for i in range(ncenters):
-            ax1.text(pxy[22+i,0]-0.05, pxy[22+i,1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+            ax1.text(pxy[22+i,0]-0.05, pxy[22+i,1], str(i+indexBase), color='b', bbox=dict(facecolor='b', alpha=0.25))
     make_ticklabels_invisible(plt.gcf())
 
     ax0.plot(pxy[:,0], pxy[:,1], 'ko', markersize=m_size)
     for i in range(len(pinds)):
-        ax0.text(pxy[i,0], pxy[i,1], str(pinds[i]), color='k')
+        ax0.text(pxy[i,0], pxy[i,1], str(pinds[i]+indexBase), color='k')
     ax0.set(title='edges & particles')
     ax1.set(title='edges & faces')
     for i in range(len(einds)):
@@ -598,12 +599,12 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         ax2.add_patch(downtri)
         ax2.text(v1[1,0],v1[1,1]+0.15,'panel-relative indexing',color='k',rotation=60,rotation_mode='anchor')
         for i in range(3):
-            ax2.text(v1[i,0]+0.01,v1[i,1]+0.01,'v'+str(i),color='k')
-            ax2.text(v2[i,0]+0.01,v2[i,1]+0.01,'v'+str(i),color='k')
-            ax2.text(0.5*(v1[i,0]+v1[(i+1)%3,0])+0.02, 0.5*(v1[i,1]+v1[(i+1)%3,1]), 'e'+str(i),color='r')
-            ax2.text(0.5*(v2[i,0]+v2[(i+1)%3,0])+0.02, 0.5*(v2[i,1]+v2[(i+1)%3,1]), 'e'+str(i),color='r')
-        ax2.text(v1[3,0]+0.01,v1[3,1]+0.01,'c1',color='k')
-        ax2.text(v2[3,0]+0.01,v2[3,1]+0.01,'c1',color='k')
+            ax2.text(v1[i,0]+0.01,v1[i,1]+0.01,'v'+str(i+indexBase),color='k')
+            ax2.text(v2[i,0]+0.01,v2[i,1]+0.01,'v'+str(i+indexBase),color='k')
+            ax2.text(0.5*(v1[i,0]+v1[(i+1)%3,0])+0.02, 0.5*(v1[i,1]+v1[(i+1)%3,1]), 'e'+str(+indexBase),color='r')
+            ax2.text(0.5*(v2[i,0]+v2[(i+1)%3,0])+0.02, 0.5*(v2[i,1]+v2[(i+1)%3,1]), 'e'+str(i+indexBase),color='r')
+        ax2.text(v1[3,0]+0.01,v1[3,1]+0.01,'c'+str(indexBase),color='k')
+        ax2.text(v2[3,0]+0.01,v2[3,1]+0.01,'c'+str(indexBase),color='k')
     elif 'quad' in oname:
         corners = np.array([[-1.,1.],[-1.,-1.],[1.,-1.],[1.,1.]])
         ax2.set_aspect('equal')
@@ -612,20 +613,20 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         sq = plt.Polygon(corners, facecolor='white', edgecolor='r')
         ax2.add_patch(sq)
         for i in range(4):
-            ax2.text(0.5*(corners[i,0]+corners[(i+1)%4,0]), 0.5*(corners[i,1]+corners[(i+1)%4,1]), 'e'+str(i),color='r')
+            ax2.text(0.5*(corners[i,0]+corners[(i+1)%4,0]), 0.5*(corners[i,1]+corners[(i+1)%4,1]), 'e'+str(i+indexBase),color='r')
 
         if 'cubic' in oname or 'Cubic' in oname:
             pts, qp, qw = refQuadCubic()
             ax2.plot(pts[:,0],pts[:,1],'k.',markersize=8)
             for i in range(12):
-                ax2.text(pts[i,0]+0.01,pts[i,1]+0.01,'v'+str(i),color='k')
+                ax2.text(pts[i,0]+0.01,pts[i,1]+0.01,'v'+str(i+indexBase),color='k')
             for i,pt in enumerate(pts[12:]):
-                ax2.text(pt[0]+0.01,pt[1]+0.01,'c'+str(i), color='k')
+                ax2.text(pt[0]+0.01,pt[1]+0.01,'c'+str(i+indexBase), color='k')
         else:
             ax2.plot(corners[:,0],corners[:,1],'k.',markersize=8)
             ax2.plot(0,0,'k.',markersize=8)
             for i in range(4):
-                ax2.text(corners[i,0]+0.01,corners[i,1]+0.01,'v'+str(i),color='k')
+                ax2.text(corners[i,0]+0.01,corners[i,1]+0.01,'v'+str(i+indexBase),color='k')
             ax2.text(0.01,0.01,'c1')
 
     ax0.plot(xyz[:,0], xyz[:,1], 'ko', markersize=m_size)
@@ -638,7 +639,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
     ncenters = np.shape(faceCenters)[0]
     nverts = np.shape(faceVerts)[1]
     for i in range(nparticles):
-        ax0.text(xyz[i,0], xyz[i,1], str(i), color='k')
+        ax0.text(xyz[i,0], xyz[i,1], str(i+indexBase), color='k')
 
     for i in range(nedges):
         if ints is not None:
@@ -651,7 +652,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
-        ax0.text(midpt[0], midpt[1]+0.05, str(i), color='r')
+        ax0.text(midpt[0], midpt[1]+0.05, str(i+indexBase), color='r')
 
     ax1.set_aspect('equal','box')
     ax1.set(title='faces & edges' )#,xlabel='x',ylabel='y')
@@ -666,7 +667,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
         ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax1.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
-        ax1.text(midpt[0], midpt[1]+0.1, str(i), color='r')
+        ax1.text(midpt[0], midpt[1]+0.1, str(i+indexBase), color='r')
 
     for i in range(nfaces):
         cntd = np.zeros(2)
@@ -678,7 +679,7 @@ def plotPlaneSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, face
             else:
                 cntd += xyz[faceCenters[i]]
         cntd /= (nverts+ncenters)
-        ax1.text(cntd[0], cntd[1], str(i), color='b', bbox=dict(facecolor='b', alpha=0.25))
+        ax1.text(cntd[0], cntd[1], str(i+indexBase), color='b', bbox=dict(facecolor='b', alpha=0.25))
 
 
 

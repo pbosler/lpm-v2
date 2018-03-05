@@ -150,7 +150,10 @@ pure function nVerticesInMesh(self, nestLevel)
             enddo
             nVerticesInMesh = nVerticesInMesh * nVerticesInMesh
         case (CUBIC_PLANE_SEED)
-            nVerticesInMesh = 600
+            nVerticesInMesh = 49
+            do i=1,nestLevel
+                nVerticesInMesh = (2*sqrt(real(nVerticesInMesh,kreal))-1)**2
+            enddo
         case (ICOS_TRI_SPHERE_SEED)
             nVerticesInMesh = 2 + 10*4**nestLevel
         case (CUBED_SPHERE_SEED)
@@ -180,17 +183,32 @@ pure function nFacesInMesh(self, nestLevel)
     end select
 end function
 
-pure function nEdgesInMesh(self, nVerts, nFaces)
+pure function nEdgesInMesh(self, nVerts, nFaces, nestLevel)
     integer(kint) :: nEdgesInMesh
     class(PolyMesh2d), intent(in) :: self
     integer(kint), intent(in) :: nVerts, nFaces
+    integer(kint), intent(in), optional :: nestLevel
+    !
+    integer(kint) :: nv, nf, i
 
     nEdgesInMesh = 0
-    select case (self%geomKind)
-        case (PLANAR_GEOM)
+    select case (self%meshSeed)
+        case (QUAD_RECT_SEED)
             nEdgesInMesh = nFaces + nVerts -1
-        case (SPHERE_GEOM)
+        case (TRI_HEX_SEED)
+            nEdgesInMesh = nFaces + nVerts -1
+        case (CUBED_SPHERE_SEED)
             nEdgesInMesh = nFaces + nVerts -2
+        case (ICOS_TRI_SPHERE_SEED)
+            nEdgesInMesh = nFaces + nVerts -2
+        case (CUBIC_PLANE_SEED)
+            nf = 4*4**nestLevel
+            nv = 3
+            do i=1,nestLevel
+                nv = nv + 2**i
+            enddo
+            nv = nv*nv
+            nEdgesInMesh = nf + nv - 1
     end select
 end function
 
@@ -285,12 +303,16 @@ subroutine getSeed(self)
 !        nc = 4
     endif
 
-    nMaxParticles = self%nVerticesInMesh(self%maxNest) + nc*self%nFacesInMesh(self%maxNest)
+    if (self%meshSeed == CUBIC_PLANE_SEED) then
+        nMaxParticles = self%nVerticesInMesh(self%maxNest)
+    else
+        nMaxParticles = self%nVerticesInMesh(self%maxNest) + self%nFacesInMesh(self%maxNest)
+    endif
     nMaxFaces = 0
     nMaxEdges = 0
     do i=0, self%maxNest
         nMaxFaces = nMaxFaces + self%nFacesInMesh(i)
-        nMaxEdges = nMaxEdges + self%nEdgesInMesh(self%nVerticesInMesh(i), self%nFacesInMesh(i))
+        nMaxEdges = nMaxEdges + self%nEdgesInMesh(self%nVerticesInMesh(i), self%nFacesInMesh(i),i)
     enddo
 
 
@@ -388,10 +410,10 @@ subroutine getSeed(self)
 !                print *, "jac(",j,") = ", jac(j)
 !            enddo
             do j=1,12
-                self%particles%weight(self%faces%vertices(j,i)) = self%faces%area(i) * quad16_vertex_qw(j) * jac(j)
+                self%particles%weight(self%faces%vertices(j,i)) = quad16_vertex_qw(j) * jac(j)
             enddo
             do j=1,4
-                self%particles%weight(self%faces%centerParticles(j,i)) = self%faces%area(i) * quad16_center_qw(j)*jac(12+j)
+                self%particles%weight(self%faces%centerParticles(j,i)) = quad16_center_qw(j)*jac(12+j)
             enddo
         enddo
     endif

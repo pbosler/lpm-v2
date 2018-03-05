@@ -180,6 +180,12 @@ subroutine writeMatlab(self, fileunit)
     enddo
     write(fileunit, *) self%rightFace(self%N), '];'
 
+    write(fileunit,'(A)',advance='no') 'edge_kids = ['
+    do i=1, self%N-1
+        write(fileunit,'(2(I8,A))',advance='no') self%child1(i), ',', self%child2(i), ';'
+    enddo
+    write(fileunit, *) self%child1(self%N), ', ', self%child2(self%N), '];'
+
     if (allocated(self%interiorParticles)) then
         nint = size(self%interiorParticles,1)
         write(fileunit,'(A)',advance='no') 'edge_interiors = ['
