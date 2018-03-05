@@ -209,9 +209,7 @@ subroutine writeVTKSerialStartXML(self, fileunit)
         do i=1, self%faces%N
             if (.not. self%faces%hasChildren(i)) then
                 do j=1,3
-                    !write(fileunit,'(3(I8,A))',advance='no') self%faces%vertices(j,i)-1, ' ', &
-                    !   self%faces%vertices(mod(j,3)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
-                    write(fileunit,'(3(I8,A))') self%faces%vertices(j,i)-1, ' ', &
+                    write(fileunit,'(3(I20,A))') self%faces%vertices(j,i)-1, ' ', &
                         self%faces%vertices(mod(j,3)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
                 enddo
             endif
@@ -220,16 +218,13 @@ subroutine writeVTKSerialStartXML(self, fileunit)
         write(fileunit,'(A)') '      </DataArray>'
         write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
         do i = 1, 3*self%faces%N_Active
-            !write(fileunit,'(I4,A)',advance='no') 3*i, ' '
-            write(fileunit,'(I8)') 3*i
+            write(fileunit,'(I20)') 3*i
         enddo
     elseif (self%faceKind == QUAD_PANEL) then
         do i=1, self%faces%N
             if (.not. self%faces%hasChildren(i)) then
                 do j=1,4
-                    !write(fileunit,'(4(I8,A))',advance='no') self%faces%vertices(j,i)-1, ' ', &
-                    !    self%faces%vertices(mod(j,4)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
-                    write(fileunit,'(4(I8,A))') self%faces%vertices(j,i)-1, ' ', &
+                    write(fileunit,'(4(I20,A))') self%faces%vertices(j,i)-1, ' ', &
                         self%faces%vertices(mod(j,4)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
                 enddo
             endif
@@ -238,29 +233,29 @@ subroutine writeVTKSerialStartXML(self, fileunit)
         write(fileunit,'(A)') '      </DataArray>'
         write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
         do i = 1, 4*self%faces%N_Active
-            write(fileunit,'(I8)') 3*i
+            write(fileunit,'(I20)') 3*i
         enddo
     elseif (self%faceKind == QUAD_CUBIC_PANEL) then
         do i=1,self%faces%N 
             if (.not. self%faces%hasChildren(i)) then
-                write(fileunit,'(4(I8,A))') self%faces%vertices(1,i)-1, ' ', self%faces%vertices(2,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%vertices(1,i)-1, ' ', self%faces%vertices(2,i)-1, ' ', &
                     self%faces%centerParticles(1,i)-1, ' ', self%faces%vertices(12,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%vertices(2,i)-1, ' ', self%faces%vertices(3,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%vertices(2,i)-1, ' ', self%faces%vertices(3,i)-1, ' ', &
                     self%faces%centerParticles(2,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%vertices(3,i)-1, ' ', self%faces%vertices(4,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%vertices(3,i)-1, ' ', self%faces%vertices(4,i)-1, ' ', &
                     self%faces%vertices(5,i)-1, ' ', self%faces%centerParticles(2,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%centerParticles(2,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(2,i)-1, ' ', &
                     self%faces%vertices(5,i)-1, ' ', self%faces%vertices(6,i)-1, ' ', self%faces%centerParticles(3,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%centerParticles(3,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(3,i)-1, ' ', &
                     self%faces%vertices(6,i)-1, ' ', self%faces%vertices(7,i)-1, ' ', self%faces%vertices(8,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%centerParticles(4,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(4,i)-1, ' ', &
                     self%faces%centerParticles(3,i)-1, ' ', self%faces%vertices(8,i)-1, ' ', self%faces%vertices(9,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%vertices(11,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%vertices(11,i)-1, ' ', &
                     self%faces%centerParticles(4,i)-1, ' ', self%faces%vertices(9,i)-1, ' ', self%faces%vertices(10,i)-1, ' '
-                write(fileunit,'(4(I8,A))') self%faces%vertices(12,i)-1, ' ', &
+                write(fileunit,'(4(I20,A))') self%faces%vertices(12,i)-1, ' ', &
                     self%faces%centerParticles(1,i)-1, ' ', self%faces%centerParticles(4,i)-1, ' ', self%faces%vertices(11,i)-1, ' '
                 do j=1,4
-                    write(fileunit,'(I8,A)') self%faces%centerParticles(j,i)-1, ' '
+                    write(fileunit,'(I20,A)') self%faces%centerParticles(j,i)-1, ' '
                 enddo
             endif
         enddo
@@ -268,7 +263,7 @@ subroutine writeVTKSerialStartXML(self, fileunit)
         write(fileunit,'(A)') '      </DataArray>'
         write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
         do i = 1, 9*self%faces%N_Active
-            write(fileunit,'(I4,A)') 4*i, ' '
+            write(fileunit,'(I20,A)') 4*i
         enddo
     endif
     write(fileunit,'(A)') ''
