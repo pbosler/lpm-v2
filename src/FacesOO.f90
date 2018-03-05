@@ -246,43 +246,6 @@ subroutine insert(self, centerInds, vertInds, edgeInds, area)
     self%N = self%N + 1
 end subroutine
 
-!pure function triCorners(self, index, aParticles)
-!    real(kreal), dimension(:,:) :: triCorners
-!    class(TriLinearFaces), intent(in) :: self
-!    class(Particles), intent(in) :: aParticles
-!    integer(kint), intent(in) :: index
-!    !
-!    integer(kint) :: i
-!    do i=1,3
-!        triCorners(:,i) = aParticles%physCoord(self%vertices(i,index))
-!    enddo
-!end function
-!
-!pure function quadCorners(self, index, aParticles)
-!    real(kreal), dimension(:,:) :: quadCorners
-!    class(quadLinearFaces), intent(in) :: self
-!    class(Particles), intent(in) :: aParticles
-!    integer(kint), intent(in) :: index
-!    !
-!    integer(kint) :: i
-!    do i=1,4
-!        quadCorners(:,i) = aParticles%physCoord(self%vertices(i,index))
-!    enddo
-!end function
-!
-!pure function quadCubicCorners(self, index, aParticles)
-!    real(kreal), dimension(:,:) :: quadCubicCorners
-!    class(QuadCubicFaces), intent(in) :: self
-!    integer(kint), intent(in) :: index
-!    class(Particles), intent(in) :: aParticles
-!    !
-!    integer(kint) :: i
-!
-!    do i=1,4
-!        quadCubicCorners(:,i) = aParticles%physCoord(self%vertices(mod(3*i+9,12),index))
-!    enddo
-!end function
-
 subroutine divideQuadLinear(self, index, aParticles, anEdges)
     class(QuadLinearFaces), intent(inout) :: self
     integer(kint), intent(in) :: index
