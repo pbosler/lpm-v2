@@ -31,7 +31,23 @@ type Field
         procedure :: avgValue
         procedure :: logStats
         procedure :: writeMatlab
+        procedure :: insertScalar
+        procedure :: insertVector
+        procedure :: replaceScalar
+        procedure :: replaceVector
+        procedure :: replaceComponent
 end type
+
+!interface insert
+!    module procedure :: insertScalar
+!    module procedure :: insertVector
+!end interface
+
+!interface replace
+!    module procedure :: replaceScalar
+!    module procedure :: replaceVector
+!    module procedure :: replaceComponent
+!end interface
 
 logical(klog), save :: logInit = .FALSE.
 type(Logger) :: log
@@ -69,6 +85,92 @@ subroutine init(self, nDim, nMax, name, units)
         case default
             call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" field init error: ", "invalid nDim.")
             return
+    end select
+    if (present(name)) then
+        self%name = name
+    endif
+    if (present(units)) then
+        self%units = units
+    endif
+end subroutine
+
+subroutine insertScalar(self, sval)
+    class(Field), intent(inout) :: self
+    real(kreal), intent(in) :: sval
+
+    if (self%N+1 > self%N_Max) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" field insert error: ", "not enough memory.")
+        return
+    endif
+    if (self%nDim /= 1) then
+        call LogMessage(log, WARNING_LOGGING_LEVEL,trim(logkey)//" warning: ", " insertScalar called on a vector field.")
+    endif
+
+    self%comp1(self%N+1) = sval
+    self%N = self%N+1
+end subroutine
+
+subroutine insertVector(self, sval)
+    class(Field), intent(inout) :: self
+    real(kreal), dimension(:), intent(in) ::  sval
+
+    if (self%N+1 > self%N_Max) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" field insert error: ", "not enough memory.")
+        return
+    endif
+
+    if (self%nDim == 2) then
+        self%comp1(self%N+1) = sval(1)
+        self%comp2(self%n+1) = sval(2)
+    elseif(self%ndim == 3) then
+        self%comp1(self%N+1) = sval(1)
+        self%comp2(self%n+1) = sval(2)
+        self%comp2(self%n+1) = sval(3)
+    endif
+    self%N = self%N+1
+end subroutine
+
+subroutine replaceScalar(self, index, sval)
+    class(Field), intent(inout) :: self
+    integer(kint), intent(in) :: index
+    real(kreal), intent(in) :: sval
+
+    if (self%nDim /= 1) then
+        call LogMessage(log, WARNING_LOGGING_LEVEL,trim(logkey)//" warning: ", " replaceScalar called on a vector field.")
+    endif
+
+    self%comp1(index) = sval
+end subroutine
+
+subroutine replaceVector(self, index, sval)
+    class(Field), intent(inout) :: self
+    integer(kint), intent(in) :: index
+    real(kreal), dimension(:), intent(in) :: sval
+
+    select case (self%ndim)
+        case (2)
+            self%comp1(index) = sval(1)
+            self%comp2(index) = sval(2)
+        case (3)
+            self%comp1(index) = sval(1)
+            self%comp2(index) = sval(2)
+            self%comp3(index) = sval(3)
+    end select
+end subroutine
+
+subroutine replaceComponent(self, index, dim, sval)
+    class(Field), intent(inout) :: self
+    integer(kint), intent(in) :: index
+    integer(kint), intent(in) :: dim
+    real(kreal), intent(in) :: sval
+
+    select case (dim)
+        case(1)
+            self%comp1(index) = sval
+        case(2)
+            self%comp2(index) = sval
+        case(3)
+            self%comp3(index) = sval
     end select
 end subroutine
 
@@ -152,6 +254,8 @@ subroutine logStats(self, aLog)
 
     call LogMessage(alog, TRACE_LOGGING_LEVEL, trim(logkey), " Field stats:")
     call StartSection(alog)
+    call LogMessage(alog, TRACE_LOGGING_LEVEL, "name = ", self%name)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "units = ", self%units)
     call LogMessage(alog, TRACE_LOGGING_LEVEL, "N = ", self%N)
     call LogMessage(alog, TRACE_LOGGING_LEVEL, "N_Max = ", self%N_Max)
     call LogMessage(alog, TRACE_LOGGING_LEVEL, "minMagnitude = ", self%minMagnitude())
@@ -214,28 +318,23 @@ subroutine writeMatlab(self, fileunit)
     character(len=MAX_STRING_LENGTH) :: ns
     character(len=MAX_STRING_LENGTH) :: us
 
-    if (trim(self%name) /= "null") then
-        ns = trim(self%name)
-    else
-        ns = "field"
-    endif
-    write(WRITE_UNIT_1, '(A)', advance='no') trim(ns)//" = ["
+    write(fileunit, '(A)', advance='no') trim(self%name)//" = ["
     select case (self%nDim)
         case (1)
             do i=1,self%N-1
-                write(WRITE_UNIT_1, '(F24.12,A)') self%comp1(i), ", "
+                write(fileunit, '(F24.12,A)') self%comp1(i), ", "
             enddo
-            write(WRITE_UNIT_1,'(F24.12,A)') self%comp1(self%N), "];"
+            write(fileunit,'(F24.12,A)') self%comp1(self%N), "];"
         case (2)
             do i=1,self%N-1
-                write(WRITE_UNIT_1, '(2(F24.12,A))') self%comp1(i), ", ", self%comp2(i), ";"
+                write(fileunit, '(2(F24.12,A))') self%comp1(i), ", ", self%comp2(i), ";"
             enddo
-            write(WRITE_UNIT_1,'(2(F24.12,A))') self%comp1(self%N), ", ", self%comp2(self%N), "];"
+            write(fileunit,'(2(F24.12,A))') self%comp1(self%N), ", ", self%comp2(self%N), "];"
         case (3)
             do i=1,self%N-1
-                write(WRITE_UNIT_1, '(3(F24.12,A))') self%comp1(i), ", ", self%comp2(i), ", ", self%comp3(i), ";"
+                write(fileunit, '(3(F24.12,A))') self%comp1(i), ", ", self%comp2(i), ", ", self%comp3(i), ";"
             enddo
-            write(WRITE_UNIT_1,'(3(F24.12,A))') self%comp1(self%N), ", ", self%comp2(self%N),", ", self%comp3(self%N), "];"
+            write(fileunit,'(3(F24.12,A))') self%comp1(self%N), ", ", self%comp2(self%N),", ", self%comp3(self%N), "];"
     end select
 end subroutine
 
