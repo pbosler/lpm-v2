@@ -10,6 +10,7 @@ use EdgesOOModule
 use FacesOOModule
 use PlaneGeomModule
 use SphereGeomModule
+use FieldOOModule
 
 implicit none
 private
@@ -38,6 +39,9 @@ type PolyMesh2d
         procedure, private :: nEdgesInMesh
         procedure, private :: nFacesInMesh
         procedure :: writeMatlab
+        procedure :: writeVTKSerialStartXML
+        procedure :: writeVTKSerialEndXML
+        procedure :: integrateScalar
 !        procedure :: copy
 !        procedure :: refine
 
@@ -104,6 +108,37 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     enddo
 end subroutine
 
+pure function integrateScalar(self, scalar)
+    real(kreal) :: integrateScalar
+    class(PolyMesh2d), intent(in) ::  self
+    class(Field), intent(in) :: scalar
+    !
+    integer(kint) :: i, j, pindex
+    
+    integrateScalar = dzero
+    if (self%faceKind == TRI_PANEL .or. self%faceKind == QUAD_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                pindex = self%faces%centerParticles(1,i)
+                integrateScalar = integrateScalar + self%particles%weight(pindex) * scalar%comp1(pindex)
+            endif
+        enddo
+    elseif (self%faceKind == QUAD_CUBIC_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                do j=1,12
+                    integrateScalar = integrateScalar + self%particles%weight(self%faces%vertices(j,i)) * &
+                        scalar%comp1(self%faces%vertices(j,i))
+                enddo
+                do j=1,4
+                    integrateScalar = integrateScalar + self%particles%weight(self%faces%centerParticles(j,i)) * &
+                        scalar%comp1(self%faces%centerParticles(j,i))
+                enddo
+            endif
+        enddo
+    endif
+end function
+
 subroutine logStats(self, aLog)
     class(PolyMesh2d), intent(in) :: self
     type(Logger), intent(inout) :: aLog
@@ -128,6 +163,125 @@ subroutine writeMatlab(self, fileunit)
     call self%particles%writeMatlab(fileunit)
     call self%edges%writeMatlab(fileunit)
     call self%faces%writeMatlab(fileunit)
+end subroutine
+
+subroutine writeVTKSerialStartXML(self, fileunit)
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i, j
+    
+    write(fileunit,'(A)') '<?xml version="1.0"?>'
+    write(fileunit,'(A)') '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'
+    write(fileunit,'(A)') ' <PolyData>'
+    write(fileunit,'(A,I8,A)',advance='no') '   <Piece NumberOfPoints="', self%particles%N, &
+        '" NumberOfVerts="0" NumberOfLines="0" '
+    if (self%faceKind == TRI_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 3*self%faces%N_Active, '">'
+    elseif(self%faceKind == QUAD_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 4*self%faces%N_Active, '">'
+    elseif(self%faceKind == QUAD_CUBIC_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 9*self%faces%N_Active, '">'
+    endif
+    
+    write(fileunit,'(A)') '    <Points>'
+    if (self%geomKind == PLANAR_GEOM) then
+        write(fileunit,'(A)') '      <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+        do i=1, self%particles%N
+            !write(fileunit,'(3(F24.9,A))',advance='no') self%particles%x(i), ' ', self%particles%y(i), ' ', dzero, ' '
+            write(fileunit,'(3(F24.9,A))') self%particles%x(i), ' ', self%particles%y(i), ' ', dzero, ' '
+        enddo
+    elseif (self%geomKind == SPHERE_GEOM) then
+        write(fileunit,'(A)') '      <DataArra type="Float32" NumberOfComponents="3" format="ascii">'
+        do i=1, self%particles%N
+            !write(fileunit,'(3(F24.9,A))',advance='no') self%particles%x(i), ' ', self%particles%y(i), ' ', &
+            !    self%particles%z(i), ' '
+            write(fileunit,'(3(F24.9,A))') self%particles%x(i), ' ', self%particles%y(i), ' ', &
+                self%particles%z(i), ' '
+        enddo
+    endif
+    !write(fileunit,'(A)') ''
+    write(fileunit,'(A)') '      </DataArray>'
+    write(fileunit,'(A)') '    </Points>'
+    write(fileunit,'(A)') '    <Polys>'
+    write(fileunit,'(A)') '      <DataArray type="Int32" Name="connectivity" format="ascii">'
+    if (self%faceKind == TRI_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                do j=1,3
+                    !write(fileunit,'(3(I8,A))',advance='no') self%faces%vertices(j,i)-1, ' ', &
+                    !   self%faces%vertices(mod(j,3)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                    write(fileunit,'(3(I8,A))') self%faces%vertices(j,i)-1, ' ', &
+                        self%faces%vertices(mod(j,3)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 3*self%faces%N_Active
+            !write(fileunit,'(I4,A)',advance='no') 3*i, ' '
+            write(fileunit,'(I8)') 3*i
+        enddo
+    elseif (self%faceKind == QUAD_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                do j=1,4
+                    !write(fileunit,'(4(I8,A))',advance='no') self%faces%vertices(j,i)-1, ' ', &
+                    !    self%faces%vertices(mod(j,4)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                    write(fileunit,'(4(I8,A))') self%faces%vertices(j,i)-1, ' ', &
+                        self%faces%vertices(mod(j,4)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 4*self%faces%N_Active
+            write(fileunit,'(I8)') 3*i
+        enddo
+    elseif (self%faceKind == QUAD_CUBIC_PANEL) then
+        do i=1,self%faces%N 
+            if (.not. self%faces%hasChildren(i)) then
+                write(fileunit,'(4(I8,A))') self%faces%vertices(1,i), ' ', self%faces%vertices(2,i), ' ', &
+                    self%faces%centerParticles(1,i), ' ', self%faces%vertices(12,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%vertices(2,i), ' ', self%faces%vertices(3,i), ' ', &
+                    self%faces%centerParticles(2,i), ' ', self%faces%centerParticles(1,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%vertices(3,i), ' ', self%faces%vertices(4,i), ' ', &
+                    self%faces%vertices(5,i), ' ', self%faces%centerParticles(2,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%centerParticles(2,i), ' ', &
+                    self%faces%vertices(5,i), ' ', self%faces%vertices(6,i), ' ', self%faces%centerParticles(3,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%centerParticles(3,i), ' ', &
+                    self%faces%vertices(6,i), ' ', self%faces%vertices(7,i), ' ', self%faces%vertices(8,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%centerParticles(4,i), ' ', &
+                    self%faces%centerParticles(3,i), ' ', self%faces%vertices(8,i), ' ', self%faces%vertices(9,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%vertices(11,i), ' ', &
+                    self%faces%centerParticles(4,i), ' ', self%faces%vertices(9,i), ' ', self%faces%vertices(10,i), ' '
+                write(fileunit,'(4(I8,A))') self%faces%vertices(12,i), ' ', &
+                    self%faces%centerParticles(1,i), ' ', self%faces%centerParticles(4,i), ' ', self%faces%vertices(11,i), ' '
+                do j=1,4
+                    write(fileunit,'(I8,A)') self%faces%centerParticles(j,i), ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 9*self%faces%N_Active
+            write(fileunit,'(I4,A)') 4*i, ' '
+        enddo
+    endif
+    write(fileunit,'(A)') ''
+    write(fileunit,'(A)') '      </DataArray>'
+    write(fileunit,'(A)') '    </Polys>'
+end subroutine
+
+subroutine writeVTKSerialEndXML(self, fileunit)
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    write(fileunit,'(A)') '    </Piece>'
+    write(fileunit,'(A)') '  </PolyData>'
+    write(fileunit,'(A)') '</VTKFile>'
 end subroutine
 
 pure function nVerticesInMesh(self, nestLevel)

@@ -36,6 +36,8 @@ type Field
         procedure :: replaceScalar
         procedure :: replaceVector
         procedure :: replaceComponent
+        procedure :: writeVtkPointDataXML
+        !procedure :: writeVtkCellDataXML
 end type
 
 !interface insert
@@ -338,6 +340,37 @@ subroutine writeMatlab(self, fileunit)
     end select
 end subroutine
 
+subroutine writeVtkPointDataXML(self, fileunit)
+    class(Field), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i
+    
+    select case(self%nDim)
+        case(1)
+            write(fileunit,'(3A)') '      <DataArray type="Float32" Name="', trim(self%name), '" format="ascii">'
+            do i=1,self%N
+                !write(fileunit,'(F24.9,A)',advance='no') self%comp1(i), ' '
+                write(fileunit,'(F24.9)') self%comp1(i)
+            enddo
+        case(2)
+            write(fileunit,'(3A)') '      <DataArray type="Float32" Name="', trim(self%name), &
+                '" NumberOfComponents="3" format="ascii">'
+            do i=1,self%N
+                !write(fileunit,'(3(F24.9,A))',advance='no') self%comp1(i), ' ', self%comp2(i), ' ', dzero, ' '
+                write(fileunit,'(3(F24.9,A))') self%comp1(i), ' ', self%comp2(i), ' ', dzero, ''
+            enddo
+        case(3)
+            write(fileunit,'(3A)') '      <DataArray type="Float32" Name="', trim(self%name), &
+                '" NumberOfComponents="3" format="ascii">'
+            do i=1,self%N
+                write(fileunit,'(3(F24.9,A))') self%comp1(i), ' ', self%comp2(i), ' ', self%comp3(i), ''
+            enddo
+    end select
+    !write(fileunit,'(A)') ''
+    write(fileunit,'(A)') '      </DataArray>'
+end subroutine
+
 pure function minValue(self, component)
     real(kreal) :: minValue
     class(Field), intent(in) :: self
@@ -392,3 +425,4 @@ subroutine InitLogger(aLog,rank)
 end subroutine
 
 end module
+
