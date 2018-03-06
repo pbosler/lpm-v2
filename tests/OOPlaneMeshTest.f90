@@ -13,6 +13,8 @@ type(Field), pointer :: vectorField => null()
 integer(kint) ::  initNest, i, j, doOutput
 character(len=56) :: mesh_type, vtkFile
 
+real(kreal), parameter :: intCosBump = 16.0_kreal / PI**2
+
 type(Logger) :: exeLog
 character(len=56) :: logkey = "OOPlaneMestTest"
 character(len=MAX_STRING_LENGTH) :: logstring
@@ -62,6 +64,8 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     character(len=*), intent(in) :: mesh_type
     integer(kint), intent(in) :: initNest
     character(len=*), intent(in) :: oname
+    !
+    real(kreal) :: computedIntegral
     
     allocate(mesh_ptr)
     allocate(scalarField)
@@ -69,17 +73,23 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     call mesh_ptr%init(mesh_type, initNest, initNest, 0, 1.0_kreal)
     call mesh_ptr%logStats(exeLog)
 
-    call scalarField%init(1, mesh_ptr%particles%N, "sineWave")
+    call scalarField%init(1, mesh_ptr%particles%N, "scalar")
     do i=1, mesh_ptr%particles%N
-        call scalarField%insertScalar(sineWave([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
+        call scalarField%insertScalar(cosineBump([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
     enddo    
 
-    call vectorField%init(2, mesh_ptr%particles%N, "gradSineWave")
+    call vectorField%init(2, mesh_ptr%particles%N, "scalarGradient")
     do i=1, mesh_ptr%particles%n
-        call vectorField%insertVector(sineWaveGrad([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
+        call vectorField%insertVector(bumpGrad([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
     enddo
 
-    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "sineWave integral = ", mesh_ptr%integrateScalar(scalarField))
+    computedIntegral = mesh_ptr%integrateScalar(scalarField)
+
+    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "scalar integral = ", computedIntegral)
+    if (mesh_ptr%faceKind == QUAD_PANEL .or. mesh_ptr%faceKind==QUAD_CUBIC_PANEL) then
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "mesh size = ", mesh_ptr%edges%avgLength(mesh_ptr%particles))
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "abs(integralErr) = ", abs(computedIntegral-intCosBump))
+    endif
 
     if (doOutput>0) then
         open(unit=WRITE_UNIT_1, file=vtkFile, action='write', status='replace')
@@ -128,6 +138,19 @@ subroutine getInput(initNest, doOutput)
         read(argv,*) doOutput
     endif
 end subroutine
+
+pure function cosineBump(xy)
+    real(kreal) :: cosineBump
+    real(kreal), intent(in) :: xy(2)
+    cosineBump = cos(0.5_kreal * PI * xy(1)) * cos(0.5_kreal * PI * xy(2))
+end function
+
+pure function bumpGrad(xy)
+    real(kreal) :: bumpGrad(2)
+    real(kreal), intent(in) :: xy(2)
+    bumpGrad(1) = -0.5_kreal * PI * sin(0.5_kreal*PI*xy(1)) * sin(0.5_kreal*PI*xy(2))
+    bumpGrad(2) = -0.5_kreal *PI * cos(0.5_kreal*PI*xy(1))*sin(0.5_kreal*PI*xy(2))
+end function
 
 pure function sineWave(xy)
     real(kreal) :: sineWave
