@@ -1,5 +1,24 @@
 module FacesOOModule
-
+!> @file Faces.f90
+!> Provides a primitive data structure and methods for creating faces of polyhedral meshes.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
+!>
+!> @defgroup Faces Faces
+!> @brief Faces of polyhedral meshes have centers and vertices via the @ref Particles and edges via the @ref Edges.
+!> 
+!> The faces data structures is a "structure of arrays," so that all information about face i is located at index i in the 
+!> relevant array.  
+!> For example, the index to the particle at the center of face i `aFaces%%centerParticle(i)` 
+!> and the vertices of face i can be accessed by `aFaces%%vertices(:,i)`. 
+!> 
+!> The faces data structure maintains arrays of pointers (integer indices) into @ref Particles and @ref Edges objects
+!> to avoid reproducing the data contained by those structures. 
+!> 
+!> In addition the faces are organized into a quadtree, defined by the `hasChildren`, `children`, and `parent` arrays,
+!> to facilitate faster searching through the data structure.
+!> 
+!> @{
 use NumberKindsModule
 use UtilitiesModule
 use STDIntVectorModule
@@ -14,8 +33,14 @@ private
 
 public Faces, TriLinearFaces, QuadLinearFaces, QuadCubicFaces
 
+!> @brief Each faces knows the indices (to @ref Particles) of its vertices and center and the indices (to @ref Edges)
+!> of its edges.  
+!> 
+!> Designed to accomodate quadrilateral and triangular faces.  
+!> Faces are recursively divided to provide desired spatial resolution, and stored in the induced quadtree.
+!>
 type, abstract :: Faces
-    integer(kint), allocatable :: centerParticles(:,:)
+    integer(kint), allocatable :: centerParticles(:,:) !< indices to particles in a face's interior 
     integer(kint), allocatable :: vertices(:,:)  !< indices to faces' vertex particles in a particlesmodule::particles object
 	integer(kint), allocatable :: edges(:,:) !< indices to faces' edges in an edgesmodule::edges object
 	logical(klog), allocatable :: hasChildren(:) !< hasChildren(i) is .TRUE. if face i has been divided
@@ -24,7 +49,7 @@ type, abstract :: Faces
 	integer(kint) :: N !< Number of faces currently in use
 	integer(kint) :: N_Active !< Number of undivided faces; these define the spatial discretization
 	integer(kint) :: N_Max !< Maximum number of faces allowed in memory
-	real(kreal), allocatable :: area(:)
+	real(kreal), allocatable :: area(:) !< area represented by each face (only equal to partices%weight with the midpoint rule)
 
 	contains
 	    procedure :: init
@@ -40,6 +65,7 @@ type, abstract :: Faces
         procedure :: writeMatlab
 end type
 
+!>@brief  Common interface to divide all face types
 interface
     subroutine divide(self, index, aParticles, anEdges)
         import :: Faces
@@ -55,7 +81,7 @@ interface
 end interface
 
 
-
+!>@brief  Common interface to define each face's initial area
 interface
     pure function setArea(self, index, aParticles)
         import :: Faces
@@ -70,7 +96,7 @@ interface
     end function
 end interface
 
-
+!>@brief Triangular face with 3 vertices and one center particle.  Midpoint rule quadrature.
 type, extends(Faces) :: TriLinearFaces
     contains
         procedure :: divide => divideTri
@@ -79,6 +105,7 @@ type, extends(Faces) :: TriLinearFaces
         procedure :: setarea => triFaceArea
 end type
 
+!>@brief Quadrilateral face with 4 vertices and one center particle. Midpoint rule quadrature.
 type, extends(Faces) :: QuadLinearFaces
     contains
         procedure :: divide => divideQuadLinear
@@ -86,6 +113,7 @@ type, extends(Faces) :: QuadLinearFaces
         procedure :: setarea => quadFaceArea
 end type
 
+!>@brief Quadrilateral face with 12 edge particles and 4 interior particles. Cubic GLL quadrature.
 type, extends(Faces) :: QuadCubicFaces
     contains
         procedure :: divide => divideQuadCubic
@@ -108,6 +136,12 @@ character(len=MAX_STRING_LENGTH) :: logstring
 
 contains
 
+!> @brief Allocates memory for a new faces object.  New arrays are set to zero, and must be initialized separately.
+!> @todo Move faceKind constants from ::numberkindsmodule to ::facesmodule? 
+!>
+!> @param self Target faces object
+!> @param faceKind Face kind identifier (e.g., triangular, quadrilateral, etc.), as definded in NumberKindsModule
+!> @param nMax Max amount of memory to allocate
 subroutine init(self, faceKind, nMax)
     class(Faces), intent(inout) :: self
     integer(kint), intent(in) :: faceKind, nMax
@@ -154,6 +188,8 @@ subroutine init(self, faceKind, nMax)
 !    self%faceKind = faceKind
 end subroutine
 
+!> @brief Deletes and frees memory associated with a faces object
+!> @param self Target faces object
 subroutine deleteTri(self)
     type(TriLinearFaces), intent(inout) :: self
     if (allocated(self%vertices)) deallocate(self%vertices)
@@ -165,6 +201,8 @@ subroutine deleteTri(self)
     if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a faces object
+!> @param self Target faces object
 subroutine deleteQuad(self)
     type(QuadLinearFaces), intent(inout) :: self
     if (allocated(self%vertices)) deallocate(self%vertices)
@@ -176,6 +214,8 @@ subroutine deleteQuad(self)
     if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
+!> @brief Deletes and frees memory associated with a faces object
+!> @param self Target faces object
 subroutine deleteQuadCubic(self)
     type(QuadCubicFaces), intent(inout) :: self
     if (allocated(self%vertices)) deallocate(self%vertices)
@@ -187,6 +227,10 @@ subroutine deleteQuadCubic(self)
     if (allocated(self%area)) deallocate(self%area)
 end subroutine
 
+!> @brief Performs a deep copy of one faces object into another.  
+!> Both objects must have been allocated correctly before calling this subroutine.
+!> @param dest Target faces object
+!> @param source Source faces object
 subroutine copy(self, other)
     class(Faces), intent(inout) :: self
     class(Faces), intent(in) :: other
@@ -210,6 +254,9 @@ subroutine copy(self, other)
     self%area(1:other%N) = other%area(1:other%N)
 end subroutine
 
+!> @brief Writes basic info about a faces object to a specified loggermodule::Logger
+!> @param self Target faces object
+!> @param aLog Logger object to handle output
 subroutine logStats(self, alog)
     class(Faces), intent(in) :: self
     type(Logger), intent(inout) :: alog
@@ -223,6 +270,12 @@ subroutine logStats(self, alog)
     call EndSection(aLog)
 end subroutine
 
+!> @brief Inserts a new face into the faces data structure. Note: edges and particles are not altered by this procedure.
+!> Increases faces.N by 1. 
+!> @param self Target faces object
+!> @param centerParticle index to a the new face's center particle in a particlesmodule::particles object
+!> @param vertIndices indices to the new face's vertices in a particlesmodule::particles object
+!> @param edgeIndices indices to the new face's edges in an edgesmodule::edges object.
 subroutine insert(self, centerInds, vertInds, edgeInds, area)
     class(Faces), intent(inout) :: self
     integer(kint), dimension(:), intent(in) :: centerInds, vertInds, edgeInds
@@ -246,6 +299,15 @@ subroutine insert(self, centerInds, vertInds, edgeInds, area)
     self%N = self%N + 1
 end subroutine
 
+!> @brief This is a primary subroutine used by any quadrilateral linear mesh (spherical or planar).
+!> It divides a quadrilateral face into 4 children, adding a 4 leaves to the faces quadtree.
+!> It creates new particles and new edges.  
+!> It replaces divided edges with their appropriate children.
+!> 
+!> @param[inout] self Target faces object
+!> @param[in] faceIndex index of face to be divided
+!> @param[inout] aParticles Particles object associated with this set of faces.  
+!> @param[inout] anEdges Edges object associated with this set of faces
 subroutine divideQuadLinear(self, index, aParticles, anEdges)
     class(QuadLinearFaces), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -424,6 +486,16 @@ function getVerticesFromEdge(self, faceIndex, edgeIndex, anEdges)
     endif
 end function
 
+
+!> @brief This is a primary subroutine used by any cubic quadrilateral mesh (spherical or planar).
+!> It divides a quadrilateral face into 4 children, adding a 4 leaves to the faces quadtree at the end of the arrays.
+!> It creates new particles and new edges.  
+!> It replaces divided edges with their appropriate children.
+!> 
+!> @param[inout] self Target faces object
+!> @param[in] faceIndex index of face to be divided
+!> @param[inout] aParticles Particles object associated with this set of faces.  
+!> @param[inout] anEdges Edges object associated with this set of faces
 subroutine divideQuadCubic(self, index, aParticles, anEdges)
     class(QuadCubicFaces), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -816,6 +888,9 @@ subroutine divideQuadCubic(self, index, aParticles, anEdges)
     end select
 end subroutine
 
+!>@brief Locates the interior points of a QuadCubicFace, given its corners
+!> @param self Target QuadCubicFaces object
+!> @param vertXyz Corners of the face 
 pure function calcInteriorPts(self, vertXyz)
     class(QuadCubicFaces), intent(in) :: self
     real(kreal), dimension(3,4) :: calcInteriorPts
@@ -826,6 +901,11 @@ pure function calcInteriorPts(self, vertXyz)
     calcInteriorPts(:,4) = bilinearMap(vertXyz, oor5, oor5)
 end function
 
+!> @brief Computes the centroid (in physical space) of a face based on its vertices.
+!> @param[in] self Target faces object
+!> @param[in] index Index of face whose centroid is needed
+!> @param[in] aParticles Particles object associated with this set of faces
+!> @return Position vector of face centroid
 pure function physCentroid(self, index, aParticles)
     real(kreal), dimension(3) :: physCentroid
     class(Faces), intent(in) :: self
@@ -860,6 +940,11 @@ pure function physCentroid(self, index, aParticles)
     endif
 end function
 
+!> @brief Computes the centroid (in Lagrangian space) of a face based on its vertices.
+!> @param[in] self Target faces object
+!> @param[in] index Index of face whose centroid is needed
+!> @param[in] aParticles Particles object associated with this set of faces
+!> @return Position vector of face centroid
 pure function lagCentroid(self, index, aParticles)
     real(kreal), dimension(3) :: lagCentroid
     class(Faces), intent(in) :: self
@@ -885,6 +970,10 @@ pure function lagCentroid(self, index, aParticles)
     endif
 end function
 
+!> @brief Counts the number of levels in the faces quadtree above a particular face
+!> @param self Target Faces object
+!> @param index Target face
+!> @return Number of levels in quadtree above face(i)
 function countParents(self, index)
     integer(kint) :: countParents
     class(Faces), intent(in) :: self
@@ -903,6 +992,11 @@ function countParents(self, index)
     enddo
 end function
 
+!> @brief Computes the area of a polyhedral face. This function should be used for all adaptively refined meshes.
+!> @param self Target faces object
+!> @param index Index of face whose area is needed
+!> @param aParticles Particles object  associated with this set of faces
+!> @param anEdges Edges object associated with this set of faces
 function area(self, index, aParticles, anEdges)
     real(kreal) :: area
     class(Faces), intent(in) :: self
@@ -923,6 +1017,13 @@ function area(self, index, aParticles, anEdges)
     enddo
 end function
 
+!> @brief Counts the number of shared edges between two faces
+!> Outputs an error of this number is > 1.
+!> @param self Target faces object
+!> @param face1 index to a face
+!> @param face2 index to another face
+!> @return SharedEdge = 0 if faces do not have a common edge, SharedEdge = 1 if faces have a common edge, 
+!> SharedEdges > 1 is an error, probably with the mesh seed file.
 function sharedEdge(self, face1, face2)
     integer(kint) :: sharedEdge
     class(Faces), intent(in) :: self
@@ -948,6 +1049,15 @@ function sharedEdge(self, face1, face2)
     endif
 end function
 
+!> @brief This is a primary subroutine used by any triangular mesh (spherical or planar).
+!> It divides a triangular face into 4 children, adding a 4 leaves to the faces quadtree to the end of the arrays.
+!> It creates new particles and new edges.  
+!> It replaces divided edges with their appropriate children.
+!> 
+!> @param[inout] self Target faces object
+!> @param[in] faceIndex index of face to be divided
+!> @param[inout] aParticles Particles object associated with this set of faces.  
+!> @param[inout] anEdges Edges object associated with this set of faces
 subroutine divideTri(self, index, aParticles, anEdges)
     class(TriLinearFaces), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -1133,6 +1243,8 @@ pure function triFaceArea(self, index, aParticles)
     endif
 end function
 
+!> @brief Sets the initial area of a new QuadCubicFace. Used only for initialization.
+!> Use Faces::area for all other situations.
 pure function quadCubicArea(self, index, aParticles)
     real(kreal) :: quadCubicArea
     class(QuadCubicFaces), intent(in) :: self
@@ -1164,6 +1276,8 @@ pure function quadCubicArea(self, index, aParticles)
     endif
 end function
 
+!> @brief Sets the initial area of a new QuadLinearFace. Used only for initialization.
+!> Use Faces::area for all other situations.
 pure function quadFaceArea(self, index, aParticles)
     real(kreal) :: quadFaceArea
     class(QuadLinearFaces), intent(in) :: self
@@ -1190,6 +1304,12 @@ pure function quadFaceArea(self, index, aParticles)
     endif
 end function
 
+
+!> @brief Returns the index to a vertex particle opposite to an edge in a triangular face.
+!> @param self Target faces object
+!> @param faceIndex target face
+!> @param edgeIndex index to an edge from an edgesmodule::edges object
+
 function particleOppositeTriEdge(self, faceIndex, edgeIndex)
     integer(kint) :: particleOppositeTriEdge
     class(TriLinearFaces), intent(in) :: self
@@ -1212,6 +1332,9 @@ function particleOppositeTriEdge(self, faceIndex, edgeIndex)
     endif
 end function
 
+!> @brief Outputs data associated with a faces object, including all connectivity information, to a Matlab-readable .m file.
+!> @param self Target faces object
+!> @param fileunit Integer unit associated with a .m file
 subroutine writeMatlab(self, fileunit)
     class(Faces), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -1298,4 +1421,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!>@}
 end module

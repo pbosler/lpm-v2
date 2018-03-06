@@ -1,4 +1,26 @@
 module EdgesOOModule
+!> @file Edges.f90
+!> Provides a primitive data structure and methods for creating edges of polyhedral meshes.
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
+!>
+!> @defgroup Edges Edges
+!> @brief Edges of polyhedral meshes connect to vertices and faces.
+!>
+!> Edges know the indices of their origin and destination particles (in a @ref Particles object), and the indices 
+!> of their left face and right face (in a @ref Faces object).
+!> 
+!> The edges data structures is a "structure of arrays," so that all information about edge i is located at index i in the 
+!> relevant array.  
+!> For example, the index to the particle at the origin of edge i is `anEdges%%orig(i)` , and its destination particle is
+!> `anEdges%%dest(i)`. 
+!> An edge's left and right faces are accessed similarly, `anEdges%%leftFace(i)` gives the index of the face (in a @ref Faces object)
+!> to the left of edge i.
+!>
+!> In addition the edges are organized into a binary tree, defined by the `hasChildren`, `children`, and `parent` arrays,
+!> to facilitate faster searching through the data structure.
+!> 
+!> @{
 
 use NumberKindsModule
 use UtilitiesModule
@@ -13,9 +35,11 @@ private
 
 public Edges, CubicEdges, LinearEdges
 
+!> @brief Edges know the indices (to @ref Particles) of their origin and destination, and the indices (to @ref Faces)
+!> of their left face and right face.
 type, abstract :: Edges
     integer(kint), allocatable :: orig(:) !< Integer array containing indices of particlesmodule::particles
-    integer(kint), allocatable :: interiorParticles(:,:)
+    integer(kint), allocatable :: interiorParticles(:,:) !< Used for high-order edges only
     integer(kint), allocatable :: dest(:) !< Integer array containing indices of particlesmodule::particles
     integer(kint), allocatable :: rightFace(:) !< Integer array containing indices of facesmodule::faces
     integer(kint), allocatable :: leftFace(:) !< Integer array containing indices of facesmodule::faces
@@ -82,6 +106,9 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 
 contains
 
+!> @brief Allocates memory for a new edges object.  All values are zeroed and must be initialized separately.
+!> @param self Target edge object
+!> @param nMax max number of edges allowed in memory
 subroutine init(self, nMax)
     class(Edges), intent(inout) :: self
     integer(kint), intent(in) :: nMax
@@ -125,6 +152,8 @@ subroutine init(self, nMax)
 	end select
 end subroutine
 
+!> @brief Deletes and frees memory associated with an edges object
+!> @param self Target edge object
 subroutine deleteLinear(self)
     type(LinearEdges), intent(inout) :: self
     if (allocated(self%orig)) deallocate(self%orig)
@@ -137,6 +166,8 @@ subroutine deleteLinear(self)
     if (allocated(self%parent)) deallocate(self%parent)
 end subroutine
 
+!> @brief Deletes and frees memory associated with an edges object
+!> @param self Target edge object
 subroutine deleteCubic(self)
     type(CubicEdges), intent(inout) :: self
     if (allocated(self%interiorParticles)) deallocate(self%interiorParticles)
@@ -150,6 +181,9 @@ subroutine deleteCubic(self)
     if (allocated(self%parent)) deallocate(self%parent)
 end subroutine
 
+!> @brief Writes the edges data structure to a .m file for later reading by Matlab.  For debugging.
+!> @param self Target edge object
+!> @param fileunit integer unit of .m file
 subroutine writeMatlab(self, fileunit)
     class(Edges), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -202,6 +236,9 @@ subroutine writeMatlab(self, fileunit)
     endif
 end subroutine
 
+!> @brief Performs a deep copy of one edges object into another.  They must have been allocated the same to avoid memory errors.
+!> @param self Target edge object
+!> @param other Source edge object
 subroutine copyLinear(self, other)
     class(Edges), intent(inout) :: self
     class(Edges), intent(in) :: other
@@ -220,6 +257,9 @@ subroutine copyLinear(self, other)
     self%child2(1:other%N) = other%child2(1:other%N)
 end subroutine
 
+!> @brief Performs a deep copy of one edges object into another.  They must have been allocated the same to avoid memory errors.
+!> @param self Target edge object
+!> @param other Source edge object
 subroutine copyCubic(self, other)
     class(CubicEdges), intent(inout) :: self
     class(Edges), intent(in) :: other
@@ -231,7 +271,14 @@ subroutine copyCubic(self, other)
     end select
 end subroutine
 
-!> @brief Inserts a new edge; particle allocation/defintion takes place elsewhere
+!> @brief Inserts an edge to the end of an edges object.  Increase edges.N by one.
+!> Particle and Face insertion/definition must take place elsewhere.
+!> @param self Target edge object
+!> @param origIndex index to origin particle
+!> @param destIndex index to destination particle
+!> @param leftFace index to left face of new edge in faces object
+!> @param rightFace index to right face of new edge in faces object
+!> @param unused (low-order)
 subroutine insertLinear(self, origIndex, destIndex, leftFace, rightFace, intrinds)
     class(Edges), intent(inout) :: self
     integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
@@ -254,6 +301,14 @@ subroutine insertLinear(self, origIndex, destIndex, leftFace, rightFace, intrind
     self%N = nn+1
 end subroutine
 
+!> @brief Inserts an edge to the end of an edges object.  Increase edges.N by one.
+!> Particle and Face insertion/definition must take place elsewhere.
+!> @param self Target edge object
+!> @param origIndex index to origin particle
+!> @param destIndex index to destination particle
+!> @param leftFace index to left face of new edge in faces object
+!> @param rightFace index to right face of new edge in faces object
+!> @param intrinds indices of the 2 interior particles of new cubic edge
 subroutine insertCubic(self, origIndex, destIndex, leftFace, rightFace, intrInds)
     class(CubicEdges), intent(inout) :: self
     integer(kint), intent(in) :: origIndex, destIndex, leftFace, rightFace
@@ -278,6 +333,9 @@ subroutine insertCubic(self, origIndex, destIndex, leftFace, rightFace, intrInds
     self%N = nn+1
 end subroutine
 
+!> @brief Returns .TRUE. if an edge is on the boundary of a mesh (does not apply to spherical meshes, which have no boundaries)
+!> @param anEdges Target edge object
+!> @param edgeIndex target edge
 pure function onBoundary(self, index)
     logical(klog) :: onBoundary
     class(Edges), intent(in) :: self
@@ -285,6 +343,13 @@ pure function onBoundary(self, index)
     onBoundary = (self%leftFace(index) < 1 .or. self%rightFace(index) < 1)
 end function
 
+!> @brief Returns .TRUE. if an edge has positive orientation relative to the selected face
+!> @todo This function should output an error if edgeIndex is not a member of faces.edges(:)
+!>
+!> @param self Target edge object
+!> @param faceIndex Integer index to a face in a facesmodule::faces object
+!> @param edgeIndex Integer index to an edge
+!> @return .TRUE. if edge has positive orientation relative to the chosen face
 pure function positiveOrientation(self, edgeIndex, faceIndex)
     logical(klog) :: positiveOrientation
     class(Edges), intent(in) :: self
@@ -292,6 +357,11 @@ pure function positiveOrientation(self, edgeIndex, faceIndex)
     positiveOrientation = (self%leftFace(edgeIndex) == faceIndex)
 end function
 
+!> @brief Builds a STDIntVector containing the indices of all of an edge's children.
+!>
+!> @param anEdges Target edge object
+!> @param parentIndex edge whose children are needed
+!> @param leafEdges On output, the indices of parentEdge's children
 function getLeafEdges(self, index)
     type(STDIntVector) :: getLeafEdges
     class(Edges), intent(in) :: Self
@@ -322,6 +392,10 @@ function getLeafEdges(self, index)
     enddo
 end function
 
+!> @brief Divides a parent edge, creating two child edges with the same orientation and adds particles to a Particles object.
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 subroutine divideLinear(self, index, aParticles)
     class(LinearEdges), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -371,6 +445,10 @@ subroutine divideLinear(self, index, aParticles)
     self%N = self%N + 2
 end subroutine
 
+!> @brief Divides a parent edge, creating two child edges with the same orientation and adds particles to a Particles object.
+!> @param self Target edge object
+!> @param edgeIndex target edge
+!> @param aParticles particles object associated with this set of edges
 subroutine divideCubic(self, index, aParticles)
     class(CubicEdges), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -449,6 +527,11 @@ subroutine divideCubic(self, index, aParticles)
     self%N = self%N + 2
 end subroutine
 
+!> @brief Computes the length of the edge at edgeIndex
+!> @param self Target edge object
+!> @param edgeIndex location of edge whose length is needed
+!> @param aParticles particles object associated with this set of edges
+!> @return Length of edge
 pure function length(self, index, aParticles)
     real(kreal) :: length
     class(Edges), intent(in) :: self
@@ -466,6 +549,10 @@ pure function length(self, index, aParticles)
     endif
 end function
 
+!> @brief Computes the maximum edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return Minimum edge length
 pure function maxLength(self, aParticles)
     real(kreal) :: maxLength
     class(Edges), intent(in) :: self
@@ -483,6 +570,10 @@ pure function maxLength(self, aParticles)
     enddo
 end function
 
+!> @brief Computes the minimum edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return Minimum edge length
 pure function minLength(self, aParticles)
     real(kreal) :: minLength
     class(Edges), intent(in) :: self
@@ -500,6 +591,10 @@ pure function minLength(self, aParticles)
     enddo
 end function
 
+!> @brief Computes the average edge length amongst all leaf edges
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @return Minimum edge length
 pure function avgLength(self, aParticles)
     real(kreal) :: avgLength
     class(Edges), intent(in) :: Self
@@ -518,6 +613,9 @@ pure function avgLength(self, aParticles)
     avgLength = avgLength / real(nLeaves, kreal)
 end function
 
+!> @brief Log summarizing statistics about an edges object
+!> @param self Target edge object
+!> @param aLog Target loggermodule::logger object for output
 subroutine logStats(self, alog)
     class(Edges), intent(in) :: self
     type(Logger), intent(inout) :: alog
@@ -530,6 +628,9 @@ subroutine logStats(self, alog)
     call EndSection(aLog)
 end subroutine
 
+!> @brief Counts the number of levels in the edges binary tree above the edge at index
+!> @param self Target edge object
+!> @param index index of target edge
 pure function countParents(self, index)
     integer(kint) :: countParents
     class(Edges), intent(in) :: self
@@ -548,6 +649,15 @@ pure function countParents(self, index)
     enddo
 end function
 
+!> @brief Computes the area represented by the triangles connecting the vertices of an edge's child particles and the center particle 
+!> of their common face.  Used for adaptively refined meshes.
+!>
+!> @param self Target edge object
+!> @param aParticles particles object associated with this set of edges
+!> @param centroid coordinates of the face centroid
+!> @param leaves indices of the child edges associated with a face whose neighbors may be more refined than itself
+!> @param nLeaves number of leafEdges
+!> @return areaFromLeaves represented by one side of a polyhedral face
 pure function areaFromLeaves(self, aParticles, centroid, leaves)
     real(kreal) :: areaFromLeaves
     class(Edges), intent(in) :: self
@@ -589,4 +699,5 @@ subroutine InitLogger(aLog,rank)
     logInit = .TRUE.
 end subroutine
 
+!>@}
 end module

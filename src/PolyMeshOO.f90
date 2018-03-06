@@ -1,4 +1,60 @@
 module PolyMeshOOModule
+!> @file PolyMesh2d.f90
+!> Data structure and methods to manage 2d polygonal meshes in the plane or on 2d manifolds embedded in R3.
+!> 
+!> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
+!>
+!>
+!> @defgroup PolyMesh2d PolyMesh2d
+!> @brief Each polygonal mesh is made up of @ref Particles, @ref Edges, and @ref Faces. 
+!> 
+!> All meshes start with an initial "seed" that is recursively refined to generate the @ref Faces quadtree, its @ref Edges, 
+!> and the associated @ref Particles.
+!> Mesh seeds are supplied in  `*Seed.dat` files.
+!>
+!>
+!>  Current seeds for __planar meshes__ include a mesh of quadrilateral faces from a square or a mesh of triangular faces from 
+!>	a hexagon, both with free boundaries, and a quadrilateral seed that is periodic in the x-direction and free in the y-direction.
+!>	Users choose the initial mesh from one of the predefined seeds, defined to approximately cover the domain
+!>	@f$ D = \{ (x,y) : x,y\in [-1,1] \} @f$, depending on the chosen seed.  
+!>	The seed is then multiplied by a user-supplied scalar `maxR` to cover larger subsets of the plane.  
+!>
+!>  Seeds for __spherical meshes__ include a mesh of quadrilaterals from the cubed sphere or a mesh of triangles from
+!>	an icosahedral triangulation of the sphere.
+!>	Users choose one of the spherical seeds (which discretize a unit sphere) and may choose a different radius.
+!>
+!>  Seeds are specified in the code by using the correct identifying integer parameter defined in @ref NumberKinds.
+!>
+!>	The mesh seed is recursively refined until a user-supplied initial depth is achieved in the @ref Faces quadtree.  
+!>	This refinement increases spatial resolution.  
+!>	
+!>	Adaptive refinement depends on the context of each problem and is handled by subclasses that include relevant @ref Field objects
+!>	for storing and handling physical data.  
+!>  These methods are provided in the @ref Refinement module.
+!>
+!>	Some currently implemented mesh seeds are illustrated below. @n 
+!>	Particles are drawn as circles and annotated by @f$p_i@f$ where the subscript i indicates 
+!>	the index of that particle in the Particles structure.@n
+!>	Edges are illustrated as arrows @f$ e_i @f$ and Faces by @f$ F_i @f$.
+!>	
+!>	Seeds are recursively refined by either facesmodule::dividetriface or facesmodule::dividequadface 
+!>	until a desired spatial resolution is achieved.
+!>
+!>  Point-location queries are provided that use a tree search to accelerate a walk search using the polymesh2dmodule::locatefacecontainingpoint function.
+!>	
+!>	@image html QuadRectSeed.png "Seed for an initially square mesh of quadrilateral faces."
+!>	@image latex QuadRectSeed.eps "Seed for an initially square mesh of quadrilateral faces." width=5in
+!>	
+!>	@image html TriHexSeed.png "Seed for an initially hexagonal mesh of triangular faces." 
+!>	@image latex TriHexSeed.eps "Seed for an initially hexagonal mesh of triangular faces." width=5in
+!>
+!>  @image html cubedSphereSeed.png "Seed for a cubed sphere mesh of quadrilateral faces."
+!>	@image latex cubedSphereSeed.eps "Seed for a cubed sphere mesh of quadrilateral faces." width=5in
+!>	
+!>	@image html icosTriSeed.png "Seed for an icosahedral mesh of triangular faces on the sphere." 
+!>	@image latex icosTriSeed.eps "Seed for an icosahedral mesh of triangular faces on the sphere." width=5in
+!>
+!> @{
 
 use NumberKindsModule
 use UtilitiesModule
@@ -17,17 +73,18 @@ private
 
 public PolyMesh2d
 
+!> @brief Combines mesh primitives into one complete mesh object. Extend this type by adding fields for applications.
 type PolyMesh2d
-    integer(kint) :: meshSeed
-    class(Particles), pointer :: particles
-    class(Edges), pointer :: edges
-    class(Faces), pointer :: faces
-    integer(kint) :: faceKind = 0
-    integer(kint) :: geomKind = 0
-    integer(kint) :: initNest = 0
-    integer(kint) :: maxNest = 0
-    integer(kint) :: amrLimit = 0
-    real(kreal) :: t = dzero
+    integer(kint) :: meshSeed !< geometry kind (e.g., planar or spherical) as defined in @ref NumberKinds.  Seeds define the initial, unrefined mesh
+    class(Particles), pointer :: particles !< @ref Particles defining vertices, edges, and interiors of mesh faces and edges
+    class(Edges), pointer :: edges !< @ref Edges connecting origin and destination particles for each edge, and each edge's left and right face
+    class(Faces), pointer :: faces !< @ref Faces
+    integer(kint) :: faceKind = 0 !< face kind (e.g., triangular or quadrilateral) as defined in @ref NumberKinds 
+    integer(kint) :: geomKind = 0 !< geometry kind (e.g., planar or spherical) as defined in @ref NumberKinds
+    integer(kint) :: initNest = 0 !< initial refinement level (in terms of the @ref Faces quadtree) for a mesh
+    integer(kint) :: maxNest = 0 !< maximum tree Faces tree depth allowed. Used for memory allocation.
+    integer(kint) :: amrLimit = 0 !< Number of times a face may be divided beyond the initial refinement level
+    real(kreal) :: t = dzero !< time value represented by the mesh
     real(kreal) :: maxRadius = 1.0_kreal
 
     contains
@@ -56,6 +113,7 @@ character(len=MAX_STRING_LENGTH) :: logstring
 
 contains
 
+!@>brief Returns the integer defined in @ref NumberKindsModule that corresponds to a mesh_type string.
 function meshKindFromString(str)
     integer(kint) :: meshKindFromString
     character(len=*), intent(in) :: str
@@ -76,6 +134,9 @@ function meshKindFromString(str)
     endif
 end function
 
+!> @brief Allocates memory for a new mesh (@ref Particles, @ref Edges, and @ref Faces).
+!> Initializes a new mesh using a "mesh seed," which is recursively refined until a desired spatial resolution is achieved.
+!> The recursive refinement defines the @ref Faces quadtree and the @ref Edges binary tree.
 subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     class(PolyMesh2d), intent(inout) :: self
     character(len=*), intent(in) ::  mesh_type
@@ -108,6 +169,9 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
     enddo
 end subroutine
 
+!> @brief Integrates a scalar field over a mesh
+!> @param self Target PolyMesh2d object
+!> @param scalar Field to be integrated (from @ref FieldsOOModule)
 pure function integrateScalar(self, scalar)
     real(kreal) :: integrateScalar
     class(PolyMesh2d), intent(in) ::  self
@@ -139,6 +203,9 @@ pure function integrateScalar(self, scalar)
     endif
 end function
 
+!> @brief Outputs basic mesh info to a @ref Logger object.
+!> @param[in] self Target mesh
+!> @param[inout] aLog logger
 subroutine logStats(self, aLog)
     class(PolyMesh2d), intent(in) :: self
     type(Logger), intent(inout) :: aLog
@@ -156,6 +223,10 @@ subroutine logStats(self, aLog)
     call EndSection(aLog)
 end subroutine
 
+!> @brief Writes a mesh to a Matlab-readable .m file
+!> 
+!> @param[in] self Mesh to output
+!> @param[in] fileunit Integer unit of .m file
 subroutine writeMatlab(self, fileunit)
     class(PolyMesh2d), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -165,6 +236,10 @@ subroutine writeMatlab(self, fileunit)
     call self%faces%writeMatlab(fileunit)
 end subroutine
 
+!@>brief Writes mesh data to a serial VTK .xml polydata file
+!> The file is incomplete after this subroutine finishes, to allow 
+!> point data from @ref Field to be added.
+!> Once all data is added, call writeVTKSerialEndXML to finish the file.
 subroutine writeVTKSerialStartXML(self, fileunit)
     class(PolyMesh2d), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -271,6 +346,7 @@ subroutine writeVTKSerialStartXML(self, fileunit)
     write(fileunit,'(A)') '    </Polys>'
 end subroutine
 
+!> @brief Completes the .xml file
 subroutine writeVTKSerialEndXML(self, fileunit)
     class(PolyMesh2d), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -279,6 +355,11 @@ subroutine writeVTKSerialEndXML(self, fileunit)
     write(fileunit,'(A)') '</VTKFile>'
 end subroutine
 
+!> @brief Computes the number of vertices in a uniformly refined mesh.  
+!> Used to compute memory allocation requirements.
+!> @param[in] self Target mesh
+!> @param[in] initNest initial refinement level
+!> @return Number of vertices in a mesh
 pure function nVerticesInMesh(self, nestLevel)
     integer(kint) :: nVerticesInMesh
     class(PolyMesh2d), intent(in) :: self
@@ -310,6 +391,11 @@ pure function nVerticesInMesh(self, nestLevel)
     end select
 end function
 
+!> @brief Computes the number of faces in a uniformly refined mesh.  
+!> Used to compute memory allocation requirements.
+!> @param[in] self Target mesh
+!> @param[in] initNest initial refinement level
+!> @return Number of faces in a mesh
 pure function nFacesInMesh(self, nestLevel)
     integer(kint) :: nFacesInMesh
     class(PolyMesh2d),intent(in) :: self
@@ -332,6 +418,12 @@ pure function nFacesInMesh(self, nestLevel)
     end select
 end function
 
+!> @brief Uses the number of vertices and the number of faces (via Euler's formulas) to determine the the number of edges in a uniformly refined mesh.  
+!> Used to compute memory allocation requirements.
+!> @param[in] self Target mesh
+!> @param[in] nVertices number of vertices in a mesh
+!> @param[in] nFaces number of faces in a mesh
+!> @return Number of edges in a mesh
 pure function nEdgesInMesh(self, nVerts, nFaces, nestLevel)
     integer(kint) :: nEdgesInMesh
     class(PolyMesh2d), intent(in) :: self
@@ -361,6 +453,12 @@ pure function nEdgesInMesh(self, nVerts, nFaces, nestLevel)
     end select
 end function
 
+!> @brief Initializes a mesh using a mesh seed from a file to define the root set of @ref Particles, @ref Edges, and @ref Faces.
+!> Mesh seeds are defined in both @ref NumberKinds and via the corresponding.  See meshSeeds.py for complete details.
+!> Multiplies particle postions by a specified amount to change the spatial domain (all mesh seeds approximately cover 
+!> the unit sphere of their embedded space).  
+!> 
+!> @param[inout] self Target mesh to be initialized
 subroutine getSeed(self)
     class(PolyMesh2d), intent(inout) :: self
     !
@@ -568,6 +666,18 @@ subroutine getSeed(self)
     endif
 end subroutine
 
+!> @brief Reads data from a mesh seed file.
+!> 
+!> @param[in] self Target mesh
+!> @param[in] seedFilename filename 
+!> @param[out] xyz position vectors of mesh seed particles
+!> @param[out] origs indices of origin particles for each edge
+!> @param[out] dests indices of destination particles for each edge
+!> @param[out] lefts indices of left faces for each edge
+!> @param[out] rights indices of right faces for each edge
+!> @param[out] faceVerts indices of vertex particles for each face
+!> @param[out] faceEdges indices of edges for each face
+!> @param[out] faceCenters indices of faces' internal particles
 subroutine readSeedFile(self, seedfilename, xyz, origs, dests, lefts, rights, ints, faceverts, faceedges, facecenters)
     class(PolyMesh2d), intent(in) :: self
     character(len=*), intent(in) :: seedfilename
@@ -616,6 +726,8 @@ subroutine readSeedFile(self, seedfilename, xyz, origs, dests, lefts, rights, in
     facecenters = facecenters+1
 end subroutine
 
+!> @brief Deletes and frees memory associated with a @ref PolyMesh2d object.
+!> @param[inout] self Target mesh
 subroutine deleteMesh(self)
     type(PolyMesh2d), intent(inout) :: self
     deallocate(self%particles)
@@ -644,4 +756,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!> @}
 end module

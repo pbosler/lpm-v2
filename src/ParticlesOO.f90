@@ -1,5 +1,38 @@
 module ParticlesOOModule
-
+!------------------------------------------------------------------------------
+! Lagrangian Particle Method (LPM) version 2.1
+!------------------------------------------------------------------------------
+!> @file
+!> Provides the primitive Particles data structure that defines the spatial discretization of LPM.
+!> @author
+!> Peter Bosler, Sandia National Laboratories, Center for Computing Research
+!
+!> @defgroup Particles Particles
+!> @brief Provides a vectorized data structure that defines the particles for LPM spatial discretization.
+!>
+!> Particles are combined with the @ref Field data structure to define scalar and vector fields over a spatial domain.
+!> Particles may be combined with a mesh object (e.g., PolyMesh2d) or an unstructured data object (e.g., a quadtree)
+!> to facilitate interpolation, differentiation, quadrature, etc.
+!>
+!> The particles data structures is a "structure of arrays," so that all information about a particle i is located at
+!> index i in the relevant arrays.  
+!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`. 
+!> Its Lagrangian coordinates are given by `aParticles%%x0(i)`, `aParticles%%y0(i)`, etc.
+!>
+!> Particles that contribute to a midpoint quadrature rule are called "active," and this status is recorded in the `isActive` array.
+!> Active particles have nonzero area (2d) or volume (3d).
+!> Particles that do not contribute to the midpoint rule (i.e., vertex particles) are considered "passive."
+!> Passive particles have zero area or volume.
+!>
+!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$; 
+!> area (for 2d models) or volume (for 3d models).
+!>
+!> Particle sets used with a mesh are initialized in the @ref PolyMesh2d module.
+!> 
+!> 
+!> @{
+!
+!------------------------------------------------------------------------------
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -8,6 +41,7 @@ implicit none
 private
 public Particles
 
+!> @brief Class used to define a spatial discretization that may move in physical space.  
 type Particles
     real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
@@ -15,13 +49,13 @@ type Particles
 	real(kreal), allocatable :: x0(:)  !< Lagrangian coordinate
 	real(kreal), allocatable :: y0(:)  !< Lagrangian coordinate
 	real(kreal), allocatable :: z0(:)  !< Lagrangian coordinate
-	real(kreal), allocatable :: weight(:)
-	integer(kint) :: N = 0
-	integer(kint) :: N_Max = 0
-	integer(kint) :: geomkind = 0
+	real(kreal), allocatable :: weight(:) !< weight (e.g., area, volume, mass) assigned to each particle
+	integer(kint) :: N = 0 !< number of particles currently in use
+	integer(kint) :: N_Max = 0 !< maximum number of particles allowed in memory
+	integer(kint) :: geomkind = 0 !< ! geometry identifier e.g., @ref NumberKinds::planar_geom
 
 	contains
-	    procedure :: init
+	    procedure :: init 
 	    final :: deletePrivate
 	    procedure :: copy
 	    procedure :: logStats
@@ -47,6 +81,12 @@ character(len=MAX_STRING_LENGTH) :: logString
 
 contains
 
+!> @brief Initialize an empty particle set with space for up to nMax particles.  
+!> All values are set to zero until separately set.
+!>
+!> @param self Target particles object
+!> @param nMax amount of space to reserve
+!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds 
 subroutine init(self, nMax, geomKind)
     class(Particles), intent(inout) :: self
     integer(kint), intent(in) :: nMax
@@ -85,6 +125,8 @@ subroutine init(self, nMax, geomKind)
 	endif
 end subroutine
 
+!> @brief Deletes and frees memory associated with a particles object
+!> @param self Target Particles object
 subroutine deletePrivate(self)
     type(Particles), intent(inout) :: self
     if ( allocated(self%x)) deallocate(self%x)
@@ -96,6 +138,9 @@ subroutine deletePrivate(self)
 	if ( allocated(self%z0)) deallocate(self%z0)
 end subroutine
 
+!> @brief Performs a deep copy of one particles object into another
+!> @param self Target Particles object
+!> @param other Source Particles object
 subroutine copy(self, other)
     class(Particles), intent(inout) :: self
     class(Particles), intent(in) :: other
@@ -120,6 +165,9 @@ subroutine copy(self, other)
 	endif
 end subroutine
 
+!> @brief Writes particles information to console using a loggermodule::logger object for formatting. 
+!> @param self
+!> @param aLog
 subroutine logStats(self, alog)
     class(Particles), intent(in) :: self
     type(Logger), intent(inout) :: alog
@@ -139,12 +187,15 @@ subroutine logStats(self, alog)
     call EndSection(aLog)
 end subroutine
 
+!> @brief Computes the sum of the particles%weight array
+!> @Warning: only for the midpoint rule is this equivalent to a numerical integration. 
 pure function totalWeight(self)
     real(kreal) :: totalWeight
     class(Particles), intent(in) :: self
     totalWeight = sum(self%weight(1:self%N))
 end function
 
+!> @brief Redefines the Lagrangian coordinate to be equal to the physical coordinate
 subroutine resetLagrangianCoordinates(self)
     class(Particles), intent(inout) :: self
     self%x0(1:self%N) = self%x(1:self%N)
@@ -152,6 +203,10 @@ subroutine resetLagrangianCoordinates(self)
     if (allocated(self%z)) self%z0(1:self%N) = self%z(1:self%N)
 end subroutine
 
+!> @brief Returns a particle's physical coordinate vector
+!> @param self
+!> @param index
+!> @return PhysCoord coordinate vector
 pure function physCoord(self, index)
     real(kreal), dimension(3) :: physCoord
     class(Particles), intent(in) :: self
@@ -165,6 +220,10 @@ pure function physCoord(self, index)
     endif
 end function
 
+!> @brief Returns a particle's Lagrangian coordinate vector
+!> @param self
+!> @param index
+!> @return LagCoord coordinate vector
 pure function lagCoord(self, index)
     real(kreal), dimension(3) :: lagCoord
     class(Particles), intent(in) :: self
@@ -178,6 +237,10 @@ pure function lagCoord(self, index)
     endif
 end function
 
+!> @brief Inserts a single particle into a particles object, at the end of the arrays.
+!> @param[inout] self a set of particles
+!> @param[in] physX physical coordinate vector of particle to add
+!> @param[in] lagX Lagrangian coordinate vector of particle to add
 subroutine insert(self, physX, lagX)
     class(Particles), intent(inout) :: self
     real(kreal), dimension(:), intent(in) :: physX, lagX
@@ -198,6 +261,11 @@ subroutine insert(self, physX, lagX)
     self%N = self%N + 1
 end subroutine
 
+!> @brief Re-locates a single particle.
+!> @param[inout] self a set of particles
+!> @param[in] particle to be overwritten.
+!> @param[in] physX physical coordinate vector of particle to add
+!> @param[in] lagX Lagrangian coordinate vector of particle to add
 subroutine replace(self, index, physx, lagx)
     class(Particles), intent(inout) :: self
     integer(kint), intent(in) :: index
@@ -213,6 +281,10 @@ subroutine replace(self, index, physx, lagx)
     endif
 end subroutine
 
+!> @brief Writes particles to a script .m file readable by Matlab
+!> @param self
+!> @param fileunit
+!> @todo WriteToCSV for python
 subroutine writeMatlab(self, fileunit)
     class(Particles), intent(in) :: self
     integer(kint), intent(in) :: fileunit
@@ -266,4 +338,5 @@ subroutine InitLogger(aLog,rank)
 	logInit = .TRUE.
 end subroutine
 
+!>@}
 end module

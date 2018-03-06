@@ -49,10 +49,10 @@ module NumberKindsModule
 
 	integer(KINT), parameter ::	QUAD_PANEL = 4 !< panelKind parameter for quadrilateral panels @ingroup MeshConstants
 	integer(KINT), parameter ::	TRI_PANEL = 3 !< panelKind parameter for triangular panels @ingroup MeshConstants
-	integer(KINT), parameter :: QUAD_CUBIC_PANEL = 16
-	integer(KINT), parameter :: PLANAR_GEOM = 81
-	integer(KINT), parameter :: SPHERE_GEOM = 82
-	integer(KINT), parameter :: EUCLIDEAN_3D = 83
+	integer(KINT), parameter :: QUAD_CUBIC_PANEL = 16 !< panelKind parameter for cubic quadrilateral panels @ingroup MeshConstants
+	integer(KINT), parameter :: PLANAR_GEOM = 81 !< geomKind parameter for R2 @ingroup MeshConstants
+	integer(KINT), parameter :: SPHERE_GEOM = 82 !< geomKind parameter for S embedded in R3 @ingroup MeshConstants
+	integer(KINT), parameter :: EUCLIDEAN_3D = 83 !< geomKind parameter for R3 @ingroup MeshConstants
 	integer(KINT), parameter ::	MAX_VERTEX_DEGREE = 10 !< panelKind parameter for triangular panels @ingroup MeshConstants
 	integer(KINT), parameter ::	ADVECTION_SOLVER = 90 !< problemKind parameter for spherical advection @ingroup MeshConstants
 	integer(KINT), parameter ::	BVE_SOLVER = 91 !< problemKind parameter for quadrilateral panels @ingroup MeshConstants
@@ -62,19 +62,19 @@ module NumberKindsModule
 	integer(KINT), parameter ::	FREE_BOUNDARIES = 101 !< boundary condition parameter for planar meshes @ingroup MeshConstants
 	integer(KINT), parameter ::	PERIODIC_BOUNDARIES = 102 !< boundary condition parameter for planar meshes @ingroup MeshConstants
 
-	integer(KINT), parameter :: TRI_HEX_SEED = 201
-	integer(KINT), parameter :: QUAD_RECT_SEED = 202
-	integer(KINT), parameter :: POLAR_DISC_SEED = 203
-	integer(KINT), parameter :: QUAD_RECT_PERIODIC_SEED = 204
-	integer(KINT), parameter :: ICOS_TRI_SPHERE_SEED = 205
-	integer(KINT), parameter :: CUBED_SPHERE_SEED = 206
-	integer(KINT), parameter :: BETA_PLANE_SEED = 207
-	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208
+	integer(KINT), parameter :: TRI_HEX_SEED = 201 !< seed identifier
+	integer(KINT), parameter :: QUAD_RECT_SEED = 202 !< seed identifier
+	integer(KINT), parameter :: POLAR_DISC_SEED = 203 !< seed identifier
+	integer(KINT), parameter :: QUAD_RECT_PERIODIC_SEED = 204 !< seed identifier
+	integer(KINT), parameter :: ICOS_TRI_SPHERE_SEED = 205 !< seed identifier
+	integer(KINT), parameter :: CUBED_SPHERE_SEED = 206!< seed identifier
+	integer(KINT), parameter :: BETA_PLANE_SEED = 207 !< seed identifier
+	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208!< seed identifier
 	real(KREAL), save :: SphereRadius = 1.0_kreal
 
-	logical(klog), save :: testPass = .TRUE.
+	logical(klog), save :: testPass = .TRUE. !< global test variable
 
-	real(kreal), parameter :: dzero = 0.0_kreal
+	real(kreal), parameter :: dzero = 0.0_kreal !< timesaver
 
 	integer(KINT), save :: numProcs = 1 !< number of processess @ingroup MPIVariables
 	integer(KINT), save :: procRank = 0 !< process rank @ingroup MPIVariables

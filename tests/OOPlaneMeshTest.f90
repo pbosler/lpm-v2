@@ -14,6 +14,7 @@ integer(kint) ::  initNest, i, j, doOutput
 character(len=56) :: mesh_type, vtkFile
 
 real(kreal), parameter :: intCosBump = 16.0_kreal / PI**2
+real(kreal), parameter :: triIntExact = 1.4741613930426135683_kreal
 
 type(Logger) :: exeLog
 character(len=56) :: logkey = "OOPlaneMestTest"
@@ -86,7 +87,10 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     computedIntegral = mesh_ptr%integrateScalar(scalarField)
 
     call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "scalar integral = ", computedIntegral)
-    if (mesh_ptr%faceKind == QUAD_PANEL .or. mesh_ptr%faceKind==QUAD_CUBIC_PANEL) then
+    if (mesh_ptr%faceKind == TRI_PANEL) then
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "mesh size = ", mesh_ptr%edges%avgLength(mesh_ptr%particles))
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "abs(integralErr) = ", abs(computedIntegral-triIntExact))
+    elseif (mesh_ptr%faceKind == QUAD_PANEL .or. mesh_ptr%faceKind==QUAD_CUBIC_PANEL) then
         call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "mesh size = ", mesh_ptr%edges%avgLength(mesh_ptr%particles))
         call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "abs(integralErr) = ", abs(computedIntegral-intCosBump))
     endif
