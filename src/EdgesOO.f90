@@ -29,6 +29,7 @@ use ParticlesOOModule
 use SphereGeomModule
 use PlaneGeomModule
 use STDIntVectorModule
+use CubicGLLModule
 
 implicit none
 private

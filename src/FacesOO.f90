@@ -27,6 +27,7 @@ use ParticlesOOModule
 use EdgesOOModule
 use PlaneGeomModule
 use SphereGeomModule
+use CubicGLLModule
 
 implicit none
 private
@@ -63,6 +64,7 @@ type, abstract :: Faces
         procedure :: sharedEdge
         procedure :: logStats
         procedure :: writeMatlab
+        
 end type
 
 !>@brief  Common interface to divide all face types
@@ -939,6 +941,8 @@ pure function physCentroid(self, index, aParticles)
         physCentroid = physCentroid / norm
     endif
 end function
+
+
 
 !> @brief Computes the centroid (in Lagrangian space) of a face based on its vertices.
 !> @param[in] self Target faces object

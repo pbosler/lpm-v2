@@ -67,6 +67,7 @@ use FacesOOModule
 use PlaneGeomModule
 use SphereGeomModule
 use FieldOOModule
+use CubicGLLModule
 
 implicit none
 private
@@ -84,6 +85,7 @@ type PolyMesh2d
     integer(kint) :: initNest = 0 !< initial refinement level (in terms of the @ref Faces quadtree) for a mesh
     integer(kint) :: maxNest = 0 !< maximum tree Faces tree depth allowed. Used for memory allocation.
     integer(kint) :: amrLimit = 0 !< Number of times a face may be divided beyond the initial refinement level
+    integer(kint) :: nRootFaces = 0 !< Number of faces in the mesh seed
     real(kreal) :: t = dzero !< time value represented by the mesh
     real(kreal) :: maxRadius = 1.0_kreal
 
@@ -99,6 +101,12 @@ type PolyMesh2d
         procedure :: writeVTKSerialStartXML
         procedure :: writeVTKSerialEndXML
         procedure :: integrateScalar
+        procedure :: locatePointInFace
+        procedure, private :: locatePointTree
+        procedure, private :: locatePointWalk
+        procedure, private :: nearestRootFace
+        procedure :: ccwEdgesAroundFace
+        procedure :: ccwAdjacentFaces
 !        procedure :: copy
 !        procedure :: refine
 
@@ -453,6 +461,178 @@ pure function nEdgesInMesh(self, nVerts, nFaces, nestLevel)
     end select
 end function
 
+function ccwAdjacentFaces(self, faceIndex)
+    type(STDIntVector) :: ccwAdjacentFaces
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: faceIndex
+    !
+    type(STDIntVector) :: leafEdges
+    integer(kint) :: i
+    
+    leafEdges = self%ccwEdgesAroundFace(faceIndex)
+    call initialize(ccwAdjacentFaces)
+    do i=1,leafEdges%n
+        if (self%edges%positiveOrientation(leafEdges%int(i), faceIndex)) then
+            call ccwAdjacentFaces%pushBack(self%edges%rightFace(leafEdges%int(i)))
+        else
+            call ccwAdjacentFaces%pushBack(self%edges%leftFace(leafEdges%int(i)))
+        endif
+    enddo
+end function
+
+function ccwEdgesAroundFace(self, faceIndex)
+    type(STDIntVector) :: ccwEdgesAroundFace
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: faceIndex
+    !
+    integer(kint) :: i, j, ne
+    type(STDIntVector), dimension(4) :: edgeLeaves
+    
+    if (self%faceKind == TRI_PANEL) then
+        ne = 3
+    else
+        ne = 4
+    endif
+    do i=1, ne
+        edgeLeaves(i) = self%edges%getLeafEdges(self%faces%edges(i,faceIndex))
+    enddo
+    
+    call initialize(ccwEdgesAroundFace)
+    do i=1,ne
+        do j=1, edgeLeaves(i)%n
+            call ccwEdgesAroundFace%pushBack(edgeLeaves(i)%int(j))
+        enddo
+    enddo
+end function
+
+function locatePointInFace(self, queryPt)
+    integer(kint) :: locatePointinFace
+    class(PolyMesh2d), intent(in) :: self
+    real(kreal), dimension(3), intent(in) :: queryPt
+    !
+    integer(kint) :: treeStart, walkStart
+    
+    locatePointInFace = 0
+    treeStart = self%nearestRootFace(queryPt)
+    walkStart = self%locatePointTree(queryPt, treeStart)
+    locatePointInFace = self%locatePointWalk(queryPt, walkStart)
+end function
+
+function nearestRootFace(self, queryPt)
+    integer(kint) :: nearestRootFace
+    real(kreal), dimension(3), intent(in) :: queryPt
+    class(PolyMesh2d), intent(in) :: self
+    !
+    integer(kint) :: i
+    real(kreal) :: dist, testDist
+    real(kreal), dimension(3) :: centroid
+    
+    nearestRootFace = 1
+    centroid = self%faces%physCentroid(1, self%particles)
+    if (self%geomKind == SPHERE_GEOM) then
+        dist = SphereDistance(centroid, queryPt)
+        do i=2, self%nRootFaces
+            centroid = self%faces%physcentroid(i, self%particles)
+            testDist = SphereDistance(centroid, queryPt)
+            if (testDist < dist) then
+                dist = testDist
+                nearestRootFace = i
+            endif
+        enddo
+    else
+        dist = sqrt(sum((queryPt-centroid)*(queryPt-centroid)))
+        do i=2, self%nRootFaces
+            centroid = self%faces%physCentroid(i, self%particles)
+            testDist = sqrt(sum((queryPt-centroid)*(queryPt-centroid)))
+            if (testDist < dist) then
+                dist = testDist
+                nearestRootFace = i
+            endif
+        enddo
+    endif
+end function
+
+recursive function locatePointWalk(self, queryPt, startIndex) result(faceIndex)
+    integer(kint) :: faceIndex
+    class(PolyMesh2d), intent(in) :: self
+    real(kreal), dimension(3), intent(in) :: queryPt
+    integer(kint), intent(in) :: startIndex
+    !
+    real(kreal) :: dist, testDist
+    real(kreal), dimension(3) :: centroid
+    integer(kint) :: currentFace, i
+    type(STDIntVector) :: adjFaces
+    
+    if (self%faces%hasChildren(startIndex)) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" locatePointWalkSearch ERROR:"," expected a leaf face.")
+		return
+    endif
+    
+    adjFaces = ccwAdjacentFaces(self, startIndex)
+    
+    faceIndex = 0
+    currentFace = faceIndex
+    centroid = self%faces%physCentroid(startIndex, self%particles)
+    if (self%geomKind == SPHERE_GEOM) then
+        dist = SphereDistance(centroid, queryPt)
+    else
+        dist = sqrt(sum((centroid-queryPt)*(centroid-queryPt)))
+    endif
+    do i=1, adjFaces%n
+        if (adjFaces%int(i) > 0 ) then ! skip faces adjacent to domain boundary
+            centroid = self%faces%physCentroid(adjFaces%int(i), self%particles)
+            if (self%geomKind == SPHERE_GEOM) then
+                testDist = SphereDistance(centroid, queryPt)
+            else
+                testDist = sqrt(sum((centroid-queryPt)*(centroid-queryPt)))
+            endif
+            if (testDist < dist) then
+                dist = testDist
+                currentFace = adjFaces%int(i)
+            endif
+        endif
+    enddo
+    
+    if (currentFace == startIndex) then
+        faceIndex = currentFace
+    else
+        faceIndex = locatePointWalk(self, queryPt, currentFace)
+    endif
+end function
+
+recursive function locatePointTree(self, queryPt, startIndex) result(faceIndex)
+    integer(kint) :: faceIndex
+    class(PolyMesh2d), intent(in) :: self
+    real(kreal), dimension(3), intent(in) :: queryPt
+    integer(kint), intent(in) :: startIndex
+    !
+    real(kreal) :: dist, testDist
+    real(kreal), dimension(3) :: centroid
+    integer(kint) :: i, nearestChild
+    
+    faceIndex = 0
+    nearestChild = 0
+    centroid = dzero
+    dist = 999.0d20
+    if (self%faces%hasChildren(startIndex)) then
+        do i=1,4
+            centroid = self%faces%physCentroid(self%faces%children(i,startIndex), self%particles)
+            if (self%geomKind == SPHERE_GEOM) then
+                testDist = SphereDistance(queryPt, centroid)
+            else
+                testDist = sqrt(sum( (queryPt-centroid)*(queryPt-centroid)))
+            endif
+            if (testDist < dist) then
+                nearestChild = self%faces%children(i, startIndex)
+                dist = testDist
+            endif
+        enddo
+        faceIndex = locatePointTree(self, queryPt, nearestChild)
+    else
+        faceIndex = startIndex
+    endif
+end function
+
 !> @brief Initializes a mesh using a mesh seed from a file to define the root set of @ref Particles, @ref Edges, and @ref Faces.
 !> Mesh seeds are defined in both @ref NumberKinds and via the corresponding.  See meshSeeds.py for complete details.
 !> Multiplies particle postions by a specified amount to change the spatial domain (all mesh seeds approximately cover 
@@ -561,16 +741,12 @@ subroutine getSeed(self)
         nMaxFaces = nMaxFaces + self%nFacesInMesh(i)
         nMaxEdges = nMaxEdges + self%nEdgesInMesh(self%nVerticesInMesh(i), self%nFacesInMesh(i),i)
     enddo
-
-
-!    print *, "nMaxParticles = ", nMaxParticles, ", nMaxFaces = ", nMaxFaces, ", nMaxEdges = ", nMaxEdges
-
+    
+    self%nRootFaces = nSeedFaces
     call self%particles%init(nMaxParticles, self%geomKind)
     call self%edges%init(nMaxEdges)
     call self%faces%init(self%faceKind, nMaxFaces)
 
-!    call LogMessage(log,DEBUG_LOGGING_LEVEL,trim(logKey)//" return from ", "initial allocations.")
-!    call self%logStats(log)
 
     allocate(seedXYZ(3,nSeedParticles))
     allocate(seedEdgeOrigs(nSeedEdges))
@@ -599,13 +775,10 @@ subroutine getSeed(self)
 
     seedXYZ = self%maxRadius * seedXYZ
 
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", "reedSeedFile")
-
     ! initialize mesh
     do i=1, nSeedParticles
         call self%particles%insert(seedXYZ(:,i), seedXYZ(:,i))
     enddo
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", "insert particles")
 
     if ( self%particles%N /= nSeedParticles ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey//" initMeshFromSeed ERROR : "," particles%N.")
@@ -614,7 +787,6 @@ subroutine getSeed(self)
 	do i=1, nSeedEdges
 	    call self%edges%insert(seedEdgeOrigs(i), seedEdgeDests(i), seedEdgeLefts(i), seedEdgeRights(i), seedEdgeInts(:,i))
 	enddo
-!	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", "insert edges")
 
 	if ( self%edges%N /= nSeedEdges ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey//" initMeshFromSeed ERROR : "," edges%N.")
@@ -623,9 +795,6 @@ subroutine getSeed(self)
 	do i=1, nSeedFaces
 	    call self%faces%insert(seedFaceCenters(:,i), seedFaceVerts(:,i), seedFaceEdges(:,i))
 	enddo
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", "insert faces")
-!    print *, self%faces%vertices(:,1:4)
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", "insert faces2")
 	!
 	!   set face areas and particle weights
 	!
@@ -635,7 +804,6 @@ subroutine getSeed(self)
         self%faces%area(i) = self%faces%setArea(i, self%particles)
     enddo
 
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" returned from ", " set face area.")
 
     if (self%faceKind == QUAD_PANEL .or. self%faceKind == TRI_PANEL) then
         do i=1, nSeedFaces
@@ -653,9 +821,6 @@ subroutine getSeed(self)
             do j=1,4
                 jac(12+j) = bilinearPlaneJacobian(seedXYZ(:,1:4), quad16_center_qp(1,j), quad16_center_qp(2,j))
             enddo
-!            do j=1,16
-!                print *, "jac(",j,") = ", jac(j)
-!            enddo
             do j=1,12
                 self%particles%weight(self%faces%vertices(j,i)) = quad16_vertex_qw(j) * jac(j)
             enddo
@@ -758,3 +923,4 @@ end subroutine
 
 !> @}
 end module
+
