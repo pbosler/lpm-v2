@@ -69,6 +69,8 @@ use SphereGeomModule
 use FieldOOModule
 use CubicGLLModule
 
+#include "LpmConfig.h"
+
 implicit none
 private
 
@@ -662,7 +664,7 @@ subroutine getSeed(self)
          allocate( LinearEdges :: self%edges)
          allocate( TriLinearFaces :: self%faces)
 
-        seedfilename = "triHex.namelist"
+        seedfilename = MESH_SEED_DIR//"/triHex.namelist"
 
         nSeedParticles = 13
         nSeedEdges = 12
@@ -677,7 +679,7 @@ subroutine getSeed(self)
         allocate(LinearEdges :: self%edges)
         allocate(QuadLinearFaces :: self%faces)
 
-        seedfilename = "quadRect.namelist"
+        seedfilename = MESH_SEED_DIR//"/quadRect.namelist"
         nSeedParticles = 13
         nSeedEdges = 12
         nSeedFaces = 4
@@ -688,7 +690,7 @@ subroutine getSeed(self)
     elseif (self%meshSeed == CUBIC_PLANE_SEED) then
         allocate(CubicEdges :: self%edges)
         allocate(QuadCubicFaces :: self%faces)
-        seedfilename = "quadCubic.namelist"
+        seedfilename = MESH_SEED_DIR//"/quadCubic.namelist"
         nSeedParticles = 49
         nSeedEdges = 12
         nSeedFaces = 4
@@ -700,7 +702,7 @@ subroutine getSeed(self)
         allocate(LinearEdges :: self%edges)
         allocate(TriLinearFaces :: self%faces)
 
-        seedfilename = "icosTri.namelist"
+        seedfilename = MESH_SEED_DIR//"/icosTri.namelist"
         nSeedParticles = 32
         nSeedEdges = 30
         nSeedFaces = 20
@@ -712,7 +714,7 @@ subroutine getSeed(self)
         allocate(LinearEdges :: self%edges)
         allocate(QuadLinearFaces :: self%faces)
 
-        seedfilename = "cubedSphere.namelist"
+        seedfilename = MESH_SEED_DIR//"/cubedSphere.namelist"
         nSeedParticles = 14
         nSeedEdges = 12
         nSeedFaces = 6

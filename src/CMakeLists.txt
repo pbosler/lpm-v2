@@ -12,8 +12,11 @@ add_library( lpmFortran TypeDefs.f90 Utilities.f90 OutputWriter.f90 Logger.f90 S
 						SphereBVE.f90 SphereBVESolver.f90
 						SphereTransport.f90 SphereTransportSolver.f90 SphereTransportVelocities.f90
 						SphereTracers.f90
-						ParticlesOO.f90 EdgesOO.f90 FacesOO.f90 PolyMeshOO.f90 FieldOO.f90 CubicGLL.f90
+						ParticlesOO.F EdgesOO.F FacesOO.F PolyMeshOO.F FieldOO.F CubicGLL.F
 						)
+SET_SOURCE_FILES_PROPERTIES(stripack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
+SET_SOURCE_FILES_PROPERTIES(ssrfpack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
+						
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})
 
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src)

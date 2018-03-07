@@ -1,8 +1,8 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 project (LPM)
-set ( LPM_VERSION_MAJOR 1)
-set ( LPM_VERSION_MINOR 0)
+set ( LPM_VERSION_MAJOR 2)
+set ( LPM_VERSION_MINOR 1)
 
 FIND_PACKAGE(MPI REQUIRED)
 FIND_PACKAGE(LAPACK REQUIRED)
@@ -23,8 +23,8 @@ endif ( NOT CMAKE_BUILD_TYPE)
 # FFLAGS depend on the compiler
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   # gfortran
-  set (CMAKE_Fortran_FLAGS_RELEASE "-O2 -fopenmp")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -fopenmp -fbacktrace -fbounds-check")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O2 -fopenmp -ffree-form")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -fopenmp -fbacktrace -fbounds-check -ffree-form")
 elseif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   # ifort
   set (CMAKE_Fortran_FLAGS_RELEASE "-O2 -openmp")
@@ -64,7 +64,7 @@ ADD_SUBDIRECTORY(tests)
 
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src)
 
-
+configure_file("${CMAKE_SOURCE_DIR}/LpmConfig.h.in" "${PROJECT_BINARY_DIR}/LpmConfig.h")
 
 
 

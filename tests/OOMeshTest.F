@@ -65,7 +65,7 @@ call runTest(mesh, mesh_type, initNest,mfile)
 call EndSection(exeLog)
 
 
-if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test Result: ", "PASSED")
+if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "", "TEST PASSED")
 
 contains
 
