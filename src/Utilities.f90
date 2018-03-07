@@ -60,6 +60,32 @@ end interface
 
 contains
 
+function geomString(geomKind)
+    character(len=56) :: geomString
+    integer(kint), intent(in) :: geomKind
+    if (geomKind == PLANAR_GEOM) then
+        geomString = "planar_geometry"
+    elseif(geomKind == SPHERE_GEOM) then
+        geomString = "sphere_geometry"
+    else
+        geomString = "invalid_geometry_kind"
+    endif
+end function
+
+function faceString(faceKind)
+    character(len=56) :: faceString
+    integer(kint), intent(in) :: faceKind
+    if (faceKind == QUAD_PANEL) then
+        faceString = "quad_panel"
+    elseif(faceKind == TRI_PANEL) then
+        faceString = "tri_panel"
+    elseif(faceKind == QUAD_CUBIC_PANEL) then
+        faceString = "quad_cubic_panel"
+    else
+        faceString = "invalid faceKind"
+    endif
+end function
+
 pure function square(x)
     real(kreal) :: square
     real(kreal), intent(in) :: x

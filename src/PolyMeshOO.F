@@ -227,6 +227,8 @@ subroutine logStats(self, aLog)
     call LogMessage(aLog, TRACE_LOGGING_LEVEL, "maxNest = ", self%maxNest)
     call LogMessage(alog, TRACE_LOGGING_LEVEL, "amrLimit = ", self%amrLimit)
     call LogMessage(alog, TRACE_LOGGING_LEVEL, "maxRadius = ", self%maxRadius)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "geomKind = ", geomString(self%geomKind))
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "faceKind = ", faceString(self%faceKind))
     call self%particles%logStats(aLog)
     call self%edges%logStats(alog)
     call self%faces%logStats(aLog)
@@ -277,7 +279,7 @@ subroutine writeVTKSerialStartXML(self, fileunit)
             write(fileunit,'(3(F24.9,A))') self%particles%x(i), ' ', self%particles%y(i), ' ', dzero, ' '
         enddo
     elseif (self%geomKind == SPHERE_GEOM) then
-        write(fileunit,'(A)') '      <DataArra type="Float32" NumberOfComponents="3" format="ascii">'
+        write(fileunit,'(A)') '      <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
         do i=1, self%particles%N
             !write(fileunit,'(3(F24.9,A))',advance='no') self%particles%x(i), ' ', self%particles%y(i), ' ', &
             !    self%particles%z(i), ' '
@@ -516,7 +518,9 @@ function locatePointInFace(self, queryPt)
     
     locatePointInFace = 0
     treeStart = self%nearestRootFace(queryPt)
+!    call LogMessage(log, DEBUG_LOGGING_LEVEL, "locatePoint treeStart = ", treeStart)
     walkStart = self%locatePointTree(queryPt, treeStart)
+!    call LogMessage(log, DEBUG_LOGGING_LEVEL, "locatePoint walkStart = ", walkStart)
     locatePointInFace = self%locatePointWalk(queryPt, walkStart)
 end function
 
@@ -565,6 +569,10 @@ recursive function locatePointWalk(self, queryPt, startIndex) result(faceIndex)
     integer(kint) :: currentFace, i
     type(STDIntVector) :: adjFaces
     
+    if (startIndex == 0) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" locatePointWalkSearch ERROR:"," invalid startIndex.")
+		return
+    endif
     if (self%faces%hasChildren(startIndex)) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" locatePointWalkSearch ERROR:"," expected a leaf face.")
 		return
@@ -573,7 +581,7 @@ recursive function locatePointWalk(self, queryPt, startIndex) result(faceIndex)
     adjFaces = ccwAdjacentFaces(self, startIndex)
     
     faceIndex = 0
-    currentFace = faceIndex
+    currentFace = startIndex
     centroid = self%faces%physCentroid(startIndex, self%particles)
     if (self%geomKind == SPHERE_GEOM) then
         dist = SphereDistance(centroid, queryPt)
