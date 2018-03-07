@@ -60,7 +60,7 @@ def cubedSphereSeed():
     edgeOrigs = np.array([0,1,2,3,2,4,5,4,6,7,6,0],dtype=int)
     edgeDests = np.array([1,2,3,0,4,5,3,6,7,5,1,7],dtype=int)
     edgeLefts = np.array([0,0,0,0,1,1,1,2,2,2,3,3],dtype=int)
-    edgeRights= np.array([3,6,1,4,5,2,4,5,3,4,5,4],dtype=int)
+    edgeRights= np.array([3,5,1,4,5,2,4,5,3,4,5,4],dtype=int)
     edgeInteriors = None
     faceVerts = np.array([[0,1,2,3], [3,2,4,5], [5,4,6,7], [7,6,1,0], [7,0,3,5],[1,6,4,2]],dtype=int)
     faceEdges = np.array([[0,1,2,3], [2,4,5,6], [5,7,8,9], [8,10,0,11], [11,3,6,9],[10,7,4,1]],dtype=int)
@@ -542,11 +542,11 @@ def plotSphereSeed(oname, xyz, origs, dests, lefts, rights, ints, faceVerts, fac
         ax0.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax0.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
-        ax0.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
+        ax0.text(midpt[0], midpt[1]+0.05, str(einds[i] + indexBase), color='r')
         ax1.arrow(exy[0,0], exy[0,1], midpt[0]-exy[0,0], midpt[1]-exy[0,1], head_width=0.1,
             head_length=0.05, fc='r', ec='r', length_includes_head=False)
         ax1.plot([midpt[0],exy[-1,0]],[midpt[1],exy[-1,1]],'r-')
-        ax1.text(midpt[0], midpt[1]+0.05, str(einds[i]), color='r')
+        ax1.text(midpt[0], midpt[1]+0.05, str(einds[i]+indexBase), color='r')
 
 
 
