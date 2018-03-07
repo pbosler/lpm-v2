@@ -14,8 +14,14 @@ add_library( lpmFortran TypeDefs.f90 Utilities.f90 OutputWriter.f90 Logger.f90 S
 						SphereTracers.f90
 						ParticlesOO.F EdgesOO.F FacesOO.F PolyMeshOO.F FieldOO.F CubicGLL.F
 						)
-SET_SOURCE_FILES_PROPERTIES(stripack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
-SET_SOURCE_FILES_PROPERTIES(ssrfpack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
+						
+if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+    SET_SOURCE_FILES_PROPERTIES(stripack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
+    SET_SOURCE_FILES_PROPERTIES(ssrfpack.f PROPERTIES COMPILE_FLAGS -ffixed-form)
+elseif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+    SET_SOURCE_FILES_PROPERTIES(stripack.f PROPERTIES COMPILE_FLAGS -nofree)
+    SET_SOURCE_FILES_PROPERTIES(ssrfpack.f PROPERTIES COMPILE_FLAGS -nofree)	
+endif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
 						
 target_link_libraries( lpmFortran ${LAPACK_LIBRARIES})
 
