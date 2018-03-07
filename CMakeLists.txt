@@ -23,12 +23,12 @@ endif ( NOT CMAKE_BUILD_TYPE)
 # FFLAGS depend on the compiler
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   # gfortran
-  set (CMAKE_Fortran_FLAGS_RELEASE "-O2 -fopenmp -ffree-form")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -fopenmp -ffree-form")
   set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -fopenmp -fbacktrace -fbounds-check -ffree-form")
 elseif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   # ifort
-  set (CMAKE_Fortran_FLAGS_RELEASE "-O2 -openmp")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -openmp -debug all -debug-parameters -warn all -traceback")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -qopenmp")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -qopenmp -debug all -debug-parameters -warn all -traceback")
 else ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
   message ("Fortran compiler: " ${Fortran_COMPILER_NAME})
