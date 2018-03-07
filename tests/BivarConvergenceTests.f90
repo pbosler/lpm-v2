@@ -1,6 +1,7 @@
 program PlanarInterpConvergence
 
 use NumberKindsModule
+use UtilitiesModule
 use LoggerModule
 use PolyMesh2dModule
 use ParticlesModule
@@ -66,9 +67,9 @@ call New(exeLog, DEBUG_LOGGING_LEVEL)
 nestCtr = 1
 
 do initNest = nestStart, nestEnd
-	
+
 	write(logstring,'(2(A,I3),A)') "test ", nestCtr, ", of ", nestEnd-nestStart +1, "..."
-	
+
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL,"Interpolation Convergence : ", logString)
 	call cpu_time(testStart)
 	!
@@ -89,7 +90,7 @@ do initNest = nestStart, nestEnd
 	call New(estLap, 1, triMesh%particles%N, "estLaplacian","n/a")
 	call New(exactLap,1, triMesh%particles%N,"exactLaplacian", "n/a")
 	call New(lapError,1, triMesh%particles%N,"lapError","n/a")
-	
+
 	do i = 1, triMesh%particles%N
 		call InsertScalarToField( scalar, Gaussian( [triMesh%particles%x(i), triMesh%particles%y(i)], b) )
 		call InsertVectorToField(exactGrad, GaussGrad( [triMesh%particles%x(i), triMesh%particles%y(i)], b))
@@ -104,10 +105,10 @@ do initNest = nestStart, nestEnd
 		x(i) = xmin + dx * (i-1)
 		y(i) = ymin + dx * (i-1)
 	enddo
-	
-	allocate(ipt(6*triMesh%particles%N - 15))  ! triangle vertices : triangle I has vertices at 
+
+	allocate(ipt(6*triMesh%particles%N - 15))  ! triangle vertices : triangle I has vertices at
 											   !  	indices ipt(3*I-2), ipt(3*I-1), and ipt(3*I), for I = 1,...,nTri.
-	allocate(ipl(6*triMesh%particles%N))	   ! border edges and triangles : border edge I has 
+	allocate(ipl(6*triMesh%particles%N))	   ! border edges and triangles : border edge I has
 											   ! 	endpoint 1, endpoint 2, and triangle index stored at
 											   !	ipl(3*I-2), ipl(3*I-1), and ipl(3*I), for I = 1,...,nL.
 	allocate(iwl(18*triMesh%particles%N))	! workspace only
@@ -131,7 +132,7 @@ do initNest = nestStart, nestEnd
 	!
 	!	estimate partial derivatives at particles
 	!
-	allocate(partials(5*triMesh%particles%N)) ! partial derivatives : partials of of particle I stored at 
+	allocate(partials(5*triMesh%particles%N)) ! partial derivatives : partials of of particle I stored at
 											  !		partials(5*I-4:5*I)
 	call idpdrv( triMesh%particles%N, triMesh%particles%x, triMesh%particles%y, scalar%scalar, nTri, ipt, partials, wk)
 	do i = 1, triMesh%particles%N
@@ -139,12 +140,12 @@ do initNest = nestStart, nestEnd
 		call InsertVectorToField( est2ndPartials, partials(5*i-2:5*i))
 		call InsertScalarToField( estLap, partials(5*i-2) + partials(5*i))
 	enddo
-	
+
 	do i = 1, triMesh%particles%N
 		partials(5*i-4:5*i-3) = GaussGrad( [triMesh%particles%x(i), triMesh%particles%y(i)], b)
 		partials(5*i-2:5*i) = Gauss2ndDerivs( [triMesh%particles%x(i), triMesh%particles%y(i)], b)
 	enddo
-	
+
 	!
 	! 	interpolate the scalar
 	!
@@ -160,8 +161,8 @@ do initNest = nestStart, nestEnd
 			endif
 		enddo
 	enddo
-	
-	
+
+
 	!
 	! calculate derivative error at particles
 	!
@@ -176,16 +177,16 @@ do initNest = nestStart, nestEnd
 		xVecB = Gauss2ndDerivs( [triMesh%particles%x(i), triMesh%particles%y(i)], b)
 		call InsertVectorToField( partialsError, xVecA - xVecB )
 	enddo
-	
+
 	maxGradMag = MaxMagnitude(exactGrad)
 	meshSize(nestCtr) = MaxEdgeLength(triMesh%edges, triMesh%particles)
 	estGradError(nestCtr) = maxval(gradError%scalar)/maxGradMag
 	estLapError(nestCtr) = maxval(abs(lapError%scalar))/maxAbsLap
 	interpError(nestCtr) = maxval(abs(interpScalar-exactScalar))
-	
+
 	write(6,'(4A24)') "dx", "gradErr-particles", "lapErr-particles", "interp error"
 	write(6,'(4F24.10)') meshSize(nestCtr), estGradError(nestCtr), estLapError(nestCtr), interpError(nestCtr)
-				  
+
 	write(filename,'(A,I1,A)') 'BivarTestTriMesh', initNest, '.m'
 	open(unit=WRITE_UNIT_1,file=filename,status='REPLACE',action='WRITE')
 		call WriteParticlesToMatlab(triMesh%particles, WRITE_UNIT_1)
@@ -196,31 +197,31 @@ do initNest = nestStart, nestEnd
 		call WriteFieldToMatlab(exactLap, WRITE_UNIT_1)
 		call WriteFieldToMatlab(gradError, WRITE_UNIT_1)
 		call WriteFieldToMatlab(lapError, WRITE_UNIT_1)
-		
+
 		write(WRITE_UNIT_1,'(A)',advance='NO') "xi = ["
 		do i = 1, nn - 1
 			write(WRITE_UNIT_1,'(F18.12,A)', advance='NO') x(i), ", "
 		enddo
 		write(WRITE_UNIT_1,'(F18.12,A)') x(nn), "];"
 		write(WRITE_UNIT_1, '(A)') "yi = xi; "
-		
+
 		write(WRITE_UNIT_1,'(A)',advance='NO') "interp = ["
 		do i = 1, nn - 1
 			do j = 1, nn - 1
 				write(WRITE_UNIT_1,'(F18.12,A)',advance='NO') interpScalar(i,j), ", "
-			enddo 
+			enddo
 			write(WRITE_UNIT_1,'(F18.12,A)') interpScalar(i,nn), "; ..."
 		enddo
 		do j = 1, nn - 1
 			write(WRITE_UNIT_1,'(F18.12,A)',advance='NO') interpScalar(nn,j), ", "
-		enddo 
+		enddo
 		write(WRITE_UNIT_1,'(F18.12,A)') interpScalar(nn,nn), "];"
-		
+
 	close(WRITE_UNIT_1)
-	
+
 	call cpu_time(testEnd)
 	write(6,'(A,I8,A,F12.2,A)') "nParticles = ", triMesh%particles%N, ": elapsed time = ", testEnd-testStart, " seconds."
-	
+
 	!
 	! reset for next iteration
 	!
@@ -241,7 +242,7 @@ do initNest = nestStart, nestEnd
 	call Delete(estGrad)
 	call Delete(scalar)
 	call Delete(triMesh)
-	
+
 	call LogMessage(exeLog,TRACE_LOGGING_LEVEL, "test complete for initNest = ", initNest)
 	nestCtr = nestCtr + 1
 enddo
@@ -275,8 +276,8 @@ function Gaussian( xy, b )
 	real(kreal) :: Gaussian
 	real(kreal), intent(in) :: xy(2)
 	real(kreal), intent(in) :: b
-	
-	Gaussian = exp( - b * b * ( (xy(1)-xc)*(xy(1)-xc) + (xy(2)-yc)*(xy(2)-yc)))	
+
+	Gaussian = exp( - b * b * ( (xy(1)-xc)*(xy(1)-xc) + (xy(2)-yc)*(xy(2)-yc)))
 end function
 
 function GaussGrad(xy, b)

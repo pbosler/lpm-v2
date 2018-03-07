@@ -2,6 +2,7 @@ module FieldOOModule
 
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use ParticlesOOModule
 
 implicit none
@@ -345,7 +346,7 @@ subroutine writeVtkPointDataXML(self, fileunit)
     integer(kint), intent(in) :: fileunit
     !
     integer(kint) :: i
-    
+
     select case(self%nDim)
         case(1)
             write(fileunit,'(3A)') '      <DataArray type="Float32" Name="', trim(self%name), '" format="ascii">'

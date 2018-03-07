@@ -1,6 +1,7 @@
 program OOMeshTest
 
 use NumberKindsModule
+use UtilitiesModule
 use LoggerModule
 use PolyMeshOOModule
 

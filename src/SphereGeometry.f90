@@ -17,6 +17,7 @@ module SphereGeomModule
 !------------------------------------------------------------------------------
 
 use NumberKindsModule
+use UtilitiesModule
 
 implicit none
 
@@ -76,7 +77,7 @@ pure function pointAlongChordVector(p0, p1, s)
     real(kreal), dimension(3) :: pointAlongChordVector
     real(kreal), dimension(3), intent(in) :: p0, p1
     real(kreal), intent(in) :: s
-    
+
     pointAlongChordVector = 0.5_kreal * ( (1-s) * p0 + (1+s) * p1)
 end function
 
@@ -86,11 +87,11 @@ pure function pointAlongSphereVector(p0, p1, s)
     real(kreal), intent(in) :: s
     !
     real(kreal) :: norm
-    
+
     pointAlongSphereVector = pointAlongChordVector(p0, p1, s)
     norm = sqrt(sum(pointAlongSphereVector*pointAlongSphereVector))
     pointAlongSphereVector = pointAlongSphereVector / norm * SphereRadius
-end function 
+end function
 
 
 !------------------------------------------------------------------------------
@@ -129,8 +130,8 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param xA 
-!> @param yA 
+!> @param xA
+!> @param yA
 !> @param zA
 !> @param xB
 !> @param yB
@@ -190,8 +191,8 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xA double precision real  
-!> @param[in] yA double precision real 
+!> @param[in] xA double precision real
+!> @param[in] yA double precision real
 !> @param[in] zA
 !> @param[in] xB
 !> @param[in] yB
@@ -370,8 +371,8 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] xA double precision real  
-!> @param[in] yA double precision real 
+!> @param[in] xA double precision real
+!> @param[in] yA double precision real
 !> @param[in] zA
 !> @param[in] xB
 !> @param[in] yB
@@ -458,7 +459,7 @@ end function
 !> @ingroup SphereGeom
 !
 !> @param[in] x
-!> @param[in] y 
+!> @param[in] y
 !> @return Longitude
 !------------------------------------------------------------------------------
 pure function LongitudeComponents2(x,y)
@@ -489,9 +490,9 @@ end function
 !
 !> @ingroup SphereGeom
 !
-!> @param[in] x 
-!> @param[in] y 
-!> @param[in] z 
+!> @param[in] x
+!> @param[in] y
+!> @param[in] z
 !> @return Latitude of xyz
 !------------------------------------------------------------------------------
 pure function LatitudeComponents(x,y,z)
@@ -551,7 +552,7 @@ pure function EuclideanCentroid(xyzs)
     real(kreal), dimension(:,:), intent(in) :: xyzs
     !
     integer(kint) :: i, nv
-    
+
     nv = size(xyzs,2)
     EuclideanCentroid = dzero
     do i=1,nv
@@ -609,7 +610,7 @@ end function
 
 !------------------------------------------------------------------------------
 !> @author Peter Bosler
-!> @brief Computes a vector cross product 
+!> @brief Computes a vector cross product
 !
 !> @ingroup SphereGeom
 !

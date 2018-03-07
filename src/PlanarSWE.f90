@@ -2,14 +2,14 @@ module PlanarSWEModule
 !> @file PlanarSWE.f90
 !> Data structure for representing solutions of the shallow water equations in a beta-plane.
 !> @author Peter Bosler, Sandia National Laboratories, Center for Computing Research
-!> 
+!>
 !> @defgroup PlanarSWE PlanarSWE
-!> @brief Data structure for representing solutions of the shallow water equations in a beta-plane.  
+!> @brief Data structure for representing solutions of the shallow water equations in a beta-plane.
 !>
 !> Combines a @ref PolyMesh2d with data @ref Field objects relevant to the shallow water equations.  @n
 !> Solutions are integrated in time using the @ref SWEPlaneSolver module.
-!> 
-!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
+!>
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates),
 !> the BVEMesh data type adds @ref Field structures for relative vorticity @f$ \zeta(x,y,t) @f$, divergence @f$ \delta(x,y,t) @f$,
 !> the materially conserved absolute vorticity @f$ q(x_0,y_0) @f$, velocity @f$ \vec{u}(x,y,t) @f$ and the fluid depth @f$ h(x,y,t) @f$.
 !> Users may also specify bottom topography @f$ \eta_B(x,y) @f$.
@@ -18,14 +18,14 @@ module PlanarSWEModule
 !> 	q &= \frac{\zeta + f}{h}, \\
 !> \eta &= \eta_B + h,
 !> @f}
-!> where @f$ f = f_0 + \beta y(t) @f$ is the Coriolis parameter with constants @f$ f_0 @f$ and @f$ \beta @f$, and 
+!> where @f$ f = f_0 + \beta y(t) @f$ is the Coriolis parameter with constants @f$ f_0 @f$ and @f$ \beta @f$, and
 !> @f$ \eta @f$ is the fluid surface height.
 !>
-!> 
+!>
 !> @image html SWEVariables.png "Illustration of variable definitions used in the shallow water equations."
-!> 
+!>
 !> We again use Green's function for the Poisson equation with free boundaries in the plane to solve the PDE.
-!> 
+!>
 !> Following a discretization by an LPM particle set, we have
 !> @f{align*}{
 !>  \vec{u}(\vec{x},t) &= \int_{\mathbb{R}^2} \left(\vec{K}_\zeta(\vec{x},\vec{y})\zeta(\vec{y}) + \vec{K}_\delta(\vec{x},\vec{y})\delta(\vec{y})\right)\, dA(\vec{y}), \\
@@ -35,7 +35,7 @@ module PlanarSWEModule
 !>  \frac{dh}{dt} &= -h\delta, \\
 !>  \frac{dA}{dt} &= \delta A,
 !> @f}
-!> where the kernels @f$ \vec{K}_\zeta = -\nabla \times G @f$ and @f$ \vec{K}_\delta = \nabla G @f$ result from 
+!> where the kernels @f$ \vec{K}_\zeta = -\nabla \times G @f$ and @f$ \vec{K}_\delta = \nabla G @f$ result from
 !> applying the appropriate differential operators to the free space Green's function
 !> @f[
 !>	G(\vec{x},\vec{y}) = \frac{1}{4\pi}\log( |\vec{x}-\vec{y}|^2).
@@ -44,11 +44,12 @@ module PlanarSWEModule
 !> and @f$ \vec{K}_\delta @f$. @n
 !> The Laplacian of the fluid surface is evaluated on the particles using Particle Strength Exchange (PSE).
 !> See @ref PSEDirectSum for additional details.
-!>  
+!>
 !>
 !> @{
 use NumberKindsModule
 use OutputWriterModule
+use UtilitiesModule
 use LoggerModule
 use ParticlesModule
 use EdgesModule, only : MaxEdgeLength
@@ -84,10 +85,10 @@ type SWEMesh
 	real(kreal) :: f0 = 0.0_kreal !< beta plane parameter
 	real(kreal) :: beta = 0.0_kreal !< beta plane parameter
 	real(kreal) :: g = 0.0_kreal !< gravitational constant
-	real(kreal) :: pseEps = 0.0_kreal !< Regularization parameter for Particle Strength Exchange 
+	real(kreal) :: pseEps = 0.0_kreal !< Regularization parameter for Particle Strength Exchange
 	type(MPISetup) :: mpiParticles !< Distributes work on particles across available MPI ranks
 	contains
-		final :: deletePrivate	
+		final :: deletePrivate
 end type
 
 interface New
@@ -143,7 +144,7 @@ contains
 !
 
 !> @brief Allocates memory and initializes a planar mesh for solving the shallow water equations.
-!> 
+!>
 !> @param[out] self new SWE mesh
 !> @param[in] meshSeed mesh seed integer, as defined in @ref NumberKinds
 !> @param[in] initNest initial level of uniform refinement
@@ -161,45 +162,45 @@ subroutine newPrivate(self, meshSeed, initNest, maxNest, amrLimit, meshRadius, f
 	integer(kint), intent(in) :: amrLimit
 	real(kreal), intent(in) :: meshRadius
 	real(kreal), intent(in) :: f0, beta, g
-	
+
 	if ( .NOT. logInit ) call InitLogger(log, procRank)
-	
+
 	if ( meshSeed /= TRI_HEX_SEED .AND. meshSeed /= QUAD_RECT_SEED ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey), "new SWEMesh ERROR : invalid meshSeed.")
 		return
 	endif
-	
+
 	call New(self%mesh, meshSeed, initNest, maxNest, amrLimit, meshRadius )
-	
+
 	call New(self%relVort, 1, self%mesh%particles%N, "relVort", "1/s")
 	call New(self%potVort, 1, self%mesh%particles%N, "potVort", "1/s")
-	call New(self%divergence, 1, self%mesh%particles%N, "divergence", "1/s")	
+	call New(self%divergence, 1, self%mesh%particles%N, "divergence", "1/s")
 	call New(self%velocity, 2, self%mesh%particles%N, "velocity", "m/s")
 	call New(self%h, 1, self%mesh%particles%N, "h", "m")
 	call New(self%hBottom, 1, self%mesh%particles%N, "hB", "m")
 	call New(self%mpiParticles, self%mesh%particles%N, numProcs)
-	
+
 	self%f0 = f0
 	self%beta = beta
 	self%g = g
 end subroutine
 
 !> @brief Performs a deep copy of a SWE mesh
-!> @todo This subroutine is incomplete.  
+!> @todo This subroutine is incomplete.
 !> @warning Cannot do remesh/remap until it is done.
 subroutine copyPrivate(self, other)
 	type(SWEMesh), intent(inout) :: self
 	type(SWEMesh), intent(in) :: other
 	!
 	integer(kint) :: i
-	
+
 	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" copyPrivate : ", "entering")
-	
+
 	self%g = other%g
 	self%f0 = other%f0
 	self%beta = other%beta
 	self%pseEps = other%pseEps
-	
+
 	call Copy(self%mesh, other%mesh)
 	call Copy(self%relVort, other%relVort)
 	call Copy(self%potVort, other%potVort)
@@ -208,9 +209,9 @@ subroutine copyPrivate(self, other)
 	call Copy(self%h, other%h)
 	call Copy(self%hBottom, other%hBottom)
 	call Copy(self%mpiParticles, other%mpiParticles)
-	
+
 	if (allocated(other%tracers) .AND. (size(self%tracers) == size(other%tracers)) ) then
-		do i = 1, size(self%tracers)	
+		do i = 1, size(self%tracers)
 			call Copy(self%tracers(i), other%tracers(i))
 		enddo
 	endif
@@ -222,7 +223,7 @@ subroutine deletePrivate(self)
 	type(SWEMesh), intent(inout) :: self
 	!
 	integer(kint) :: i
-	
+
 	call Delete(self%mpiParticles)
 	call Delete(self%hBottom)
 	call Delete(self%relVort)
@@ -243,20 +244,20 @@ subroutine SetFieldN(self)
 	type(SWEMesh), intent(inout) :: self
 	!
 	integer(kint) :: nn
-	
+
 	nn = self%mesh%particles%N
-	
+
 	self%hBottom%N = nn
 	self%relVort%N = nn
 	self%potVort%N = nn
 	self%divergence%N = nn
 	self%velocity%N = nn
 	self%h%N = nn
-	
+
 end subroutine
 
 !> @brief Computes the fluid velocity at each particle in parallel using direct summation.
-!> @todo Verify whether or not this subroutine is ever used.  
+!> @todo Verify whether or not this subroutine is ever used.
 subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 	type(SWEMesh), intent(inout) :: self
 	type(Field), intent(inout) :: velocity
@@ -264,10 +265,10 @@ subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 	!
 	integer(kint) :: i, j, mpiErrCode
 	real(kint) :: denom
-	
+
 	call SetFieldToZero(velocity)
 	velocity%N = self%mesh%particles%N
-	
+
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		do j = 1, self%mesh%particles%N
 			if ( i /= j .AND. self%mesh%particles%isActive(j) ) then
@@ -279,12 +280,12 @@ subroutine SWEComputeVelocity(self, velocity, x, y, relVort, divergence, area )
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 				self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(velocity%yComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
-				self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)				
+				self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	enddo
 end subroutine
 
@@ -299,7 +300,7 @@ subroutine logStatsPrivate(self, aLog)
 	call LogStats(self%relVort, aLog)
 	call LogStats(self%potVort, aLog)
 	call LogStats(self%divergence, aLog)
-	call LogStats(self%velocity, aLog) 
+	call LogStats(self%velocity, aLog)
 	call LogStats(self%hBottom, aLog)
 	call LogStats(self%mpiParticles, aLog)
 end subroutine
@@ -317,17 +318,17 @@ subroutine AddTracers( self, nTracers, tracerDims )
 	integer(kint), dimension(:), intent(in) :: tracerDims
 	!
 	integer(kint) :: i
-	
+
 	if ( size(tracerDims) /= nTracers ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" AddTracers ERROR : ", &
 			" must specify dimension of each tracer field.")
 		return
 	endif
-	
+
 	allocate(self%tracers(nTracers))
 	do i = 1, nTracers
 		call New(self%tracers(i), tracerDims(i), self%mesh%particles%N)
-	enddo	
+	enddo
 end subroutine
 
 subroutine OutputToVTKFile( self, filename )
@@ -335,7 +336,7 @@ subroutine OutputToVTKFile( self, filename )
 	character(len=*), intent(in) :: filename
 	!
 	integer(kint) :: i, writeStat
-	
+
 	open(unit=WRITE_UNIT_1, file=filename, status="REPLACE", action="WRITE", iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(filename))
@@ -392,10 +393,10 @@ subroutine SetInitialVorticityOnMesh(self, vorticityFn )
 	procedure(scalarFnOf2DSpace) :: vorticityFn
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		call InsertScalarToField(self%relVort, vorticityFn( self%mesh%particles%x(i), self%mesh%particles%y(i) ) )
-	enddo	
+	enddo
 end subroutine
 
 subroutine SetInitialDivergenceOnMesh(self, divergenceFn )
@@ -403,10 +404,10 @@ subroutine SetInitialDivergenceOnMesh(self, divergenceFn )
 	procedure(scalarFnOf2DSpace) :: divergenceFn
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		call InsertScalarToField(self%divergence, divergenceFn( self%mesh%particles%x(i), self%mesh%particles%y(i) ) )
-	enddo	
+	enddo
 end subroutine
 
 subroutine SetInitialHOnMesh(self, hFn )
@@ -414,7 +415,7 @@ subroutine SetInitialHOnMesh(self, hFn )
 	procedure(scalarFnOf2DSpace) :: hFn
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		call InsertScalarToField(self%h, hFn( self%mesh%particles%x(i), self%mesh%particles%y(i) ))
 	enddo
@@ -425,11 +426,11 @@ subroutine SetBottomHeightOnMesh( self, depthFn)
 	procedure(scalarFnOf2DSpace) :: depthFn
 	!
 	integer(kint) :: i
-	
+
 	self%hBottom%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		self%hBottom%scalar(i) = depthFn( self%mesh%particles%x(i), self%mesh%particles%y(i) )
-	enddo		
+	enddo
 end subroutine
 
 subroutine SetInitialVelocityOnMesh(self, velFn)
@@ -437,7 +438,7 @@ subroutine SetInitialVelocityOnMesh(self, velFn)
 	procedure(vectorFnOf2DSpace) :: velFn
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		call InsertVectorToField(self%velocity, velFn( self%mesh%particles%x(i), self%mesh%particles%y(i)))
 	enddo
@@ -447,24 +448,24 @@ subroutine setVelocityFromFieldData(self)
 	type(SWEMesh), intent(inout) :: self
 	!
 	integer(kint) :: i, j, mpiErrCode
-	real(kreal) :: rotStrength, potStrength 
+	real(kreal) :: rotStrength, potStrength
 	real(kreal) :: sqDist, denom
 
 	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
 	print *, "remesh proc ", procRank
 	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
-	
+
 	call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" setVelocityFromFieldData : ", " entering.")
 	call LogStats(self, log)
 
 !	call SWEComputeVelocity(self, self%velocity, self%mesh%particles%x, self%mesh%particles%y, &
 !		self%relVort%scalar, self%divergence%scalar, self%mesh%particles%area )
-	
+
 !	if (procRank == 1) then
-!			
+!
 !	endif
 !	call MPI_BARRIER(MPI_COMM_WORLD, mpiErrCode)
-!	
+!
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		self%velocity%xComp(i) = 0.0_kreal
 		self%velocity%yComp(i) = 0.0_kreal
@@ -474,22 +475,22 @@ subroutine setVelocityFromFieldData(self)
 				sqDist = (self%mesh%particles%x(i) - self%mesh%particles%x(j))**2 + &
 						 (self%mesh%particles%y(i) - self%mesh%particles%y(j))**2
 				denom = 2.0_kreal * PI * sqDist
-			
+
 				rotStrength = self%relVort%scalar(j) * self%mesh%particles%area(j) / denom
 				potStrength = self%divergence%scalar(j) * self%mesh%particles%area(j) / denom
-				
-				self%velocity%xComp(i) = self%velocity%xComp(i) - & 
+
+				self%velocity%xComp(i) = self%velocity%xComp(i) - &
 						(self%mesh%particles%y(i) - self%mesh%particles%y(j)) * rotStrength + &
 						(self%mesh%particles%x(i) - self%mesh%particles%x(j)) * potStrength
 				self%velocity%yComp(i) = self%velocity%yComp(i) + &
 						(self%mesh%particles%x(i) - self%mesh%particles%x(j)) * rotStrength + &
 						(self%mesh%particles%y(i) - self%mesh%particles%y(j)) * potStrength
 			endif
-		enddo	
+		enddo
 	enddo
-!	
+!
 !	print *, "proc ", procRank, " velocity work done, waiting for broadcast."
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
@@ -505,7 +506,7 @@ subroutine SetInitialPotVortOnMesh( self )
 	!
 	integer(kint) :: i
 	real(kreal) :: pv
-	
+
 	do i = 1, self%mesh%particles%N
 		if ( self%h%scalar(i) > 0.0_kreal ) then
 			pv = (self%relVort%scalar(i) + self%f0 + self%beta*self%mesh%particles%y(i)) / self%h%scalar(i)

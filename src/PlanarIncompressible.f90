@@ -6,17 +6,17 @@ module PlanarIncompressibleModule
 !>
 !> @defgroup PlanarIncompressible PlanarIncompressible
 !> @brief Data structure for solving the fluid equations for two-dimensional (in the plane) inviscid, incompressible flow.
-!> 
+!>
 !> Inviscid planar incompressible flow may be characterized completely by the flow's vorticity and stream function.
 !> This module provides a data structure for discretizing the flow using a collection of point vortices.
-!> Each point vortex carries vorticity and is advected by the velocity induced by all other vortices.   
+!> Each point vortex carries vorticity and is advected by the velocity induced by all other vortices.
 !>
 !> The spatial domain is discretized in space and time by a @ref PolyMesh2d object.
-!> Associated @ref Field objects for vorticity, velocity, and the stream function are provided, as well as a set 
-!> of optional @ref Field objects for passive tracers carried by the flow.  
+!> Associated @ref Field objects for vorticity, velocity, and the stream function are provided, as well as a set
+!> of optional @ref Field objects for passive tracers carried by the flow.
 !>
-!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
-!> the PlaneMeshIncompressible data type adds fields for vorticity @f$ \zeta(\vec{x},t) @f$, which is materially conserved, 
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates),
+!> the PlaneMeshIncompressible data type adds fields for vorticity @f$ \zeta(\vec{x},t) @f$, which is materially conserved,
 !> velocity @f$ \vec{u}(\vec{x},t) @f$, and the stream function @f$ \psi(\vec{x},t) @f$.
 !> These variables are related by the equations
 !> @f{align*}{
@@ -24,24 +24,25 @@ module PlanarIncompressibleModule
 !>  \nabla^2 \psi & = - \zeta, \\
 !>  \zeta &= \nabla \times \vec{u}.
 !> @f}
-!> These equations are solved using vortex methods (particles = point vortices).  For more information on these 
+!> These equations are solved using vortex methods (particles = point vortices).  For more information on these
 !> numerical techniques, see
 !> * A. J. Chorin and J. E. Marsden, _A Mathematical Introduction to Fluid Mechanics_, 3rd edition, Springer, 2000.
 !> * G.-F. Cottet and P. D. Koumoutsakos, _Vortex Methods_, Cambridge University Press, 2000.
 !> * A. J. Majda and A. L. Bertozzi, _Vorticity and Incompressible Flow_, Cambridge University Press, 2002.
 !>
-!> Currently, only free boundary conditions are supported.  
+!> Currently, only free boundary conditions are supported.
 !> The flow is integrated in time using a @ref PlanarIncompressibleSolver object.
-!> 
-!> The data structure is designed to use a replicated data algorithm (via the @ref MPISetup module) for efficiency in 
+!>
+!> The data structure is designed to use a replicated data algorithm (via the @ref MPISetup module) for efficiency in
 !> parallel computing environments.
-!> 
-!> Output routines suitable for reading/dispaly with [Paraview](www.paraview.org) are provided. 
-!> 
+!>
+!> Output routines suitable for reading/dispaly with [Paraview](www.paraview.org) are provided.
+!>
 !> @{
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
+use UtilitiesModule
 use ParticlesModule
 use EdgesModule
 use FacesModule
@@ -77,7 +78,7 @@ type PlaneMeshIncompressible
 	type(Field), dimension(:), allocatable :: tracers  !< allocatable array of scalar and vector @ref Field objects
 	type(MPISetup) :: mpiParticles !< @ref MPISetup to distribute all particles over the available MPI ranks
 	logical(klog) :: useAMR = .FALSE. !< .TRUE. if mesh will be adaptively refined
-	
+
 	contains
 		final :: deletePrivate
 end type
@@ -126,11 +127,11 @@ contains
 !----------------
 !
 
-!> @brief Allocates memory and initializes a PlanarIncompressible mesh with accompanying @ref Field objects for physical variables.  
+!> @brief Allocates memory and initializes a PlanarIncompressible mesh with accompanying @ref Field objects for physical variables.
 !> Tracers must be added separately, if desired.
-!> 
+!>
 !> @param[out] self PlanarIncompressible mesh
-!> @param[in] initNest initial recursion level for @ref PolyMesh2d 
+!> @param[in] initNest initial recursion level for @ref PolyMesh2d
 !> @param[in] maxNest maximum recursion level for @ref PolyMesh2d
 !> @param[in] meshSeed mesh seed integer as defined by @ref NumberKinds
 !> @param[in] amrLimit maximum number of refinements beyond initNest allowed
@@ -142,13 +143,13 @@ subroutine newPrivate( self, initNest, maxNest, meshSeed, amrLimit, meshRadius )
 	integer(kint), intent(in) :: meshSeed
 	integer(kint), intent(in) :: amrLimit
 	real(kreal), intent(in) :: meshRadius
-	
+
 	if ( .NOT. logInit ) call InitLogger( log, procRank )
-	
+
 	call New(self%mesh, meshSeed, initNest, maxNest, amrLimit, meshRadius)
-	
+
 	self%useAMR = (( amrLimit > 0 ) .AND. (maxNest > initNest) )
-	
+
 	call New(self%vorticity, 1, self%mesh%particles%N_Max, "vorticity", "1/time")
 	call New(self%streamFn, 1, self%mesh%particles%N_Max, "streamFn", "area/time")
 	call New(self%velocity, 2, self%mesh%particles%N_Max, "velocity", "dist/time")
@@ -161,7 +162,7 @@ subroutine deletePrivate(self)
 	type(PlaneMeshIncompressible), intent(inout) :: self
 	!
 	integer(kint) :: i
-	
+
 	call Delete(self%mpiParticles)
 	call Delete(self%velocity)
 	call Delete(self%streamFn)
@@ -183,7 +184,7 @@ subroutine copyPrivate( self, other )
 	type(PlaneMeshIncompressible), intent(in) :: other
 	!
 	integer(kint) :: i
-	
+
 	call Copy(self%mesh, other%mesh)
 	call Copy(self%vorticity, other%vorticity)
 	call Copy(self%streamFn, other%streamFn)
@@ -206,18 +207,18 @@ subroutine AddTracers(self, nTracers, tracerDims)
 	integer(kint), dimension(:), intent(in) :: tracerDims
 	!
 	integer(kint) :: i
-	
+
 	if ( size(tracerDims) /= nTracers ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" AddTracers ERROR : ", &
 			" must specify dimension of each tracer field.")
 		return
 	endif
-	
+
 	allocate(self%tracers(nTracers))
 	do i = 1, nTracers
 		call New(self%tracers(i), tracerDims(i), self%mesh%particles%N_Max)
 	enddo
-end subroutine	
+end subroutine
 
 !> @brief Output basic information about a PlanarIncompressible mesh to a @ref Logger
 !> @param[in] self PlanarIncompressible mesh
@@ -225,7 +226,7 @@ end subroutine
 subroutine logStatsPrivate(self, alog)
 	type(PlaneMeshIncompressible), intent(in) :: self
 	type(Logger), intent(inout) :: aLog
-	
+
 	call StartSection(aLog, "PlaneMeshIncompressible Stats:")
 	call LogStats(self%mesh, alog)
 	call LogStats(self%vorticity, alog)
@@ -255,13 +256,13 @@ subroutine OutputToVTK(self, filename)
 	character(len=*), intent(in) :: filename
 	!
 	integer(kint) :: i, writeStat
-	
+
 	open( unit=WRITE_UNIT_1, file=filename, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(filename))
 			return
 		endif
-		
+
 		!
 		!	write points and topology
 		!
@@ -288,7 +289,7 @@ subroutine OutputToVTK(self, filename)
 end subroutine
 
 !> @brief Defines an initial vorticity distribution on a PlanarIncompressible mesh.
-!> 
+!>
 !> @param[inout] self PlanarIncompressible mesh
 !> @param[in] vortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf2DSpace
 subroutine SetInitialVorticityOnMesh( self, vortFn )
@@ -296,7 +297,7 @@ subroutine SetInitialVorticityOnMesh( self, vortFn )
 	procedure(scalarFnOf2DSpace) :: vortFn
 	!
 	integer(kint) :: i
-	
+
 	self%vorticity%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		self%vorticity%scalar(i) = vortFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i) )
@@ -304,7 +305,7 @@ subroutine SetInitialVorticityOnMesh( self, vortFn )
 end subroutine
 
 !> @brief Defines an initial velocity distribution on a PlanarIncompressible mesh.
-!> 
+!>
 !> @param[inout] self PlanarIncompressible mesh
 !> @param[in] velFn Velocity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf2DSpace
 subroutine setVelocityFromFunction( self, velFn )
@@ -313,7 +314,7 @@ subroutine setVelocityFromFunction( self, velFn )
 	!
 	integer(kint) :: i
 	real(kreal), dimension(2) :: velVec
-	
+
 	self%velocity%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		velVec = velFn( self%mesh%particles%x(i), self%mesh%particles%y(i))
@@ -323,7 +324,7 @@ subroutine setVelocityFromFunction( self, velFn )
 end subroutine
 
 !> @brief Defines an initial scalar tracer distribution on a PlanarIncompressible mesh.
-!> 
+!>
 !> @param[inout] self PlanarIncompressible mesh
 !> @param[in] tracerID index of tracer in `PlanarIncompressiblMesh%%tracers(:)`
 !> @param[in] tracerFn Tracer distribution function.  Must have same interface as numberkindsmodule::scalarFnOf2DSpace
@@ -333,7 +334,7 @@ subroutine SetScalarTracerOnMesh( self, tracerID, tracerFn )
 	procedure(scalarFnOf2DSpace) :: tracerFn
 	!
 	integer(kint) :: i
-	
+
 	self%tracers(tracerID)%N = self%mesh%particles%N
 	do i = 1, self%Mesh%particles%n
 		self%tracers(tracerID)%scalar(i) = tracerFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i))
@@ -341,7 +342,7 @@ subroutine SetScalarTracerOnMesh( self, tracerID, tracerFn )
 end subroutine
 
 !> @brief Defines an initial scalar tracer distribution on a PlanarIncompressible mesh.
-!> 
+!>
 !> @param[inout] self PlanarIncompressible mesh
 !> @param[in] tracerID index of tracer in `PlanarIncompressiblMesh%%tracers(:)`
 !> @param[in] tracerFn Tracer distribution function.  Must have same interface as numberkindsmodule::vectorFnOf2DSpace
@@ -352,7 +353,7 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn)
 	!
 	integer(kint) :: i
 	real(kreal), dimension(2) :: vecT
-	
+
 	self%tracers(tracerID)%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		vecT = tracerFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i))
@@ -370,7 +371,7 @@ function TotalKE( self )
 	!
 	integer(kint) :: i
 	real(kreal) :: spdSq
-	
+
 	TotalKE = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
@@ -389,7 +390,7 @@ function TotalEnstrophy(self)
 	type(PlaneMeshIncompressible), intent(in) :: self
 	!
 	integer(kint) :: i
-	
+
 	TotalEnstrophy = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
@@ -409,7 +410,7 @@ function MaxCirculationPerFace(self)
 	integer(kint) :: i
 	real(kreal) :: testCirc
 	integer(kint) :: particleIndex
-	
+
 	MaxCirculationPerFace = 0.0_kreal
 	do i = 1, self%mesh%faces%N
 		if ( .NOT. self%mesh%faces%hasChildren(i) ) then
@@ -427,7 +428,7 @@ subroutine setVelocityFromVorticity( self )
 	!
 	integer(kint) :: i, j, mpiErrCode
 	real(kreal) :: xi, yi, xj, yj, strength
-	
+
 	self%velocity%N = self%mesh%particles%N
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		self%velocity%xComp(i) = 0.0_kreal
@@ -455,7 +456,7 @@ subroutine setVelocityFromVorticity( self )
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
@@ -471,7 +472,7 @@ subroutine SetStreamFunctionOnMesh(self)
 	!
 	integer(kint) :: i, j, mpiErrCode
 	real(kreal) :: greensKernel, xi, xj, yi, yj
-	
+
 	self%streamFn%N = self%mesh%particles%N
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		self%streamFn%scalar(i) = 0.0_kreal
@@ -496,7 +497,7 @@ subroutine SetStreamFunctionOnMesh(self)
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%streamFn%scalar( self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 				self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
@@ -509,7 +510,7 @@ end subroutine
 !----------------
 !
 !> @brief Initializes a logger for the PlanarIncompressible module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor

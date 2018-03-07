@@ -2,6 +2,7 @@ program OOParticlesAndFieldTest
 
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use ParticlesOOModule
 use FieldOOModule
 

@@ -2,6 +2,7 @@ program stdIntVectorTest
 
 use NumberKindsModule
 use STDIntVectorModule
+use UtilitiesModule
 
 implicit none
 
@@ -68,7 +69,7 @@ print *, "contents of intVec1:"
 do i = 1, intVec1%N
 	write(6,'(I6)',advance='NO') intVec1%int(i)
 enddo
-print *, " " 
+print *, " "
 print *, " "
 
 call initialize(intVec3, intArray)

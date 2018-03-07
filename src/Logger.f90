@@ -8,10 +8,10 @@ module LoggerModule
 !> Peter Bosler, Sandia National Laboratories, Albuquerque, NM
 !
 !> @defgroup Logger Logger module
-!> A Logger object for writing output to console or to files. 
-!> 
+!> A Logger object for writing output to console or to files.
+!>
 !> Handles display, formatting, and organization of console messages.
-!> All messages are presumed to have a key - value pair.  
+!> All messages are presumed to have a key - value pair.
 !> For example, the key may be the origin of the message in the code, and the value contains the message content.
 !> @todo Move initLogger routines from each module to this module.
 !>
@@ -23,6 +23,7 @@ module LoggerModule
 use NumberKindsModule
 use OutputWriterModule
 use STDIntVectorModule
+use UtilitiesModule
 
 implicit none
 private
@@ -136,7 +137,7 @@ end subroutine
 
 !> @brief Logs a string key-value pair.
 !> @param self Target Logger object
-!> @param msgLevel Priority level of this message.  
+!> @param msgLevel Priority level of this message.
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
 !> @param string message content
@@ -152,7 +153,7 @@ subroutine LogString(self,msgLevel,key,string)
 			call Write(self%writer,key)
 		endif
 	endif
-	
+
 	if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
 	    testPass = .FALSE.
 	endif
@@ -160,7 +161,7 @@ end subroutine
 
 !> @brief Logs a string/integer key-value pair.
 !> @param self Target Logger object
-!> @param msgLevel Priority level of this message.  
+!> @param msgLevel Priority level of this message.
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
 !> @param val message content
@@ -187,7 +188,7 @@ subroutine LogIntVector(self, msgLevel, key, val )
 	integer(kint), intent(in) :: msgLevel
 	character(len=*), intent(in) :: key
 	type(STDIntVector), intent(in) :: val
-	
+
 	if ( msgLevel >= self%level ) then
 		call Write(self%writer, key, val)
 	endif
@@ -201,7 +202,7 @@ subroutine LogIntArray(self, msgLevel, key, val )
 	integer(kint), intent(in) :: msgLevel
 	character(len=*), intent(in) :: Key
 	integer(kint), dimension(:), intent(in) :: val
-	
+
 	if ( msgLevel >= self%level ) then
 		call Write(self%writer, key, val )
 	endif
@@ -212,7 +213,7 @@ end subroutine
 
 !> @brief Logs a string/real key-value pair.
 !> @param self Target Logger object
-!> @param msgLevel Priority level of this message.  
+!> @param msgLevel Priority level of this message.
 !> If it is below the priority of the logger object self, the message will not be displayed.
 !> @param key identification key for message
 !> @param val message content
@@ -238,7 +239,7 @@ subroutine StartSectionLogger(self,sectionName,description)
 	type(Logger), intent(inout) :: self
 	character(len=*), intent(in), optional :: sectionName
 	character(len=*), intent(in), optional :: description
-	
+
 	if ( present(sectionName) ) then
 		if ( present(description) ) then
 			call StartSection(self%writer,sectionName,description)

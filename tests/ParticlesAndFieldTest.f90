@@ -2,6 +2,7 @@ program ParticlesAndFieldTester
 
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use ParticlesModule
 use FieldModule
 
@@ -74,7 +75,7 @@ call Delete(exeLog)
 
 if (testPass) print*, "TEST PASSED."
 
-contains 
+contains
 
 function SineWaves( xy )
 	real(kreal) :: SineWaves
@@ -82,13 +83,13 @@ function SineWaves( xy )
 	SineWaves = sin( 2.0_kreal * PI * xy(1) / 5.0_kreal) * sin(2.0_kreal * PI * xy(2) / 5.0_kreal )
 end function
 
-function SineWavesGrad( xy ) 
+function SineWavesGrad( xy )
 	real(kreal) :: SineWavesGrad(2)
 	real(kreal), intent(in) :: xy(2)
 	SineWavesGrad(1) = 2.0_kreal * PI / 5.0_kreal * cos(2.0_kreal * PI * xy(1) / 5.0_kreal) * &
 		sin(2.0_kreal * PI * xy(2) / 5.0_kreal)
 	SineWavesGrad(2) = 2.0_kreal * PI / 5.0_kreal * sin(2.0_kreal * PI * xy(1) / 5.0_kreal) * &
 	    cos(2.0_kreal * PI * xy(2) / 5.0_kreal)
-end function 
+end function
 
 end program

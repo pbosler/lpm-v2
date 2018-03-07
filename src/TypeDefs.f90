@@ -72,58 +72,8 @@ module NumberKindsModule
 	integer(KINT), parameter :: CUBIC_PLANE_SEED = 208!< seed identifier
 	real(KREAL), save :: SphereRadius = 1.0_kreal
 
-	logical(klog), save :: testPass = .TRUE. !< global test variable
-
-	real(kreal), parameter :: dzero = 0.0_kreal !< timesaver
-
 	integer(KINT), save :: numProcs = 1 !< number of processess @ingroup MPIVariables
 	integer(KINT), save :: procRank = 0 !< process rank @ingroup MPIVariables
-
-	!> @brief Provides a generic function interface
-	interface
-		real(8) function scalarFnOf2DSpace( x, y)
-			real(8), intent(in) :: x, y
-		end function
-	end interface
-
-	!> @brief Provides a generic function interface
-	interface
-		real(8) function scalarFnOf3DSpace( x, y, z)
-			real(8), intent(in) :: x, y, z
-		end function
-	end interface
-
-	!> @brief Provides a generic function interface
-	interface
-		function scalarFnOf3DSpaceAndTime( x, y, z, t )
-			real(8) :: scalarFnOf3DSpaceAndTime
-			real(8), intent(in) :: x, y, z, t
-		end function
-	end interface
-
-	!> @brief Provides a generic function interface
-	interface
-		function vectorFnOf2DSpace( x, y )
-			real(8), dimension(2) :: vectorFnOf2DSpace
-			real(8), intent(in) :: x, y
-		end function
-	end interface
-
-	!> @brief Provides a generic function interface
-	interface
-		function vectorFnOf3DSpace( x, y, z)
-			real(8), dimension(3) :: vectorFnOf3DSpace
-			real(8), intent(in) :: x, y, z
-		end function
-	end interface
-
-	!> @brief Provides a generic function interface
-	interface
-		function vectorFnOf3DSpaceAndTime( x, y, z, t )
-			real(8), dimension(3) :: vectorFnOf3DSpaceAndTime
-			real(8), intent(in) :: x, y, z, t
-		end function
-	end interface
 !> @}
 end module NumberKindsModule
 

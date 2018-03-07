@@ -2,6 +2,7 @@ program OOPlaneMestTest
 
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use PolyMeshOOModule
 use FieldOOModule
 
@@ -67,7 +68,7 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     character(len=*), intent(in) :: oname
     !
     real(kreal) :: computedIntegral
-    
+
     allocate(mesh_ptr)
     allocate(scalarField)
     allocate(vectorField)
@@ -77,7 +78,7 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     call scalarField%init(1, mesh_ptr%particles%N, "scalar")
     do i=1, mesh_ptr%particles%N
         call scalarField%insertScalar(cosineBump([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
-    enddo    
+    enddo
 
     call vectorField%init(2, mesh_ptr%particles%N, "scalarGradient")
     do i=1, mesh_ptr%particles%n
@@ -119,7 +120,7 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     deallocate(mesh)
     nullify(mesh)
     nullify(vectorField)
-    nullify(scalarField)   
+    nullify(scalarField)
 end subroutine
 
 subroutine getInput(initNest, doOutput)
@@ -135,7 +136,7 @@ subroutine getInput(initNest, doOutput)
         call GETARG(1,argv)
         read(argv,*) initNest
         doOutput = 0
-    else 
+    else
         call GETARG(1,argv)
         read(argv,*) initNest
         call GETARG(2,argv)
@@ -170,4 +171,4 @@ pure function sineWaveGrad(xy)
     sinewaveGrad(2) = 2.0_kreal*PI*1.0_kreal * sin(2.0_kreal*PI*xy(1)*1.0_kreal) * cos(2.0_kreal*PI*xy(2)*1.0_kreal)
 end function
 
-end program 
+end program

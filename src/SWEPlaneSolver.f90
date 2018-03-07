@@ -2,24 +2,25 @@ module SWEPlaneSolverModule
 !> @file SWEPlaneSolver.f90
 !> Data structure for solving the Shallow Water Equations (SWE) in the beta plane.
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
-!> 
+!>
 !>
 !> @defgroup SWEPlaneSolver SWEPlaneSolver
 !> Data structure for solving the Shallow Water Equations (SWE) in the beta plane.
 !> Used with the @ref PlanarSWE module.
 !>
 !> The shallow water equations are presented in the detailed description of the @ref PlanarSWE module.  @n
-!> 
-!> Integrals are used to compute the velocity @f$\vec{u}@f$, the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$, and a PSE integral (see @ref PSEDirectSum) 
+!>
+!> Integrals are used to compute the velocity @f$\vec{u}@f$, the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$, and a PSE integral (see @ref PSEDirectSum)
 !> approximates the Laplacian of the fluid surface.@n
 !> As with the other integrals in LPM, these integrals are computed as a parallel direct summation across all MPI ranks.@n
 !> See sweplanesolvermodule::sweplanerhsintegrals.
-!> 
-!> All other terms are computed as ODEs along each particle trajectory; see sweplanesolvermodule::timestepprivate. 
-!> 
+!>
+!> All other terms are computed as ODEs along each particle trajectory; see sweplanesolvermodule::timestepprivate.
+!>
 !> @{
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use ParticlesModule
 use PolyMesh2dModule
 use FieldModule
@@ -54,7 +55,7 @@ type SWESolver
 	real(kreal), allocatable :: potVort(:) !< potential vorticity of each particle
 	real(kreal), allocatable :: doubleDot(:) !< double dot product of velocity at each particle
 	real(kreal), allocatable :: lapSurf(:) !< Laplacian of fluid surface at each particle
-	
+
 	real(kreal), allocatable :: xIn(:)  !< x-coordinate input to RK4
 	real(kreal), allocatable :: xStage1(:) !< x-coordinates of each particle at RK4 stage 1
 	real(kreal), allocatable :: xStage2(:) !< x-coordinates of each particle at RK4 stage 2
@@ -139,11 +140,11 @@ subroutine newPrivate( self, plane, topoFn )
 	procedure(scalarFnOf2dSpace) :: topoFn
 	!
 	integer(kint) :: i, nP
-	
+
 	if (.NOT. logInit ) call InitLogger(log, procRank)
-	
+
 	nP = plane%mesh%particles%N
-	
+
 	allocate(self%xStart(1:nP))
 	allocate(self%yStart(1:nP))
 	allocate(self%areaStart(1:nP))
@@ -156,7 +157,7 @@ subroutine newPrivate( self, plane, topoFn )
 	allocate(self%hStart(1:nP))
 	allocate(self%doubleDot(1:nP))
 	allocate(self%lapSurf(1:nP))
-	
+
 	allocate(self%xIn(1:nP))
 	allocate(self%xStage1(1:nP))
 	allocate(self%xStage2(1:nP))
@@ -187,7 +188,7 @@ subroutine newPrivate( self, plane, topoFn )
 	allocate(self%hStage2(1:nP))
 	allocate(self%hStage3(1:nP))
 	allocate(self%hStage4(1:nP))
-	
+
 	self%xStart = plane%mesh%particles%x(1:nP)
 	self%yStart = plane%mesh%particles%y(1:nP)
 	self%areaStart = plane%mesh%particles%area(1:nP)
@@ -198,7 +199,7 @@ subroutine newPrivate( self, plane, topoFn )
 	self%u = plane%velocity%xComp(1:nP)
 	self%v = plane%velocity%yComp(1:nP)
 	self%mask = plane%mesh%particles%isActive(1:nP)
-	
+
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xStart, self%yStart, self%relVortStart, &
 				self%divStart, self%hStart, topoFn, self%areaStart, self%mask, plane%pseEps, plane%mpiParticles)
 end subroutine
@@ -206,35 +207,35 @@ end subroutine
 subroutine logStatsPrivate(self, aLog)
 	type(SWESolver), intent(in) :: self
 	type(Logger), intent(inout) :: aLog
-	
+
 	call StartSection(aLog, trim(logKey)//" SWESolver Stats:")
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size xStart = ", size(self%xStart))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max xStart = ", maxval(self%xStart))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size yStart = ", size(self%yStart))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max yStart = ", maxval(self%yStart))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size u = ", size(self%u))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max u = ", maxval(self%u))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size v = ", size(self%v))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max v = ", maxval(self%v))
-		
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size doubleDot = ", size(self%doubleDot))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max doubleDot = ", maxval(self%doubleDot))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size lapSurf = ", size(self%lapSurf))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max lapSurf = ", maxval(self%lapSurf))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size relVortStart = ", size(self%relVortStart))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max relVortStart = ", maxval(self%relVortStart))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size hStart = ", size(self%hStart))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max hStart = ", maxval(self%hStart))
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "size areaStart = ", size(self%areaStart))
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max areaStart = ", maxval(self%areaStart))
-		
+
 	call EndSection(aLog)
 end subroutine
 
@@ -255,7 +256,7 @@ subroutine deletePrivate(self)
 		deallocate(self%hStart)
 		deallocate(self%doubleDot)
 		deallocate(self%lapSurf)
-	
+
 		deallocate(self%xIn)
 		deallocate(self%xStage1)
 		deallocate(self%xStage2)
@@ -301,7 +302,7 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 	procedure(scalarFnOf2dSpace) :: topoFn
 	!
 	integer(kint) :: i, nP
-	
+
 	nP = plane%mesh%particles%N
 	!
 	!	RK Stage 1
@@ -316,7 +317,7 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%hStage1(i) = dt * ( - self%hStart(i) * self%divStart(i))
 		self%areaStage1(i) = dt * ( self%areaStart(i) * self%divStart(i))
 	enddo
-	
+
 	!
 	!	RK Stage 2
 	!
@@ -328,10 +329,10 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%areaIn(i) = self%areaStart(i) + 0.5_kreal * self%areaStage1(i)
 		self%hIn(i) = self%hStart(i) + 0.5_kreal * self%hStage1(i)
 	enddo
-	
+
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xIn, self%yIn, self%relVortIn, &
 				self%divIn, self%hIn, topoFn, self%areaIn, self%mask, plane%pseEps, plane%mpiParticles)
-	
+
 	do i = 1, nP
 		self%xStage2(i) = dt * self%u(i)
 		self%yStage2(i) = dt * self%v(i)
@@ -342,7 +343,7 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%hStage2(i) = dt * ( - self%hIn(i) * self%divIn(i) )
 		self%areaStage2(i) = dt * ( self%areaIn(i) * self%divIn(i) )
 	enddo
-	
+
 	!
 	! RK Stage 3
 	!
@@ -354,10 +355,10 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%areaIn(i) = self%areaStart(i) + 0.5_kreal * self%areaStage2(i)
 		self%hIn(i) = self%hStart(i) + 0.5_kreal * self%hStage2(i)
 	enddo
-	
+
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xIn, self%yIn, self%relVortIn, &
 				self%divIn, self%hIn, topoFn, self%areaIn, self%mask, plane%pseEps, plane%mpiParticles)
-				
+
 	do i = 1, nP
 		self%xStage3(i) = dt * self%u(i)
 		self%yStage3(i) = dt * self%v(i)
@@ -368,7 +369,7 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%hStage3(i) = dt * ( - self%hIn(i) * self%divIn(i) )
 		self%areaStage3(i) = dt * ( self%areaIn(i) * self%divIn(i) )
 	enddo
-	
+
 	!
 	! RK Stage 4
 	!
@@ -380,10 +381,10 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%areaIn(i) = self%areaStart(i) + self%areaStage3(i)
 		self%hIn(i) = self%hStart(i) + self%hStage3(i)
 	enddo
-	
+
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xIn, self%yIn, self%relVortIn, &
 				self%divIn, self%hIn, topoFn, self%areaIn, self%mask, plane%pseEps, plane%mpiParticles)
-				
+
 	do i = 1, nP
 		self%xStage4(i) = dt * self%u(i)
 		self%yStage4(i) = dt * self%v(i)
@@ -394,7 +395,7 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%hStage4(i) = dt * ( - self%hIn(i) * self%divIn(i) )
 		self%areaStage4(i) = dt * ( self%areaIn(i) * self%divIn(i) )
 	enddo
-	
+
 	!
 	! RK Update
 	!
@@ -406,16 +407,16 @@ subroutine timestepPrivate( self, plane, dt, topoFn )
 		self%relVortStart(i) = self%relVortStart(i) + self%relVortStage1(i) / 6.0_kreal + self%relVortStage2(i) / 3.0_kreal + &
 										  self%relVortStage3(i) / 3.0_kreal + self%relVortStage4(i) / 6.0_kreal
 		self%hStart(i) = self%hStart(i) + self%hStage1(i) / 6.0_kreal + self%hStage2(i) / 3.0_kreal + &
-										  self%hStage3(i) / 3.0_kreal + self%hStage4(i) / 6.0_kreal	
+										  self%hStage3(i) / 3.0_kreal + self%hStage4(i) / 6.0_kreal
 		self%areaStart(i) = self%areaStart(i) + self%areaStage1(i) / 6.0_kreal + self%areaStage2(i) / 3.0_kreal + &
-										  self%areaStage3(i) / 3.0_kreal + self%areaStage4(i) / 6.0_kreal	
+										  self%areaStage3(i) / 3.0_kreal + self%areaStage4(i) / 6.0_kreal
 		self%divStart(i) = self%divStart(i) + self%divStage1(i) / 6.0_kreal + self%divStage2(i) / 3.0_kreal + &
-										  self%divStage3(i) / 3.0_kreal + self%divStage4(i) / 6.0_kreal								  
+										  self%divStage3(i) / 3.0_kreal + self%divStage4(i) / 6.0_kreal
 	enddo
-	
+
 	call SWEPlaneRHSIntegrals( self%u, self%v, self%doubleDot, self%lapSurf, self%xStart, self%yStart, self%relVortStart, &
 			self%divStart, self%hStart, topoFn, self%areaStart, self%mask, plane%pseEps, plane%mpiParticles)
-	
+
 	plane%mesh%particles%x(1:nP) = self%xStart
 	plane%mesh%particles%y(1:nP) = self%yStart
 	plane%mesh%particles%area(1:nP) = self%areaStart
@@ -434,11 +435,11 @@ end subroutine
 !
 
 !> @brief Computes the integral expressions on the right-hand side of the set of ODEs from a Lagrangian method of lines discretization; see @ref PlanarSWE.
-!> 
-!> Integrals are used to compute the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$ and a PSE integral (see @ref PSEDirectSum) 
+!>
+!> Integrals are used to compute the double dot product @f$ \nabla\vec{u}:\nabla\vec{u} @f$ and a PSE integral (see @ref PSEDirectSum)
 !> approximates the Laplacian of the fluid surface.@n
 !> As with the other integrals in LPM, these integrals are computed as a parallel direct summation across all MPI ranks.
-!> 
+!>
 !> @param[out] u x-component of velocity
 !> @param[out] v y-component of velocity
 !> @param[out] doubleDot double dot product
@@ -473,7 +474,7 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 	real(kreal) :: rotStrength, potStrength, denom, ddotkernel, pseKin, lapKernel
 	real(kreal) :: surfHeightI, surfHeightJ
 	real(kreal) :: ux, uy, vx, vy, denom2, sqDist
-	
+
 	do i = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 		u(i) = 0.0_kreal
 		v(i) = 0.0_kreal
@@ -492,16 +493,16 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 				denom2 = PI * sqdist * sqdist
 				rotStrength = vort(j) * area(j) / denom
 				potStrength = div(j) * area(j) / denom
-				
+
 				pseKin = sqrt( sqDist ) / pseEps
-				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
+				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2
 				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
-				
+
 				if ( i == j ) cycle
-				
+
 				u(i) = u(i) - (y(i) - y(j)) * rotStrength + (x(i) - x(j)) * potStrength
 				v(i) = v(i) + (x(i) - x(j)) * rotStrength + (y(i) - y(j)) * potStrength
-			
+
 				ux = ux + potStrength - ( (x(i) - x(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
 										 area(j) / denom2
 				uy = uy - rotStrength - ( (y(i) - y(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
@@ -509,7 +510,7 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 				vx = vx + rotStrength - ( (x(i) - x(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
 										 area(j) / denom2
 				vy = vy + potStrength - ( (y(i) - y(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
-										 area(j) / denom2		
+										 area(j) / denom2
 			endif
 		enddo
 !		do j = i + 1, size(x)
@@ -520,10 +521,10 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 !				denom2 = PI * sqdist * sqdist
 !				rotStrength = vort(j) * area(j) / denom
 !				potStrength = div(j) * area(j) / denom
-!				
+!
 !				u(i) = u(i) - (y(i) - y(j)) * rotStrength + (x(i) - x(j)) * potStrength
 !				v(i) = v(i) + (x(i) - x(j)) * rotStrength + (y(i) - y(j)) * potStrength
-!				
+!
 !				ux = ux + potStrength - ( (x(i) - x(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
 !					 			         area(j) / denom2
 !				uy = uy - rotStrength - ( (y(i) - y(j)) * ( (x(i) - x(j)) * div(j) - (y(i) - y(j)) * vort(j) ) ) * &
@@ -531,28 +532,28 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 !				vx = vx + rotStrength - ( (x(i) - x(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
 !										 area(j) / denom2
 !				vy = vy + potStrength - ( (y(i) - y(j)) * ( (y(i) - y(j)) * div(j) + (x(i) - x(j)) * vort(j) ) ) * &
-!										 area(j) / denom2		
-!			
+!										 area(j) / denom2
+!
 !				pseKin = sqrt( sqDist ) / pseEps
-!				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2 
+!				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseEps**2
 !				lapSurf(i) = lapSurf(i) + lapKernel * (surfHeightJ - surfHeightI) * area(j)
-!			endif		
+!			endif
 !		enddo
 		lapSurf(i) = lapSurf(i) / pseEps**2
 		doubleDot(i) = ux * ux + 2.0_kreal * uy * vx + vy * vy
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(u(mpiParticles%indexStart(i):mpiParticles%indexEnd(i)), mpiParticles%messageLength(i), &
 				MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(v(mpiParticles%indexStart(i):mpiParticles%indexEnd(i)), mpiParticles%messageLength(i), &
 				MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(doubleDot(mpiParticles%indexStart(i):mpiParticles%indexEnd(i)), mpiParticles%messageLength(i), &
-				MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)				
+				MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(lapSurf(mpiParticles%indexStart(i):mpiParticles%indexEnd(i)), mpiParticles%messageLength(i), &
 				MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	enddo
-	
+
 !	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" max u = ", maxval(u) )
 !	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" min u = ", minval(u) )
 !	call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" max v = ", maxval(v) )
@@ -564,7 +565,7 @@ subroutine SWEPlaneRHSIntegrals(u, v, doubleDot, lapSurf, x, y, vort, div, h, to
 end subroutine
 
 !> @brief Initializes a logger for the planar SWE solver module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor

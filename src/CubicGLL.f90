@@ -3,9 +3,11 @@ module CubicGLLModule
 use NumberKindsModule
 use UtilitiesModule
 
-implicit none 
+implicit none
 
 public
+
+integer(kint), parameter :: MAX_ITER = 20
 
 real(kreal), parameter :: r5 = sqrt(5.0_kreal)
 real(kreal), parameter :: oor5 = 1.0_kreal / r5
@@ -46,7 +48,7 @@ real(kreal), dimension(4), parameter :: quad16_center_qw =(/gll_cubic_qw(2)*gll_
                                               gll_cubic_qw(3)*gll_cubic_qw(3) /)
 
 contains
-                                            
+
 pure function bilinearMap(vertXyz, s1, s2)
     real(kreal), dimension(3) :: bilinearMap
     real(kreal), dimension(3,4), intent(in) :: vertXyz
@@ -55,6 +57,18 @@ pure function bilinearMap(vertXyz, s1, s2)
     bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,1) + (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
         (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
 end function
+
+
+!pure function bilinearMap(vertXyz, r1, r1)
+!    real(kreal), dimension(3) :: bilinearMap
+!    real(kreal), dimension(3,4), intent(in) :: vertXyz
+!    real(kreal), intent(in) :: r1, r2
+!    !
+!    real(kreal), dimension(3,4) :: Tmatrix
+!    real(kreal), dimension(4,4) :: Pmat =
+!
+!
+!end function
 
 function sphereQuadMap(vertXyz, s1, s2)
     real(kreal), dimension(3) :: sphereQuadMap
@@ -111,7 +125,7 @@ end function
 
 elemental function gll_cubic_basis3(x)
     real(kreal) :: gll_cubic_basis3
-    real(kreal), intent(in) :: x 
+    real(kreal), intent(in) :: x
     gll_cubic_basis3 = -r5 * (x-1.0_kreal)*(x+1.0_kreal)*(r5 + 5.0_kreal * x) / 8.0_kreal
 end function
 

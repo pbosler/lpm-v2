@@ -2,14 +2,15 @@ module BetaPlaneMeshModule
 !> @file BetaPlane.f90
 !> Data structure for  a planar incompressible flow with a background rotation
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
-!> 
+!>
 !>
 !> @defgroup BetaPlane BetaPlane
 !> Data structure for  a planar incompressible flow with a background rotation
-!> 
+!>
 !> @{
 use NumberKindsModule
 use OutputWriterModule
+use UtilitiesModule
 use LoggerModule
 use ParticlesModule
 use EdgesModule
@@ -50,7 +51,7 @@ type BetaPlaneMesh
 	real(kreal) :: beta = 0.0_kreal
 	type(MPISetup) :: mpiParticles
 	logical(klog) :: useAMR = .FALSE.
-	
+
 	contains
 		final :: deletePrivate
 end type
@@ -75,7 +76,7 @@ interface LogStats
 	module procedure logStatsPrivate
 end interface
 
-interface SetVelocityOnMesh 
+interface SetVelocityOnMesh
 	module procedure setVelocityFromFunction
 	module procedure setVelocityFromVorticity
 end interface
@@ -113,11 +114,11 @@ subroutine newPrivate( self, initNest, maxNest, amrLimit, baseLat, rotRate )
 	!
 	integer(kint), parameter :: meshSeed = BETA_PLANE_SEED
 	real(kreal), parameter :: ampFactor = 1.0_kreal
-	
+
 	if ( .NOT. logInit) call InitLogger(log, procRank)
-	
+
 	call New(self%mesh, meshSeed, initNest, maxNest, amrLimit, ampFactor)
-	
+
 	if ( abs(baseLat) > PI/2.0_kreal) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" NewBetaPlaneMesh ERROR : ", "invalid baseLat")
 	else
@@ -129,21 +130,21 @@ subroutine newPrivate( self, initNest, maxNest, amrLimit, baseLat, rotRate )
 			self%beta = 2.0_kreal * (2.0_kreal * PI) * cos( baseLat )
 		endif
 	endif
-	
+
 	call New(self%absVort, 1, self%mesh%particles%N_Max, "absVort", "1/time")
 	call New(self%relVort, 1, self%mesh%particles%N_Max, "relVort", "1/time")
 	call New(self%absStream, 1, self%mesh%particles%N_Max, "absStream", "area/time")
 	call New(self%relStream, 1, self%mesh%particles%N_Max, "relStream", "area/time")
 	call New(self%velocity, 2, self%mesh%particles%N_Max, "velocity", "distance/time")
-	
-	call New(self%mpiParticles, self%mesh%particles%N,  numProcs)	
+
+	call New(self%mpiParticles, self%mesh%particles%N,  numProcs)
 end subroutine
 
 subroutine deletePrivate(self)
 	type(BetaPlaneMesh), intent(inout) :: self
 	!
 	integer(kint) :: i
-	
+
 	call Delete(self%mpiParticles)
 	call Delete(self%velocity)
 	call Delete(self%relStream)
@@ -151,7 +152,7 @@ subroutine deletePrivate(self)
 	call Delete(self%relVort)
 	call Delete(self%absVort)
 	call Delete(self%mesh)
-	
+
 	if ( allocated(self%tracers) ) then
 		do i = 1, size(self%tracers)
 			call Delete(self%tracers(i))
@@ -163,7 +164,7 @@ end subroutine
 subroutine copyPrivate( self, other )
 	type(BetaPlaneMesh), intent(inout) :: self
 	type(BetaPlaneMesh), intent(in) :: other
-	
+
 	self%f0 = other%f0
 	self%beta = other%beta
 	call Copy(self%mesh, other%mesh)
@@ -181,13 +182,13 @@ subroutine AddTracers(self, nTracers, tracerDims)
 	integer(kint), dimension(:), intent(in) :: tracerDims
 	!
 	integer(kint) :: i
-	
+
 	if ( size(tracerDims) /= nTracers ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" AddTracers ERROR : ", &
 			" must specify dimension of each tracer field.")
 		return
 	endif
-	
+
 	allocate(self%tracers(nTracers))
 	do i = 1, nTracers
 		call New(self%tracers(i), tracerDims(i), self%mesh%particles%N_Max)
@@ -210,7 +211,7 @@ subroutine OutputToVTK(self, filename)
 	type(BetaPlaneMesh), intent(in) :: self
 	character(len=*), intent(in) :: filename
 	integer(kint) :: i, writeStat
-	
+
 	open(unit=WRITE_UNIT_1, file=filename, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(filename))
@@ -249,14 +250,14 @@ subroutine SetInitialVorticityOnMesh( self, relVortFn )
 	!
 	integer(kint) :: i
 	real(kreal) :: zeta
-	
+
 	self%relVort%N = self%mesh%particles%N
 	self%absVort%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		zeta = relVortFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i) )
 		self%relVort%scalar(i) = zeta
 		self%absVort%scalar(i) = zeta + self%f0 + self%beta * self%mesh%particles%y0(i)
-	enddo	
+	enddo
 end subroutine
 
 subroutine setVelocityFromFunction(self, velFn )
@@ -265,7 +266,7 @@ subroutine setVelocityFromFunction(self, velFn )
 	!
 	integer(kint) :: i
 	real(kreal), dimension(2) :: vel
-	
+
 	self%velocity%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
 		vel = velFn( self%mesh%particles%x(i), self%mesh%particles%y(i) )
@@ -280,7 +281,7 @@ subroutine SetScalarTracerOnMesh( self, tracerID, tracerFn )
 	procedure(scalarFnof2DSpace) :: tracerFn
 	!
 	integer(kint) :: I
-	
+
 	call SetFieldToZero(self%tracers(tracerID))
 	self%tracers(tracerID)%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
@@ -295,7 +296,7 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn)
 	!
 	integer(kint) :: i
 	real(kreal), dimension(2) :: vec
-	
+
 	call SetFieldToZero( self%tracers(tracerID))
 	self%tracers(tracerID)%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
@@ -311,7 +312,7 @@ function TotalKE( self )
 	!
 	integer(kint) :: i
 	real(kreal) :: magSq
-	
+
 	TotalKE = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
@@ -327,7 +328,7 @@ function TotalEnstrophy(self)
 	type(BetaPlaneMesh), intent(in) :: self
 	!
 	integer(kint) :: i
-	
+
 	TotalEnstrophy = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
@@ -344,7 +345,7 @@ function MaxCirculationMagnitudePerFace( self )
 	integer(kint) :: i
 	real(kreal) :: testCirc
 	integer(kint) :: particleIndex
-	
+
 	MaxCirculationMagnitudePerFace = 0.0_kreal
 	do i = 1, self%mesh%faces%N
 		if ( .NOT. self%mesh%faces%hasChildren(i) ) then
@@ -361,7 +362,7 @@ subroutine setVelocityFromVorticity( self )
 	integer(kint) :: i, j, mpiErrCode
 	real(kreal) :: strength
 	real(kreal), dimension(3) :: xi, xj
-	
+
 	self%velocity%N = self%mesh%particles%N
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		self%velocity%xComp(i) = 0.0_kreal
@@ -372,7 +373,7 @@ subroutine setVelocityFromVorticity( self )
 				xj = PhysCoord(self%mesh%particles, j)
 				strength = 0.5_kreal * self%relVort%scalar(j) * self%mesh%particles%area(j) / &
 					( cosh( 2.0_kreal * PI * (xi(2) - xj(2) )) - cos( 2.0_kreal * PI * ( xi(1) - xj(1) )) )
-				self%velocity%xComp(i) = self%velocity%xComp(i) - sinh( 2.0_kreal * PI * ( xi(2) - xj(2) ) ) * strength 
+				self%velocity%xComp(i) = self%velocity%xComp(i) - sinh( 2.0_kreal * PI * ( xi(2) - xj(2) ) ) * strength
 				self%velocity%yComp(i) = self%velocity%yComp(i) + sin( 2.0_kreal * PI * ( xi(1) - xj(1)) ) * strength
 			endif
 		enddo
@@ -381,12 +382,12 @@ subroutine setVelocityFromVorticity( self )
 				xj = PhysCoord(self%mesh%particles, j)
 				strength = 0.5_kreal * self%relVort%scalar(j) * self%mesh%particles%area(j) / &
 					( cosh( 2.0_kreal * PI * (xi(2) - xj(2) )) - cos( 2.0_kreal * PI * ( xi(1) - xj(1) )) )
-				self%velocity%xComp(i) = self%velocity%xComp(i) - sinh( 2.0_kreal * PI * ( xi(2) - xj(2) ) ) * strength 
+				self%velocity%xComp(i) = self%velocity%xComp(i) - sinh( 2.0_kreal * PI * ( xi(2) - xj(2) ) ) * strength
 				self%velocity%yComp(i) = self%velocity%yComp(i) + sin( 2.0_kreal * PI * ( xi(1) - xj(1)) ) * strength
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
@@ -395,13 +396,13 @@ subroutine setVelocityFromVorticity( self )
 	enddo
 end subroutine
 
-subroutine SetStreamFunctionsOnMesh( self ) 
+subroutine SetStreamFunctionsOnMesh( self )
 	type(BetaPlaneMesh), intent(inout) :: self
 	!
 	integer(kint) :: i, j, mpiErrCode
 	real(kreal) :: greensKernel
 	real(kreal), dimension(3) :: xi, xj
-	
+
 	self%absStream%N = self%mesh%particles%N
 	self%relStream%N = self%mesh%particles%N
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
@@ -431,12 +432,12 @@ subroutine SetStreamFunctionsOnMesh( self )
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%relStream%scalar(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(self%absStream%scalar(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
-			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)			
+			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	enddo
 end subroutine
 
@@ -444,7 +445,7 @@ subroutine resetPeriodicBoundsArray( x )
 	real(kreal), dimension(:), intent(inout) :: x
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, size(x)
 		if ( x(i) < 0.0_kreal ) then
 			x(i) = x(i) + 1.0_kreal
@@ -459,7 +460,7 @@ subroutine resetPeriodicBoundsMesh( self )
 	type(BetaPlaneMesh), intent(inout) :: self
 	!
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%x(i) < 0.0_kreal ) then
 			self%mesh%particles%x(i) = self%mesh%particles%x(i) + 1.0_kreal

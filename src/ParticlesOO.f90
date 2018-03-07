@@ -15,8 +15,8 @@ module ParticlesOOModule
 !> to facilitate interpolation, differentiation, quadrature, etc.
 !>
 !> The particles data structures is a "structure of arrays," so that all information about a particle i is located at
-!> index i in the relevant arrays.  
-!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`. 
+!> index i in the relevant arrays.
+!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`.
 !> Its Lagrangian coordinates are given by `aParticles%%x0(i)`, `aParticles%%y0(i)`, etc.
 !>
 !> Particles that contribute to a midpoint quadrature rule are called "active," and this status is recorded in the `isActive` array.
@@ -24,24 +24,25 @@ module ParticlesOOModule
 !> Particles that do not contribute to the midpoint rule (i.e., vertex particles) are considered "passive."
 !> Passive particles have zero area or volume.
 !>
-!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$; 
+!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$;
 !> area (for 2d models) or volume (for 3d models).
 !>
 !> Particle sets used with a mesh are initialized in the @ref PolyMesh2d module.
-!> 
-!> 
+!>
+!>
 !> @{
 !
 !------------------------------------------------------------------------------
 use NumberKindsModule
 use OutputWriterModule
+use UtilitiesModule
 use LoggerModule
 
 implicit none
 private
 public Particles
 
-!> @brief Class used to define a spatial discretization that may move in physical space.  
+!> @brief Class used to define a spatial discretization that may move in physical space.
 type Particles
     real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
@@ -55,7 +56,7 @@ type Particles
 	integer(kint) :: geomkind = 0 !< ! geometry identifier e.g., @ref NumberKinds::planar_geom
 
 	contains
-	    procedure :: init 
+	    procedure :: init
 	    final :: deletePrivate
 	    procedure :: copy
 	    procedure :: logStats
@@ -81,12 +82,12 @@ character(len=MAX_STRING_LENGTH) :: logString
 
 contains
 
-!> @brief Initialize an empty particle set with space for up to nMax particles.  
+!> @brief Initialize an empty particle set with space for up to nMax particles.
 !> All values are set to zero until separately set.
 !>
 !> @param self Target particles object
 !> @param nMax amount of space to reserve
-!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds 
+!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds
 subroutine init(self, nMax, geomKind)
     class(Particles), intent(inout) :: self
     integer(kint), intent(in) :: nMax
@@ -165,7 +166,7 @@ subroutine copy(self, other)
 	endif
 end subroutine
 
-!> @brief Writes particles information to console using a loggermodule::logger object for formatting. 
+!> @brief Writes particles information to console using a loggermodule::logger object for formatting.
 !> @param self
 !> @param aLog
 subroutine logStats(self, alog)
@@ -188,7 +189,7 @@ subroutine logStats(self, alog)
 end subroutine
 
 !> @brief Computes the sum of the particles%weight array
-!> @Warning: only for the midpoint rule is this equivalent to a numerical integration. 
+!> @Warning: only for the midpoint rule is this equivalent to a numerical integration.
 pure function totalWeight(self)
     real(kreal) :: totalWeight
     class(Particles), intent(in) :: self

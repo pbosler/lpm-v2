@@ -2,6 +2,7 @@ program planarMeshTester
 
 use NumberKindsModule
 use LoggerModule
+use UtilitiesModule
 use PolyMesh2dModule
 use ParticlesModule
 use EdgesModule
@@ -50,7 +51,7 @@ call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "PlanarMeshTest: ", "output to Matl
 narg = IARGC()
 if (  narg == 0 ) then
 	initNest = 0
-else 
+else
 	call GETARG(1, arg)
 	read(arg,*) initNest
 endif
@@ -85,7 +86,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,'(A)') "unifx = -5:0.1:5;"
 	write(WRITE_UNIT_1,'(A)') "unify = unifx;"
 	write(WRITE_UNIT_1,'(A)') "[xx, yy] = meshgrid(unifx, unify);"
-	
+
 	call WriteMeshToMatlab(triMesh, WRITE_UNIT_1)
 
 	write(WRITE_UNIT_1,*) "figure(1);clf;hold on;"
@@ -122,9 +123,9 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('faces and particles');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 	xvec = 0.0_kreal
-	
+
 	do i = 1, nn
 		xvec(1) = x(i)
 		do j = 1, nn
@@ -134,7 +135,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 		enddo
 	enddo
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "n points outside mesh = ", sum(triFaces))
-	
+
 	write(WRITE_UNIT_1,'(A)',advance='NO') "outsideTriMesh = ["
 	do i = 1, nn - 1
 		do j = 1, nn - 1
@@ -146,7 +147,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 		write(WRITE_UNIT_1,'(I6,A)',advance='NO') triFaces(nn,j), ", "
 	enddo
 	write(WRITE_UNIT_1,'(I6,A)') triFaces(nn,nn), "]; "
-	
+
 	write(WRITE_UNIT_1,*) "figure(3);clf;hold on;"
 	write(WRITE_UNIT_1,*) "plot(x,y,'k+');"
 	write(WRITE_UNIT_1,*) "for i = 1:", triMesh%edges%N
@@ -163,7 +164,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('points outside mesh');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 	triFaces = 0
 	do i = 1, nn
 		xVec(1) = x(i)
@@ -200,7 +201,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('nearest face');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 	keepGoing = .TRUE.
 	call RANDOM_SEED()
 	do while (keepGoing)
@@ -208,29 +209,29 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 		randomVertex = 1 + floor(triMesh%particles%N * randReal)
 		if ( triMesh%particles%isPassive(randomVertex) .AND. .NOT. triMesh%particles%isActive(randomVertex) ) keepGoing = .FALSE.
 	enddo
-	
+
 	keepGoing = .TRUE.
 	do while (keepGoing)
 		call RANDOM_NUMBER(randReal)
 		randomFace = 1 + floor(triMesh%faces%N * randReal)
 		if ( .NOT. triMesh%faces%hasChildren(randomFace) ) keepGoing = .FALSE.
 	enddo
-	
+
 	call initialize(edgesAroundFace)
 	call initialize(verticesAroundFace)
 	call initialize(adjacentFaces)
 	call initialize(facesAroundVertex)
-	
+
 	call CCWEdgesAroundFace( triMesh, edgesAroundFace, randomFace )
-	
+
 	call CCWVerticesAroundFace(triMesh,verticesAroundFace, randomFace)
-	
+
 	call CCWAdjacentFaces(triMesh, adjacentFaces, randomFace )
-	
-	call CCWFacesAroundVertex( triMesh, facesAroundVertex, randomVertex)	
-	
+
+	call CCWFacesAroundVertex( triMesh, facesAroundVertex, randomVertex)
+
 	phys = PhysCoord(triMesh%particles, randomVertex)
-	
+
 	write(WRITE_UNIT_1,*) "randVert = [", phys(1), ", ", phys(2), "];"
 	write(WRITE_UNIT_1,'(A)',advance='NO') "facesNearVert = ["
 	do i = 1, facesAroundVertex%N -1
@@ -243,7 +244,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) triMesh%particles%x( triMesh%faces%centerParticle(facesAroundVertex%int(facesAroundVertex%N))), ", ",&
 						  triMesh%particles%y( triMesh%faces%centerParticle(facesAroundVertex%int(facesAroundVertex%N))), "];"
 	endif
-	
+
 	phys = FaceCenterPhysCoord(triMesh%faces, randomFace, triMesh%particles)
 	write(WRITE_UNIT_1,*) "randFace = [", phys(1), ", ", phys(2), "];"
 	write(WRITE_UNIT_1,'(A)',advance='NO') "edgesAroundFaceX = ["
@@ -260,7 +261,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	enddo
 	write(WRITE_UNIT_1,*) triMesh%particles%y( triMesh%edges%orig(edgesAroundFace%int(edgesAroundFace%N))), ", ", &
 						  triMesh%particles%y( triMesh%edges%dest(edgesAroundFace%int(edgesAroundFace%N))), "];"
-	
+
 	write(WRITE_UNIT_1,'(A)',advance='NO') "vertsAroundFace = ["
 	do i = 1, verticesAroundFace%N - 1
 		write(WRITE_UNIT_1,*) triMesh%particles%x( verticesAroundFace%int(i)), ", ",&
@@ -339,7 +340,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('faces and particles');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 	do i = 1, nn
 		xvec(1) = x(i)
 		do j = 1, nn
@@ -349,7 +350,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 		enddo
 	enddo
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "n points outside mesh = ", sum(quadFaces))
-	
+
 	write(WRITE_UNIT_1,'(A)',advance='NO') "outsideQuadMesh = ["
 	do i = 1, nn - 1
 		do j = 1, nn - 1
@@ -378,7 +379,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('points outside mesh');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 	quadFaces = 0
 	do i = 1, nn
 		xVec(1) = x(i)
@@ -415,7 +416,7 @@ open(unit=WRITE_UNIT_1,file=filename,status='REPLACE')
 	write(WRITE_UNIT_1,*) "title('nearest face');"
 	write(WRITE_UNIT_1,*) "xlim([-5.1,5.1]);"
 	write(WRITE_UNIT_1,*) "ylim([-5.1,5.1]);"
-	
+
 close(WRITE_UNIT_1)
 
 call Delete(quadMesh)
@@ -423,4 +424,4 @@ call Delete(quadMesh)
 if (testPass) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "Test result: " , "PASSED")
 call Delete(exeLog)
 
-end program 
+end program
