@@ -30,13 +30,17 @@ planeVerts(1:2,3) = [5.0_kreal, 1.0_kreal]
 planeVerts(1:2,4) = [8.0_kreal, 3.0_kreal]
 
 elXy = bilinearMap(planeVerts, -one, one)
-if ( sqrt(sum( (elxy-planeVerts(:,2))*(elxy-planeVerts(:,1)))) > ZERO_TOL ) then
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "bilinearMap(-1,1) |error| = ", &
+    sqrt(sum( (elxy-planeVerts(:,1))*(elxy-planeVerts(:,1)))))
+if ( sqrt(sum( (elxy-planeVerts(:,1))*(elxy-planeVerts(:,1)))) > ZERO_TOL ) then
     write(logstring,'(2(A,G18.8),A)') "bilinearMap(-1,1) = (", elXy(1), ", ", elXy(1), "); correct solution is (4,3)"
     call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" ", logstring)
     testPass = .FALSE.
 endif
 
 elXy = bilinearMap(planeVerts, -one, -one)
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "bilinearMap(-1,-1) |error| = ", &
+    sqrt(sum( (elxy-planeVerts(:,2))*(elxy-planeVerts(:,2)))))
 if ( sqrt(sum( (elxy-planeVerts(:,2))*(elxy-planeVerts(:,2)))) > ZERO_TOL ) then
     write(logstring,'(2(A,G18.8),A)') "bilinearMap(-1,-1) = (", elXy(1), ", ", elXy(1), "); correct solution is (2,2)"
     call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" ", logstring)
@@ -44,6 +48,8 @@ if ( sqrt(sum( (elxy-planeVerts(:,2))*(elxy-planeVerts(:,2)))) > ZERO_TOL ) then
 endif
 
 elXy = bilinearMap(planeVerts, one, -one)
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "bilinearMap(1,-1) |error| = ", &
+    sqrt(sum( (elxy-planeVerts(:,3))*(elxy-planeVerts(:,3)))))
 if ( sqrt(sum( (elxy-planeVerts(:,3))*(elxy-planeVerts(:,3)))) > ZERO_TOL ) then
     write(logstring,'(2(A,G18.8),A)') "bilinearMap(1,-1) = (", elXy(1), ", ", elXy(1), "); correct solution is (5,1)"
     call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" ", logstring)
@@ -51,6 +57,8 @@ if ( sqrt(sum( (elxy-planeVerts(:,3))*(elxy-planeVerts(:,3)))) > ZERO_TOL ) then
 endif
 
 elXy = bilinearMap(planeVerts, one, one)
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "bilinearMap(1,1) |error| = ", &
+    sqrt(sum( (elxy-planeVerts(:,4))*(elxy-planeVerts(:,4)))))
 if ( sqrt(sum( (elxy-planeVerts(:,4))*(elxy-planeVerts(:,4)))) > ZERO_TOL ) then
     write(logstring,'(2(A,G18.8),A)') "bilinearMap(1,1) = (", elXy(1), ", ", elXy(1), "); correct solution is (8,3)"
     call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" error: ", logstring)
@@ -59,6 +67,7 @@ endif
 
 elxy = [19.0_kreal, 9.0_kreal, dzero] * 0.25_kreal
 rcrd = invertBilinear(planeVerts, elXy)
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "invertBilinear(19/4,9/4) |error| = ", sqrt(sum(rcrd*rcrd)))
 if (sqrt(sum(rcrd*rcrd)) > ZERO_TOL) then
     write(logstring,'(A,2G15.8,A)') 'invertBilinear([19/4,9/4,0]) = (', rcrd, "); correct solution is (0,0)"
     call LogMessage(exeLog,ERROR_LOGGING_LEVEL,trim(logkey)//" error: ", logstring)
