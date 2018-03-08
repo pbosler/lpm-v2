@@ -1,6 +1,7 @@
 program betaPlaneGaussian
 
 use NumberKindsModule
+use UtilitiesModule
 use OutputWriterModule
 use LoggerModule
 use ParticlesModule
