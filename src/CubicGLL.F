@@ -69,16 +69,6 @@ end function
 !> @brief Finds the point X inside a bilinear quadrilateral,
 !> Given the vertices of a quadrilateral in R^d (d=2,3), and reference coordinates (r1,r2) in [-1,1]x[-1,1],
 !>
-!> Let V be a 3x4 matrix with V(:,i) = the i'th vertex in a quadrilateral, where V(:,i) are listed in CCW order.
-!> Let (a,b) be coordinates in the unit square, [0,1]x[0,1] (different than the reference element),
-!> so that (a,b) = (0,0) corresponds to V(:,1); (1,0) is V(:,2); (1,1) is V(:,3), and (0,1) is V(:,4).
-!> The map may be written in terms for the 3x4 matrix T, where
-!>      T = VP,
-!>      P = [1 -1 -1  1
-!>          -1  1  0  0
-!>           1  0  0  0
-!>          -1  0  1  0],
-!> as X(a,b) = T(:,1)*a*b + T(:,2)*a + T(:,3)*b + T(:,4)
 !> @param vertXyz Vertex coordinates of quadrilateral, in CCW order
 !> @param s1, s2 reference element coordinates in [-1,1]x[-1,1]
 pure function bilinearMap(vertXyz, s1, s2)
@@ -90,71 +80,116 @@ pure function bilinearMap(vertXyz, s1, s2)
     real(kreal), dimension(3,4) :: tMatrix
     integer(kint) :: i
 
-!    bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,1) + &
-!                                 (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
-!                                (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + &
-!                                (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
-    a = 0.5_kreal*(s1 + one)
-    b = 0.5_kreal*(s2 + one)
-    tMatrix = bilinearTransformMatrix(vertXyz)
-    bilinearMap = dzero
-    do i=1,3
-        bilinearMap(i) = tMatrix(i,1)*a*b + tMatrix(i,2)*a + tMatrix(i,3)*b + tMatrix(i,4)
-    enddo
+    bilinearMap = 0.25_kreal * ( (1.0_kreal-s1)*(1.0_kreal+s2)*vertXyz(:,1) + &
+                                 (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
+                                (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + &
+                                (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
+
 end function
 
 !> Inverts bilinearMap to find reference coordinates (r1,r2) in [-1,1]^2
+!> Folows C. Hua, 1990, Finite Elem. Anal. Design 7:159--166.
 function invertBilinear(vertXyz, xyz)
     real(kreal), dimension(2) :: invertBilinear
     real(kreal), dimension(3,4), intent(in) :: vertXyz
     real(kreal), dimension(3), intent(in) :: xyz
     !
     real(kreal), dimension(3) :: aa, bb, cc, dd
-    real(kreal) :: qa, qb, qc, disc, r1, r2, c1, c2
     integer(kint), dimension(2) :: ij
+    real(kreal) :: xi, eta, a_b, a_c, a_d, b_c, b_d, c_d
     integer(kint) :: i, j
 
-    invertBilinear = dzero
+    aa = -vertXyz(:,1) + vertXyz(:,2) - vertXyz(:,3) + vertXyz(:,4)
+    bb = -vertXyz(:,1) - vertXyz(:,2) + vertXyz(:,3) + vertXyz(:,4)
+    cc = vertXyz(:,1) - vertXyz(:,2) - vertXyz(:,3) + vertXyz(:,4)
+
+    dd = 4.0_kreal * xyz - sum(vertXyz,2)
 
     ij = pickBilinearIJ(vertXyz)
     i = ij(1)
     j = ij(2)
-    print *, "ij = ", i, j
-    aa = vertXyz(:,1) - vertXyz(:,2) + vertXyz(:,3) - vertXyz(:,4)
-    bb = vertXyz(:,2) - vertXyz(:,1)
-    cc = vertXyz(:,4) - vertXyz(:,1)
-    dd = vertXyz(:,4)
 
-    qa = aa(i)*cc(j) - aa(j)*cc(i)
-    qb = bb(i)*cc(j) - bb(j)*cc(i) + aa(j)*(xyz(i)-dd(i)) - aa(i)*(xyz(j)-dd(j))
-    qc = bb(j)*(xyz(i)-dd(i)) - bb(i)*(xyz(j)-dd(j))
-    
-    print *, qa
-    print *, qb
-    print *, qc
+    xi = 999.0d20
+    eta = 999.0d20
 
-    disc = qb*qb - 4.0_kreal * qa*qc
-    
-    print *, disc
-    if (abs(sum(aa*aa)) > ZERO_TOL) then
-        r1 = (-qb + sqrt(disc))/(2.0_kreal*qa)
-        r2 = (-qb - sqrt(disc))/(2.0_kreal*qa)
-        if (dzero <= r1 .and. r1 <= one) then
-            c2 = r1
-        elseif (dzero <= r2 .and. r2 <= one) then
-            c2 = r2
+    a_b = twoByTwoDeterminant([aa(i),aa(j)],[bb(i),bb(j)])
+    a_c = twoByTwoDeterminant([aa(i),aa(j)],[cc(i),cc(j)])
+    a_d = twoByTwoDeterminant([aa(i),aa(j)],[dd(i),dd(j)])
+    b_c = twoByTwoDeterminant([bb(i),bb(j)],[cc(i),cc(j)])
+    b_d = twoByTwoDeterminant([bb(i),bb(j)],[dd(i),dd(j)])
+    c_d = twoByTwoDeterminant([cc(i),cc(j)],[dd(i),dd(j)])
+
+    if ( abs(aa(i)) < ZERO_TOL) then !I
+        if (abs(aa(j)) < ZERO_TOL) then ! rectangle
+            !I.A
+            xi = -c_d / (aa(i)*dd(j) + b_c)
+            eta = b_d /(aa(j)*dd(i) + b_c)
+        elseif (abs(cc(i)) < ZERO_TOL) then
+            !I.B(a)
+            xi = dd(i) / bb(i)
+            eta = (bb(i)*dd(j)-bb(j)*dd(i))/(aa(j)*dd(i)+bb(i)*cc(j))
         else
-            !error
-            write(6,'(2(A,G15.8))') 'invertBilinear ERROR: both roots out of range, r1 = ', r1, ', r2 = ', r2
+            !I.B(b)
+            xi = quadraticRoot(aa(j)*bb(i), cc(j)*bb(i)-aa(j)*dd(i)-bb(j)*cc(i), dd(j)*cc(i)-cc(j)*dd(i))
+            eta = (dd(i)-bb(i)*xi)/cc(i)
         endif
-    else
-        !rectangle
-        c2 = (bb(i)*dd(j) - bb(j)*dd(i))/(bb(i)*cc(j) - bb(j)*cc(i))
+    else !II
+        if (abs(aa(j)) > ZERO_TOL) then !II.A
+            if (abs(a_b) > ZERO_TOL) then ! II.A(a)
+                if (abs(a_c) > ZERO_TOL) then
+                    !II.A.(a).1
+                    xi = quadraticRoot(a_b, (-b_c-a_d), -c_d)
+                    eta = (a_d-a_b*xi)/(a_c)
+                else
+                    !II.A.(a).2
+                    xi = a_d/a_b
+                    eta = -aa(i)*b_d/(cc(i)*a_b + aa(i)*a_d)
+                endif
+            else ! II.A(b)
+                xi = -aa(i)*c_d/(bb(i)*a_c + aa(i)*a_d)
+                eta = a_d/a_c
+            endif
+        else !II.B
+            if (abs(bb(j)) < ZERO_TOL) then
+                !II.B(a)
+                xi = -c_d / (aa(i)*dd(j)+bb(i)*cc(j))
+                eta = dd(j) / cc(j)
+            else
+                !II.B(b)
+                xi = quadraticRoot(aa(i)*bb(j), (cc(i)*bb(j) - aa(i)*dd(j) - bb(i)*cc(j)), (dd(i)*cc(j)-cc(i)*dd(j)))
+                eta = (dd(j)-bb(j)*xi)/cc(j)
+            endif
+        endif
     endif
-    invertBilinear(1) = c1
-    invertBilinear(2) = c2
-    c1 = (xyz(i) - dd(i) - cc(i)*c2)/(bb(i)-aa(i)*c2)
-    invertBilinear = 2.0_kreal * invertBilinear - one
+    invertBilinear = [xi, eta]
+end function
+
+pure function twoByTwoDeterminant(c1, c2)
+    real(kreal) :: twoByTwoDeterminant
+    real(kreal), dimension(2), intent(in) :: c1, c2
+    twoByTwoDeterminant = c1(1)*c2(2) - c1(2)*c2(1)
+end function
+
+function quadraticRoot(a, b, c)
+    real(kreal) :: quadraticRoot
+    real(kreal), intent(in) :: a, b, c
+    !
+    real(kreal) :: r1, r2, disc, aa, rdisc
+
+    quadraticRoot = -999.d20
+
+    aa = 2.0_kreal * a
+    disc = b*b - 4.0_kreal * a * c
+    if (abs(disc) < ZERO_TOL) then
+        disc = dzero
+    elseif (disc < -ZERO_TOL) then
+        print *, "quadratic root error: complex root."
+    endif
+    rdisc = sqrt(disc)
+    r1 = (-b + rdisc)/aa
+    r2 = (-b - rdisc)/aa
+    if (-one <= r1 .and. r1 <= one) quadraticRoot = r1
+    if (-one <= r2 .and. r2 <= one) quadraticRoot = r2
 end function
 
 !> @brief Find the indices of the dimensions with the largest extent
