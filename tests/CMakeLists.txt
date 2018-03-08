@@ -47,6 +47,9 @@ TARGET_LINK_LIBRARIES(ooIcosTriMeshTest.exe lpmFortran)
 ADD_EXECUTABLE(ooCubedSphereTest.exe OOCubedSphereTests.F)
 TARGET_LINK_LIBRARIES(ooCubedSphereTest.exe lpmFortran)
 
+ADD_EXECUTABLE(cubicGllTest.exe CubicGLLTest.F)
+TARGET_LINK_LIBRARIES(cubicGllTest.exe lpmFortran)
+
 # Unit Tests
 create_test(particlesAndFieldTest.exe)
 create_test(stdIntVectorTest.exe)
@@ -58,6 +61,7 @@ create_test(ooParticlesAndFieldTest.exe)
 create_test(ooPlaneMeshTest.exe)
 create_test(ooIcosTriMeshTest.exe 3)
 create_test(ooCubedSphereTest.exe 3)
+create_test(cubicGllTest.exe)
 
 # Regression tests
 create_test(BivarConvergenceTest.exe)

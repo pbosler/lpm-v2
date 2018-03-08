@@ -80,7 +80,7 @@ end function
 !>          -1  0  1  0],
 !> as X(a,b) = T(:,1)*a*b + T(:,2)*a + T(:,3)*b + T(:,4)
 !> @param vertXyz Vertex coordinates of quadrilateral, in CCW order
-!> @param s1, s2 reference element coordinates
+!> @param s1, s2 reference element coordinates in [-1,1]x[-1,1]
 pure function bilinearMap(vertXyz, s1, s2)
     real(kreal), dimension(3) :: bilinearMap
     real(kreal), dimension(3,4), intent(in) :: vertXyz
@@ -96,7 +96,8 @@ pure function bilinearMap(vertXyz, s1, s2)
 !                                (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
     a = 0.5_kreal*(s1 + one)
     b = 0.5_kreal*(s2 + one)
-    tMatrix = transpose(bilinearTransformMatrix(vertXyz))
+    tMatrix = bilinearTransformMatrix(vertXyz)
+    bilinearMap = dzero
     do i=1,3
         bilinearMap(i) = tMatrix(i,1)*a*b + tMatrix(i,2)*a + tMatrix(i,3)*b + tMatrix(i,4)
     enddo
@@ -109,7 +110,7 @@ function invertBilinear(vertXyz, xyz)
     real(kreal), dimension(3), intent(in) :: xyz
     !
     real(kreal), dimension(3) :: aa, bb, cc, dd
-    real(kreal) :: qa, qb, qc, disc, r1, r2
+    real(kreal) :: qa, qb, qc, disc, r1, r2, c1, c2
     integer(kint), dimension(2) :: ij
     integer(kint) :: i, j
 
@@ -118,35 +119,41 @@ function invertBilinear(vertXyz, xyz)
     ij = pickBilinearIJ(vertXyz)
     i = ij(1)
     j = ij(2)
-
+    print *, "ij = ", i, j
     aa = vertXyz(:,1) - vertXyz(:,2) + vertXyz(:,3) - vertXyz(:,4)
-    bb = -vertXyz(:,1) + vertXyz(:,2)
-    cc = -vertXyz(:,1) + vertXyz(:,4)
-    dd = xyz - vertXyz(:,1)
+    bb = vertXyz(:,2) - vertXyz(:,1)
+    cc = vertXyz(:,4) - vertXyz(:,1)
+    dd = vertXyz(:,4)
 
-    qa = -aa(j)*cc(i) + cc(j)*aa(i)
-    qb = -aa(i)*dd(j) + aa(j)*dd(i) - bb(j)*cc(i) + bb(i)*cc(j)
-    qc = bb(j)*dd(i) - bb(i)*dd(j)
+    qa = aa(i)*cc(j) - aa(j)*cc(i)
+    qb = bb(i)*cc(j) - bb(j)*cc(i) + aa(j)*(xyz(i)-dd(i)) - aa(i)*(xyz(j)-dd(j))
+    qc = bb(j)*(xyz(i)-dd(i)) - bb(i)*(xyz(j)-dd(j))
+    
+    print *, qa
+    print *, qb
+    print *, qc
 
     disc = qb*qb - 4.0_kreal * qa*qc
+    
+    print *, disc
     if (abs(sum(aa*aa)) > ZERO_TOL) then
         r1 = (-qb + sqrt(disc))/(2.0_kreal*qa)
         r2 = (-qb - sqrt(disc))/(2.0_kreal*qa)
         if (dzero <= r1 .and. r1 <= one) then
-            invertBilinear(2) = r1
-            invertBilinear(1) = (dd(i) - cc(i)*invertBilinear(2))/(bb(i)-aa(i)*invertBilinear(2))
+            c2 = r1
         elseif (dzero <= r2 .and. r2 <= one) then
-            invertBilinear(2) = r2
-            invertBilinear(1) = (dd(i) - cc(i)*invertBilinear(2))/(bb(i)-aa(i)*invertBilinear(2))
+            c2 = r2
         else
             !error
             write(6,'(2(A,G15.8))') 'invertBilinear ERROR: both roots out of range, r1 = ', r1, ', r2 = ', r2
         endif
     else
         !rectangle
-        invertBilinear(2) = (bb(i)*dd(j) - bb(j)*dd(i))/(bb(i)*cc(j) - bb(j)*cc(i))
-        invertBilinear(1) = (dd(i) - cc(j)*invertBilinear(2))/bb(i)
+        c2 = (bb(i)*dd(j) - bb(j)*dd(i))/(bb(i)*cc(j) - bb(j)*cc(i))
     endif
+    invertBilinear(1) = c1
+    invertBilinear(2) = c2
+    c1 = (xyz(i) - dd(i) - cc(i)*c2)/(bb(i)-aa(i)*c2)
     invertBilinear = 2.0_kreal * invertBilinear - one
 end function
 
@@ -158,16 +165,16 @@ pure function pickBilinearIJ(vertXyz)
     !
     real(kreal) :: dx, dy, dz
 
-    dx = maxval(vertXyz(:,1)) - minval(vertXyz(:,1))
-    dy = maxval(vertXyz(:,2)) - minval(vertXyz(:,2))
-    dz = maxval(vertXyz(:,3)) - minval(vertXyz(:,3))
+    dx = maxval(vertXyz(1,:)) - minval(vertXyz(1,:))
+    dy = maxval(vertXyz(2,:)) - minval(vertXyz(2,:))
+    dz = maxval(vertXyz(3,:)) - minval(vertXyz(3,:))
 
     ! start with x, y
     pickBilinearIJ(1) = 1
     pickBilinearIJ(2) = 2
-    if (dy <= dx .and. dy <= dz) then ! skip y
+    if (dy < dx .and. dy < dz) then ! skip y
         pickBilinearIJ(2) = 3
-    elseif( dx <= dy .and. dx <= dz) then !skip x
+    elseif( dx < dy .and. dx < dz) then !skip x
         pickBilinearIJ(1) = 2
         pickBilinearIJ(2) = 3
     endif
