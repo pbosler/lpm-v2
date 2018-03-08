@@ -264,11 +264,19 @@ end subroutine
 subroutine copyCubic(self, other)
     class(CubicEdges), intent(inout) :: self
     class(Edges), intent(in) :: other
-
-    call copyLinear(self%edges, other)
     select type(other)
         class is (CubicEdges)
+            self%orig(1:other%N) = other%orig(1:other%N)
+            self%dest(1:other%N) = other%dest(1:other%N)
+            self%leftFace(1:other%N) = other%leftFace(1:other%N)
+            self%rightFace(1:other%N) = other%rightFace(1:other%N)
+            self%hasChildren(1:other%N) = other%hasChildren(1:other%N)
+            self%parent(1:other%N) = other%parent(1:other%N)
+            self%child1(1:other%N) = other%child1(1:other%N)
+            self%child2(1:other%N) = other%child2(1:other%N)
             self%interiorParticles(:,1:other%N) = other%interiorParticles(:,1:other%N)
+        class default
+            call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" copy cubic edges error: ", "type mismatch.")
     end select
 end subroutine
 
