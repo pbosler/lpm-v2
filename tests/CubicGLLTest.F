@@ -23,6 +23,9 @@ type(Logger) :: exeLog
 
 testPass = .TRUE.
 
+call New(exeLog, DEBUG_LOGGING_LEVEL)
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey), " start:")
+
 planeVerts = dzero
 planeVerts(1:2,1) = [4.0_kreal, 3.0_kreal]
 planeVerts(1:2,2) = [2.0_kreal, 2.0_kreal]
