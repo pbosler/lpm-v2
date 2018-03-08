@@ -21,6 +21,13 @@ end interface
 
 !> @brief Provides a generic function interface
 interface
+    real(8) function scalarFnOf2DSpaceAndTime( x, y, t)
+        real(8), intent(in) :: x, y, t
+    end function
+end interface
+
+!> @brief Provides a generic function interface
+interface
     real(8) function scalarFnOf3DSpace( x, y, z)
         real(8), intent(in) :: x, y, z
     end function
@@ -39,6 +46,14 @@ interface
     function vectorFnOf2DSpace( x, y )
         real(8), dimension(2) :: vectorFnOf2DSpace
         real(8), intent(in) :: x, y
+    end function
+end interface
+
+!> @brief Provides a generic function interface
+interface
+    function vectorFnOf2DSpaceAndTime( x, y, t )
+        real(8), dimension(2) :: vectorFnOf2DSpaceAndTime
+        real(8), intent(in) :: x, y, t
     end function
 end interface
 

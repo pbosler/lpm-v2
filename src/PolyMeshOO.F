@@ -101,6 +101,7 @@ type PolyMesh2d
         procedure, private :: nFacesInMesh
         procedure :: writeMatlab
         procedure :: writeVTKSerialStartXML
+        procedure :: writePlanarVTKStartWithHeightFromField
         procedure :: writeVTKSerialEndXML
         procedure :: integrateScalar
         procedure :: locatePointInFace
@@ -288,6 +289,117 @@ subroutine writeVTKSerialStartXML(self, fileunit)
         enddo
     endif
     !write(fileunit,'(A)') ''
+    write(fileunit,'(A)') '      </DataArray>'
+    write(fileunit,'(A)') '    </Points>'
+    write(fileunit,'(A)') '    <Polys>'
+    write(fileunit,'(A)') '      <DataArray type="Int32" Name="connectivity" format="ascii">'
+    if (self%faceKind == TRI_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                do j=1,3
+                    write(fileunit,'(3(I20,A))') self%faces%vertices(j,i)-1, ' ', &
+                        self%faces%vertices(mod(j,3)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 3*self%faces%N_Active
+            write(fileunit,'(I20)') 3*i
+        enddo
+    elseif (self%faceKind == QUAD_PANEL) then
+        do i=1, self%faces%N
+            if (.not. self%faces%hasChildren(i)) then
+                do j=1,4
+                    write(fileunit,'(4(I20,A))') self%faces%vertices(j,i)-1, ' ', &
+                        self%faces%vertices(mod(j,4)+1,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 4*self%faces%N_Active
+            write(fileunit,'(I20)') 3*i
+        enddo
+    elseif (self%faceKind == QUAD_CUBIC_PANEL) then
+        do i=1,self%faces%N 
+            if (.not. self%faces%hasChildren(i)) then
+                write(fileunit,'(4(I20,A))') self%faces%vertices(1,i)-1, ' ', self%faces%vertices(2,i)-1, ' ', &
+                    self%faces%centerParticles(1,i)-1, ' ', self%faces%vertices(12,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%vertices(2,i)-1, ' ', self%faces%vertices(3,i)-1, ' ', &
+                    self%faces%centerParticles(2,i)-1, ' ', self%faces%centerParticles(1,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%vertices(3,i)-1, ' ', self%faces%vertices(4,i)-1, ' ', &
+                    self%faces%vertices(5,i)-1, ' ', self%faces%centerParticles(2,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(2,i)-1, ' ', &
+                    self%faces%vertices(5,i)-1, ' ', self%faces%vertices(6,i)-1, ' ', self%faces%centerParticles(3,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(3,i)-1, ' ', &
+                    self%faces%vertices(6,i)-1, ' ', self%faces%vertices(7,i)-1, ' ', self%faces%vertices(8,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%centerParticles(4,i)-1, ' ', &
+                    self%faces%centerParticles(3,i)-1, ' ', self%faces%vertices(8,i)-1, ' ', self%faces%vertices(9,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%vertices(11,i)-1, ' ', &
+                    self%faces%centerParticles(4,i)-1, ' ', self%faces%vertices(9,i)-1, ' ', self%faces%vertices(10,i)-1, ' '
+                write(fileunit,'(4(I20,A))') self%faces%vertices(12,i)-1, ' ', &
+                    self%faces%centerParticles(1,i)-1, ' ', self%faces%centerParticles(4,i)-1, ' ', self%faces%vertices(11,i)-1, ' '
+                do j=1,4
+                    write(fileunit,'(I20,A)') self%faces%centerParticles(j,i)-1, ' '
+                enddo
+            endif
+        enddo
+        !write(fileunit,'(A)') ''
+        write(fileunit,'(A)') '      </DataArray>'
+        write(fileunit,'(A)') '      <DataArray type="Int32" Name="offsets" format="ascii">'
+        do i = 1, 9*self%faces%N_Active
+            write(fileunit,'(I20,A)') 4*i
+        enddo
+    endif
+    write(fileunit,'(A)') ''
+    write(fileunit,'(A)') '      </DataArray>'
+    write(fileunit,'(A)') '    </Polys>'
+end subroutine
+
+subroutine writePlanarVTKStartWithHeightFromField(self, hfield, fileunit)
+    class(PolyMesh2d), intent(in) :: self
+    class(Field), intent(in) :: hField
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i, j
+    
+    if (self%geomKind /= PLANAR_GEOM) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" writePlanarVTKStartWithHeightFromField error: ", &
+            "cannot use height field on 3d data.")
+        return
+    endif
+    if (hfield%nDim /= 1) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" writePlanarVTKStartWithHeightFromField error: ", &
+            "only scalar fields can be used for height")
+        return
+    endif
+    if (hfield%N /= self%particles%N) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" writePlanarVTKStartWithHeightFromField error: ", &
+            "field size mismatch")
+        return
+    endif
+        
+    write(fileunit,'(A)') '<?xml version="1.0"?>'
+    write(fileunit,'(A)') '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'
+    write(fileunit,'(A)') ' <PolyData>'
+    write(fileunit,'(A,I8,A)',advance='no') '   <Piece NumberOfPoints="', self%particles%N, &
+        '" NumberOfVerts="0" NumberOfLines="0" '
+    if (self%faceKind == TRI_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 3*self%faces%N_Active, '">'
+    elseif(self%faceKind == QUAD_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 4*self%faces%N_Active, '">'
+    elseif(self%faceKind == QUAD_CUBIC_PANEL) then
+        write(fileunit,'(A,I8,A)') 'NumberOfStrips="0" NumberOfPolys="', 9*self%faces%N_Active, '">'
+    endif
+    write(fileunit,'(A)') '    <Points>'
+
+    write(fileunit,'(A)') '      <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+    do i=1, self%particles%N
+        write(fileunit,'(3(F24.9,A))') self%particles%x(i), ' ', self%particles%y(i), ' ', hfield%comp1(i), ' '
+    enddo
     write(fileunit,'(A)') '      </DataArray>'
     write(fileunit,'(A)') '    </Points>'
     write(fileunit,'(A)') '    <Polys>'

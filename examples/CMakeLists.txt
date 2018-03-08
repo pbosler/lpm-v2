@@ -48,3 +48,6 @@ TARGET_LINK_LIBRARIES( planarGravityWave.exe lpmFortran)
 
 ADD_EXECUTABLE( bveRossbyHaurwitzWave54.exe RossbyHaurwitz54.f90 )
 TARGET_LINK_LIBRARIES( bveRossbyHaurwitzWave54.exe lpmFortran)
+
+ADD_EXECUTABLE( transportDemo.exe TransportDemo.F)
+TARGET_LINK_LIBRARIES( transportDemo.exe lpmFortran)
