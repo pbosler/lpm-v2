@@ -2,6 +2,7 @@ program OOPlaneMestTest
 
 use NumberKindsModule
 use LoggerModule
+use OutputWriterModule
 use UtilitiesModule
 use PolyMeshOOModule
 use FieldOOModule
@@ -16,6 +17,8 @@ character(len=56) :: mesh_type, vtkFile
 
 real(kreal), parameter :: intCosBump = 16.0_kreal / PI**2
 real(kreal), parameter :: triIntExact = 1.4741613930426135683_kreal
+real(kreal), parameter :: dx = 2.0_kreal / 50.0_kreal
+
 
 type(Logger) :: exeLog
 character(len=56) :: logkey = "OOPlaneMestTest"
@@ -27,7 +30,8 @@ call getInput(initNest, doOutput)
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logkey)//" part 1: build each planar mesh to initNest = ", initNest)
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logkey), " part 2: define scalar and vector fields on mesh.")
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logkey), " part 3: demonstrate quadrature on mesh.")
-call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logKey), " part 4: output to vtk xml file.")
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logkey), " part 4: demonstrate interpolation on a cubic mesh.")
+call LogMessage(exeLog, TRACE_LOGGING_LEVEL,trim(logKey), " part 5: output to vtk xml file.")
 
 !-------------------------------------
 !   Test Planar mesh, linear triangles
@@ -51,6 +55,8 @@ call EndSection(exeLog)
 !-------------------------------------
 !   Test Planar mesh, cubic quads
 !-------------------------------------
+
+
 mesh_type = "planar_cubic_quad"
 write(vtkFile,'(A,I1,A)') trim(mesh_type), initNest, '.vtp'
 call StartSection(exeLog,'Planar Cubic Quad Test.')
@@ -68,6 +74,11 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     character(len=*), intent(in) :: oname
     !
     real(kreal) :: computedIntegral
+    real(kreal), dimension(3) :: interpTargetPt
+    integer(kint) :: i, j
+    real(kreal) :: interpErr
+    real(kreal), dimension(51) :: unifX, unifY
+    real(kreal), dimension(51,51) :: interp, exact
 
     allocate(mesh_ptr)
     allocate(scalarField)
@@ -86,6 +97,30 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     enddo
 
     computedIntegral = mesh_ptr%integrateScalar(scalarField)
+    interpErr = dzero
+    if (mesh_ptr%faceKind == QUAD_CUBIC_PANEL) then
+        do j=1,51
+            unifx(j) = -one + dx*(j-1)
+        enddo
+        do i=1, 51
+            unify(i) = -one + dx*(i-1)
+        enddo
+        do j=1,51
+            do i=1,51
+                exact(i,j) = cosineBump([unifX(j), unifY(i)])
+            enddo
+        enddo
+        interpTargetPt = dzero
+        do j=1,51
+            do i=1,51
+                interpTargetPt(1) = unifx(j)
+                interpTargetPt(2) = unify(i)
+                interp(i,j) = mesh_ptr%interpolateScalar(interpTargetPt, scalarField)
+            enddo
+        enddo
+        interpErr = maxval(abs(exact-interp))
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "interp error = ", interpErr)
+    endif
 
     call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "scalar integral = ", computedIntegral)
     if (mesh_ptr%faceKind == TRI_PANEL) then
@@ -105,12 +140,19 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
         write(WRITE_UNIT_1,'(A)') '     </PointData>'
         call mesh_ptr%writeVTKSerialEndXML(WRITE_UNIT_1)
         close(WRITE_UNIT_1)
-    !    write(vtkFile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
-    !    open(unit=WRITE_UNIT_1, file=vtkFile, action='write', status='replace')
-    !    call mesh%writeMatlab(WRITE_UNIT_1)
-    !    call scalarField%writeMatlab(WRITE_UNIT_1)
-    !    call vectorField%writeMatlab(WRITE_UNIT_1)
-    !    close(WRITE_UNIT_1)
+        write(vtkFile,'(A,I1,A)') trim(mesh_type), initNest, '.m'
+
+        if (mesh_ptr%faceKind == QUAD_CUBIC_PANEL) then
+            open(unit=WRITE_UNIT_1, file=vtkFile, action='write', status='replace')
+            call mesh%writeMatlab(WRITE_UNIT_1)
+            call scalarField%writeMatlab(WRITE_UNIT_1)
+            call vectorField%writeMatlab(WRITE_UNIT_1)
+            call writeToMatlab(unifX, WRITE_UNIT_1, "unifx")
+            call writeToMatlab(unify, WRITE_UNIT_1, "unify")
+            call writeToMatlab(exact, WRITE_UNIT_1, "exact")
+            call writeToMatlab(interp, WRITE_UNIT_1, "interp")
+            close(WRITE_UNIT_1)
+        endif
     endif
 
 

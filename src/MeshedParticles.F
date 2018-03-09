@@ -10,7 +10,7 @@ use PolyMeshOOModule
 use FieldOOModule
 use MPIReplicatedDataModule
 
-implicit none 
+implicit none
 
 private
 
@@ -31,7 +31,7 @@ type, extends(PolyMesh2d) :: MeshedParticles
         procedure :: writeVTK => writeTransportVTK
 !        procedure :: computeVelocity2d
 !        procedure :: computeVelocity3d
-        
+
         final :: deleteMP
 end type
 
@@ -71,10 +71,10 @@ subroutine initTransport(self, mesh_type, initNest, maxNest, amrLimit, maxRadius
     integer(kint), intent(in) :: maxNest
     integer(kint), intent(in) :: amrLimit
     real(kreal), intent(in) :: maxRadius
-    
-    
+
+
     if (.not. logInit) call InitLogger(log, procRank)
-    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "entering init MeshedParticles.")
+    !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "entering init MeshedParticles.")
     call self%polymesh2d%init(mesh_type, initNest, maxNest, amrLimit, maxRadius)
     call self%density%init(1, self%particles%N_Max, "density")
     if (self%geomKind == PLANAR_GEOM) then
@@ -91,13 +91,13 @@ subroutine addTracers(self, nTracers, tracerDims)
     !
     character(len=10) :: trString
     integer(kint) :: i
-    
+
     if (allocated(self%tracers)) then
         call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" addTracers error: ", "tracers already allocated.")
         return
     endif
-    
-    if (present(tracerDims)) then        
+
+    if (present(tracerDims)) then
         if (size(tracerDims) == nTracers) then
             ! specify the dimensions of each tracer (vector or scalar)
             allocate(self%tracers(nTracers))
@@ -131,9 +131,9 @@ subroutine set2DVelocityWithFunction(self, velFn, t)
     real(kreal), intent(in) :: t
     !
     integer(kint) :: i
-    
+
     if (.not. self%velocity%n == self%particles%n) self%velocity%n = self%particles%N
-    
+
     do i=1, self%particles%n
         call self%velocity%replaceVector(i, velFn(self%particles%x(i), self%particles%y(i), t))
     enddo
@@ -166,9 +166,9 @@ subroutine set3DVelocityWithFunction(self, velFn)
     procedure(vectorFnOf3DSpace) :: velFn
     !
     integer(kint) :: i
-    
+
     if (.not. self%velocity%n == self%particles%n) self%velocity%n = self%particles%N
-    
+
     do i=1, self%particles%n
         call self%velocity%replaceVector(i, velFn(self%particles%x(i), self%particles%y(i), self%particles%z(i)))
     enddo
@@ -181,7 +181,7 @@ subroutine writeTransportVTK(self, fileunit)
     character(len=MAX_STRING_LENGTH) :: datastring
     integer(kint) :: i, sCount, vCount
     integer(kint), allocatable :: tracerIds(:)
-    
+
     allocate(tracerIds(self%nTracers))
     tracerIds = 0
     if (self%geomKind == PLANAR_GEOM) then

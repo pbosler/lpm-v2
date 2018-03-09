@@ -19,7 +19,7 @@ character(len=56) :: mesh_type
 integer(kint) :: initNest
 integer(kint) :: maxNest
 integer(kint) :: amrLimit
-real(kreal) :: domainRadius
+real(kreal), parameter :: domainRadius=2.0_kreal
 type(MeshedParticles) :: plane
 integer(kint) :: i
 real(kreal), dimension(2) :: xy
@@ -41,12 +41,12 @@ call New(exeLog, DEBUG_LOGGING_LEVEL)
 call getInput(initNest)
 maxNest = initNest
 amrLimit = 0
-domainRadius = one
+
 
 mesh_type='planar_cubic_quad'
 call plane%init(mesh_type, initNest, maxNest, amrLimit, domainRadius)
-print *, "returned from init"
-call plane%logStats(exeLog)
+!print *, "returned from init"
+if (procRank==0) call plane%logStats(exeLog)
 
 plane%density%N = plane%particles%N
 call plane%density%setToConst(one)
@@ -61,7 +61,7 @@ enddo
 if (procRank == 0) then
     write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", 0, '.vtp'
     open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
-    call plane%writeVTK(WRITE_UNIT_1)    
+    call plane%writeVTK(WRITE_UNIT_1)
     close(WRITE_UNIT_1)
 endif
 
@@ -74,12 +74,12 @@ dt = tfinal / real(nTimesteps,kreal)
 
 do timeI = 1, nTimesteps
     call time%stepTransport2d(plane, mpiParticles, mpiFaces, dt, rigidRotation)
-    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "time = ", plane%t)
-    
+    if (mod(timeI, 25) == 0 .and. procRank == 0) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "time = ", plane%t)
+
     if (procRank == 0) then
         write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", timeI, '.vtp'
         open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
-        call plane%writeVTK(WRITE_UNIT_1)    
+        call plane%writeVTK(WRITE_UNIT_1)
         close(WRITE_UNIT_1)
     endif
 enddo
