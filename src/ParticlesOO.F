@@ -164,6 +164,7 @@ subroutine copy(self, other)
 	    self%z(1:other%N) = other%z(1:other%n)
 	    self%z0(1:other%N) = other%z(1:other%n)
 	endif
+	self%N = other%N
 end subroutine
 
 !> @brief Writes particles information to console using a loggermodule::logger object for formatting.

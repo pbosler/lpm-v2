@@ -21,6 +21,7 @@ integer(kint) :: maxNest
 integer(kint) :: amrLimit
 real(kreal), parameter :: domainRadius=2.0_kreal
 type(MeshedParticles) :: plane
+type(MeshedParticles), pointer :: tempPlane => null()
 integer(kint) :: i
 real(kreal), dimension(2) :: xy
 
@@ -28,7 +29,7 @@ type(MPIReplicatedData) :: mpiParticles
 type(MPIReplicatedData) :: mpiFaces
 type(TransportStepper) :: time
 real(kreal) :: dt, tfinal
-integer(kint) :: nTimesteps, timeI
+integer(kint) :: nTimesteps, timeI, frameCounter
 
 character(len=128) :: fname
 
@@ -70,17 +71,58 @@ call mpiFaces%init(plane%faces%N, numProcs)
 call time%init(plane, mpiParticles, mpiFaces, .FALSE.)
 tfinal = one
 nTimesteps = 100
-dt = tfinal / real(nTimesteps,kreal)
+dt = 0.01_kreal
 
+frameCounter = 1
 do timeI = 1, nTimesteps
+    if (mod(timeI,25) == 0) then ! remesh
+        !call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "commencing remesh, t = ", plane%t)
+        allocate(tempPlane)
+        !print *, "allocated temp plane"
+        
+        call tempPlane%init(mesh_type, initNest, maxNest, amrLimit, domainRadius)
+        tempPlane%density%n = tempPlane%particles%N
+        call tempPlane%density%setToConst(one)
+        call tempPlane%set2dVelocityWithFunction(rigidRotation, plane%t)
+        call tempPlane%setLagCoordFromOther(plane)
+        tempPlane%t = plane%t
+        call tempPlane%addTracers(1)
+        tempPlane%tracers(1)%name = "threeTracers"
+        do i=1, tempPlane%particles%N
+            xy = [tempPlane%particles%x0(i), tempPlane%particles%y0(i)]
+            call tempPlane%tracers(1)%insertScalar(ThreeTracers(xy))
+        enddo
+
+        !print *, "data on temp plane set."
+        
+        !if (procrank==0) call tempPlane%logStats(exeLog)
+        
+        
+        if (procRank==0) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "remesh complete, t = ", plane%t)
+        
+        call plane%copy(tempPlane)
+        deallocate(tempPlane)
+        nullify(tempPlane)
+        
+        if (procRank == 0) then
+            write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", frameCounter, '.vtp'
+            open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
+            call plane%writeVTK(WRITE_UNIT_1)
+            close(WRITE_UNIT_1)
+            frameCounter = frameCounter + 1
+        endif
+    endif
+
     call time%stepTransport2d(plane, mpiParticles, mpiFaces, dt, rigidRotation)
+    
     if (mod(timeI, 25) == 0 .and. procRank == 0) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "time = ", plane%t)
 
     if (procRank == 0) then
-        write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", timeI, '.vtp'
+        write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", frameCounter, '.vtp'
         open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
         call plane%writeVTK(WRITE_UNIT_1)
         close(WRITE_UNIT_1)
+        frameCounter = frameCounter + 1
     endif
 enddo
 

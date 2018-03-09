@@ -27,13 +27,15 @@ real(kreal), dimension(2,12), parameter :: quad16_vertex_qp = reshape([ gll_cubi
                                                                 gll_cubic_qp(4), gll_cubic_qp(3), &
                                                                 gll_cubic_qp(4), gll_cubic_qp(4), &
                                                                 gll_cubic_qp(3), gll_cubic_qp(4), &
-                                                                gll_cubic_qp(2), gll_cubic_qp(4)], shape(quad16_vertex_qp))
+                                                                gll_cubic_qp(2), gll_cubic_qp(4)], &
+                                                                 shape(quad16_vertex_qp))
 
 !> quadrature points re-indexed to match layout of quad16 faces, edges, and particles
 real(kreal), dimension(2,4), parameter :: quad16_center_qp = reshape([ gll_cubic_qp(2), gll_cubic_qp(3), &
                                                                 gll_cubic_qp(2), gll_cubic_qp(2), &
                                                                 gll_cubic_qp(3), gll_cubic_qp(2), &
-                                                                gll_cubic_qp(3), gll_cubic_qp(3)], shape(quad16_center_qp))
+                                                                gll_cubic_qp(3), gll_cubic_qp(3)], &
+                                                                shape(quad16_center_qp))
 !> quadrature weights re-indexed to match layout of quad16 faces, edges, and particles
 real(kreal), dimension(12), parameter :: quad16_vertex_qw =(/gll_cubic_qw(1)*gll_cubic_qw(4), &
                                               gll_cubic_qw(1)*gll_cubic_qw(3), &
@@ -84,7 +86,46 @@ pure function bilinearMap(vertXyz, s1, s2)
                                  (1.0_kreal-s1)*(1.0_kreal-s2)*vertXyz(:,2) + &
                                 (1.0_kreal+s1)*(1.0_kreal-s2)*vertXyz(:,3) + &
                                 (1.0_kreal+s1)*(1.0_kreal+s2)*vertXyz(:,4))
+end function
 
+pure function bivariateScalarInterpolation(refCrd, vertVals, cntrVals)
+    real(kreal) :: bivariateScalarInterpolation
+    real(kreal), dimension(2), intent(in) :: refCrd
+    real(kreal), dimension(12), intent(in) :: vertVals
+    real(kreal), dimension(4), intent(in) :: cntrVals
+    bivariateScalarInterpolation = dzero
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(1) * &
+        gll_cubic_basis1(refCrd(1)) * gll_cubic_basis4(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(2) * &
+        gll_cubic_basis1(refCrd(1)) * gll_cubic_basis3(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(3) * &
+        gll_cubic_basis1(refCrd(1)) * gll_cubic_basis2(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(4) * &
+        gll_cubic_basis1(refCrd(1)) * gll_cubic_basis1(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(5) * &
+        gll_cubic_basis2(refCrd(1)) * gll_cubic_basis1(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(6) * &
+        gll_cubic_basis3(refCrd(1)) * gll_cubic_basis1(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(7) * &
+        gll_cubic_basis4(refCrd(1)) * gll_cubic_basis1(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(8) * &
+        gll_cubic_basis4(refCrd(1)) * gll_cubic_basis2(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(9) * &
+        gll_cubic_basis4(refCrd(1)) * gll_cubic_basis3(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(10) * &
+        gll_cubic_basis4(refCrd(1)) * gll_cubic_basis4(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(11) * &
+        gll_cubic_basis3(refCrd(1)) * gll_cubic_basis4(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + vertVals(12) * &
+        gll_cubic_basis2(refCrd(1)) * gll_cubic_basis4(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + cntrVals(1) * &
+        gll_cubic_basis2(refCrd(1)) * gll_cubic_basis3(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + cntrVals(2) * &
+        gll_cubic_basis2(refCrd(1)) * gll_cubic_basis2(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + cntrVals(3) * &
+        gll_cubic_basis3(refCrd(1)) * gll_cubic_basis2(refCrd(2))
+    bivariateScalarInterpolation = bivariateScalarInterpolation + cntrVals(4) * &
+        gll_cubic_basis3(refCrd(1)) * gll_cubic_basis3(refCrd(2))
 end function
 
 !> Inverts bilinearMap to find reference coordinates (r1,r2) in [-1,1]^2

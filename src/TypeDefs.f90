@@ -37,6 +37,7 @@ module NumberKindsModule
     real(KREAL), parameter :: EARTH_OMEGA = 2.0_kreal*PI / ONE_DAY  !< rotation rate of sphere {s^(-1)} @ingroup PhysicalConstants
     real(KREAL), parameter :: EARTH_SURFACE_AREA = 4.0_kreal * PI * EARTH_RADIUS * EARTH_RADIUS
 
+    real(kreal), parameter :: FILL_VALUE=999.0d20 !< indicates a garbage value or undefined variable
 
 	integer(KINT), parameter :: STD_ERR = 0
 	integer(KINT), parameter :: STD_IN  = 5

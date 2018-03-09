@@ -74,14 +74,14 @@ use CubicGLLModule
 implicit none
 private
 
-public PolyMesh2d
+public PolyMesh2d, meshKindFromString
 
 !> @brief Combines mesh primitives into one complete mesh object. Extend this type by adding fields for applications.
 type PolyMesh2d
     integer(kint) :: meshSeed !< geometry kind (e.g., planar or spherical) as defined in @ref NumberKinds.  Seeds define the initial, unrefined mesh
-    class(Particles), pointer :: particles !< @ref Particles defining vertices, edges, and interiors of mesh faces and edges
-    class(Edges), pointer :: edges !< @ref Edges connecting origin and destination particles for each edge, and each edge's left and right face
-    class(Faces), pointer :: faces !< @ref Faces
+    class(Particles), pointer :: particles => null() !< @ref Particles defining vertices, edges, and interiors of mesh faces and edges
+    class(Edges), pointer :: edges => null() !< @ref Edges connecting origin and destination particles for each edge, and each edge's left and right face
+    class(Faces), pointer :: faces => null() !< @ref Faces
     integer(kint) :: faceKind = 0 !< face kind (e.g., triangular or quadrilateral) as defined in @ref NumberKinds
     integer(kint) :: geomKind = 0 !< geometry kind (e.g., planar or spherical) as defined in @ref NumberKinds
     integer(kint) :: initNest = 0 !< initial refinement level (in terms of the @ref Faces quadtree) for a mesh
@@ -94,7 +94,7 @@ type PolyMesh2d
     contains
         procedure :: init
         procedure :: logStats
-        procedure, private :: getSeed
+        procedure :: getSeed
         procedure, private :: readSeedFile
         procedure, private :: nVerticesInMesh
         procedure, private :: nEdgesInMesh
@@ -102,16 +102,20 @@ type PolyMesh2d
         procedure :: writeMatlab
         procedure :: writeVTKSerialStartXML
         procedure :: writePlanarVTKStartWithHeightFromField
+        procedure :: writeLagCoordsToVTKPointDataXML
         procedure :: writeVTKSerialEndXML
         procedure :: integrateScalar
         procedure :: interpolateScalar
+        procedure :: setLagCoordFromOther
+        procedure :: interpolateLagCoord
         procedure :: locatePointInFace
         procedure, private :: locatePointTree
         procedure, private :: locatePointWalk
         procedure, private :: nearestRootFace
         procedure :: ccwEdgesAroundFace
         procedure :: ccwAdjacentFaces
-!        procedure :: copy
+        procedure :: pointIsOutsideMesh
+        procedure :: copy
 !        procedure :: refine
 
         final :: deleteMesh
@@ -159,15 +163,29 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
 
     if ( .NOT. logInit) call InitLogger(log, procRank)
 
+    if (associated(self%particles)) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ERROR:", &
+            " init called on mesh with particles already associated.")
+        return
+    endif
+    if (associated(self%edges)) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ERROR:", &
+            " init called on mesh with particles already associated.")
+        return
+    endif
+    if (associated(self%faces)) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" ERROR:", &
+            " init called on mesh with faces already associated.")
+        return
+    endif
+
     self%meshSeed = meshKindFromString(mesh_type)
     self%initNest = initNest
     self%maxNest = maxNest
     self%amrLimit = amrLimit
     self%maxRadius = maxRadius
 
-    self%particles => null()
-    self%edges => null()
-    self%faces => null()
+    self%t = dzero
 
     call self%getSeed()
 
@@ -179,6 +197,25 @@ subroutine init(self, mesh_type, initNest, maxNest, amrLimit, maxRadius)
         enddo
         startIndex = nFacesOld + 1
     enddo
+end subroutine
+
+subroutine copy(self, other)
+    class(PolyMesh2d), intent(inout) :: self
+    class(PolyMesh2d), intent(in) :: other
+    
+    self%meshSeed = other%meshSeed
+    self%initNest = other%initNest
+    self%maxNest = other%maxNest
+    self%amrLimit = other%amrLimit
+    self%maxRadius = other%maxRadius
+    self%t = other%t
+    self%nRootFaces = other%nRootFaces
+    self%geomKind = other%geomKind
+    self%faceKind = other%faceKind
+    
+    call self%particles%copy(other%particles)
+    call self%edges%copy(other%edges)
+    call self%faces%copy(other%faces)
 end subroutine
 
 !> @brief Integrates a scalar field over a mesh
@@ -215,6 +252,54 @@ pure function integrateScalar(self, scalar)
     endif
 end function
 
+function pointIsOutsideMesh(self, xyz, faceIndex)
+    logical(klog) :: pointIsOutsideMesh
+    class(PolyMesh2d), intent(in) :: self
+    real(kreal), dimension(3), intent(in) :: xyz
+    integer(kint), intent(in), optional :: faceIndex
+    !
+    type(STDIntVector) :: faceEdges
+    type(STDIntVector) :: boundaryEdges
+    integer(kint) :: i, faceId
+    real(kreal), dimension(3) :: centroid, p, q, v1, reflection
+    real(kreal) :: insideDist, outsideDist
+    
+    pointIsOutsideMesh = .FALSE.
+    if (self%geomKind == PLANAR_GEOM) then
+        if (present(faceIndex)) then
+            faceId = faceIndex
+        else
+            faceId = self%locatePointInFace(xyz)
+        endif
+        faceEdges = self%ccwEdgesAroundFace(faceId)
+        call initialize(boundaryEdges)
+        do i=1, faceEdges%N
+            if (self%edges%onBoundary(faceEdges%int(i))) &
+                call boundaryEdges%pushBack(faceEdges%int(i))
+        enddo
+        if (boundaryEdges%n > 0) then
+            v1 = dzero
+            centroid = self%faces%physCentroid(faceId, self%particles)
+            insideDist = sqrt(sum((centroid-xyz)*(centroid-xyz)))
+            do i=1, boundaryEdges%n
+                q = self%edges%vector(boundaryEdges%int(i), self%particles)
+                if (self%edges%positiveOrientation(boundaryEdges%int(i), faceId)) then
+                    v1 = self%particles%physCoord(self%edges%orig(boundaryEdges%int(i)))
+                else
+                    v1 = self%particles%physCoord(self%edges%dest(boundaryEdges%int(i)))
+                    q = -q
+                endif
+                q = q/sqrt(sum(q*q))
+                p = centroid - v1
+                reflection = centroid - 2.0_kreal * (p - sum(p*q)*q)
+                outsideDist = sqrt(sum((reflection-xyz)*(reflection-xyz)))
+                if (outsideDist < insideDist) &
+                    pointIsOutsideMesh = .TRUE.
+            enddo
+        endif
+    endif
+end function
+
 function interpolateScalar(self, xyz, scalar)
     real(kreal) :: interpolateScalar
     class(PolyMesh2d), intent(in)  :: self
@@ -224,61 +309,85 @@ function interpolateScalar(self, xyz, scalar)
     integer(kint) :: faceId, i, j
     real(kreal), dimension(3,4) :: faceCorners
     real(kreal), dimension(2) :: refCrd
+    real(kreal), dimension(12) :: vertvals
+    real(kreal), dimension(4) :: cntrVals
 
-    interpolateScalar = dzero
+    interpolateScalar = FILL_VALUE
     if (self%faceKind == QUAD_CUBIC_PANEL) then
         if (self%geomKind == PLANAR_GEOM) then
             faceId = self%locatePointInFace(xyz)
+            if (self%pointIsOutsideMesh(xyz, faceId)) then
+                interpolateScalar=dzero
+            else
+                do i=1,4
+                    faceCorners(:,i) = self%particles%physCoord(self%faces%vertices(mod(3*i+9,12)+1,faceId))
+                enddo
 
-            !write(logstring,'(A,2G15.8,A,I8)') 'interpolateScalar: tgt (', xyz(1:2), ') found in face ', faceId
-            !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", logstring)
+                refCrd = invertBilinear(faceCorners, xyz)
 
-            do i=1,4
-                faceCorners(:,i) = self%particles%physCoord(self%faces%vertices(mod(3*i+9,12)+1,faceId))
-            enddo
+                do i=1,12
+                    vertvals(i) = scalar%comp1(self%faces%vertices(i,faceId))
+                enddo
+                do i=1,4
+                    cntrVals(i) = scalar%comp1(self%faces%centerParticles(i,faceId))
+                enddo
+                interpolateScalar = bivariateScalarInterpolation(refCrd, vertVals, cntrVals)
+            endif
+        endif
+    endif
+end function
 
-            !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" interpolateScalar: ", 'face corners found.')
+subroutine setLagCoordFromOther(self, other)
+    class(PolyMesh2d), intent(inout) :: self
+    class(PolyMesh2d), intent(in) :: other
+    !
+    real(kreal), dimension(3) :: lagX, physX
+    integer(kint) :: i
+    
+    do i=1, self%particles%n
+        physX = self%particles%physCoord(i)
+        lagX = other%interpolateLagCoord(physX)
+        self%particles%x0(i) = lagX(1)
+        self%particles%y0(i) = lagX(2)
+        if (self%geomKind == SPHERE_GEOM) &
+            self%particles%z0(i) = lagX(3)
+    enddo
+end subroutine
 
-            refCrd = invertBilinear(faceCorners, xyz)
 
-            !write(logstring,'(A,2G15.8,A)') "interpolateScalar: tgt has refCrds = (", refCrd, ')'
-           !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", logstring)
+function interpolateLagCoord(self, xyz)
+    real(kreal), dimension(3) :: interpolateLagCoord
+    class(PolyMesh2d), intent(in) :: self
+    real(kreal), dimension(3), intent(in) :: xyz
+    !
+    integer(kint) :: faceId, i, j
+    real(kreal), dimension(3,4) :: faceCorners
+    real(kreal), dimension(2) :: refCrd
+    real(kreal), dimension(12) :: vertX0, vertY0
+    real(kreal), dimension(4) :: cntrX0, cntrY0
+    
+    interpolateLagCoord = FILL_VALUE
+    if (self%faceKind == QUAD_CUBIC_PANEL) then
+        if (self%geomKind == PLANAR_GEOM) then
+            faceId = self%locatePointInFace(xyz)
+            interpolateLagCoord(3) = dzero
+            if (.not. self%pointIsOutsideMesh(xyz, faceId)) then
+                do i=1,4
+                    faceCorners(:,i) = self%particles%physCoord(self%faces%vertices(mod(3*i+9,12)+1,faceId))
+                enddo
+                refCrd = invertBilinear(faceCorners, xyz)
 
-
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(1,faceId)) * &
-                gll_cubic_basis1(refCrd(1)) * gll_cubic_basis4(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(2,faceId)) * &
-                gll_cubic_basis1(refCrd(1)) * gll_cubic_basis3(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(3,faceId)) * &
-                gll_cubic_basis1(refCrd(1)) * gll_cubic_basis2(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(4,faceId)) * &
-                gll_cubic_basis1(refCrd(1)) * gll_cubic_basis1(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(5,faceId)) * &
-                gll_cubic_basis2(refCrd(1)) * gll_cubic_basis1(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(6,faceId)) * &
-                gll_cubic_basis3(refCrd(1)) * gll_cubic_basis1(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(7,faceId)) * &
-                gll_cubic_basis4(refCrd(1)) * gll_cubic_basis1(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(8,faceId)) * &
-                gll_cubic_basis4(refCrd(1)) * gll_cubic_basis2(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(9,faceId)) * &
-                gll_cubic_basis4(refCrd(1)) * gll_cubic_basis3(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(10,faceId)) * &
-                gll_cubic_basis4(refCrd(1)) * gll_cubic_basis4(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(11,faceId)) * &
-                gll_cubic_basis3(refCrd(1)) * gll_cubic_basis4(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%vertices(12,faceId)) * &
-                gll_cubic_basis2(refCrd(1)) * gll_cubic_basis4(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%centerParticles(1,faceId)) * &
-                gll_cubic_basis2(refCrd(1)) * gll_cubic_basis3(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%centerParticles(2,faceId)) * &
-                gll_cubic_basis2(refCrd(1)) * gll_cubic_basis2(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%centerParticles(3,faceId)) * &
-                gll_cubic_basis3(refCrd(1)) * gll_cubic_basis2(refCrd(2))
-            interpolateScalar = interpolateScalar + scalar%comp1(self%faces%centerParticles(4,faceId)) * &
-                gll_cubic_basis3(refCrd(1)) * gll_cubic_basis3(refCrd(2))
-
-            !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" interpolateScalar: summation complete.", interpolateScalar)
+                do i=1,12
+                    vertX0(i) = self%particles%x0(self%faces%vertices(i,faceId))
+                    vertY0(i) = self%particles%y0(self%faces%vertices(i,faceId))
+                enddo
+                do i=1,4
+                    cntrX0(i) = self%particles%x0(self%faces%centerParticles(i,faceId))
+                    cntrY0(i) = self%particles%y0(self%faces%centerParticles(i,faceId))
+                enddo
+                interpolateLagCoord(1) = bivariateScalarInterpolation(refCrd, vertX0, cntrX0)
+                interpolateLagCoord(2) = bivariateScalarInterpolation(refCrd, vertY0, cntrY0)
+            endif
         endif
     endif
 end function
@@ -428,6 +537,25 @@ subroutine writeVTKSerialStartXML(self, fileunit)
     write(fileunit,'(A)') '    </Polys>'
 end subroutine
 
+subroutine writeLagCoordsToVTKPointDataXML(self, fileunit)
+    class(PolyMesh2d), intent(in) :: self
+    integer(kint), intent(in) :: fileunit
+    !
+    integer(kint) :: i,j
+    
+    write(fileunit,'(A)') '      <DataArray type="Float32" Name="LagCoords" NumberOfComponents="3" format="ascii">'
+    if (self%geomKind == PLANAR_GEOM) then
+        do i=1,self%particles%N
+            write(fileunit,'(3(G15.8,A))') self%particles%x0(i), " ", self%particles%y0(i), " ", dzero, ""
+        enddo    
+    else
+        do i=1,self%particles%N
+            write(fileunit,'(3(G15.8,A))') self%particles%x0(i), " ", self%particles%y0(i), " ", self%particles%z0(i), ""
+        enddo
+    endif
+    write(fileunit,'(A)') '     </DataArray>'
+end subroutine
+
 subroutine writePlanarVTKStartWithHeightFromField(self, hfield, fileunit)
     class(PolyMesh2d), intent(in) :: self
     class(Field), intent(in) :: hField
@@ -446,8 +574,9 @@ subroutine writePlanarVTKStartWithHeightFromField(self, hfield, fileunit)
         return
     endif
     if (hfield%N /= self%particles%N) then
-        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//" writePlanarVTKStartWithHeightFromField error: ", &
-            "field size mismatch")
+        write(logstring,'(2(A,I8))') "particles%N = ", self%particles%N, ", hField%n = ", hField%n
+        call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey)//&
+            " writePlanarVTKStartWithHeightFromField error: field size mismatch", logstring)
         return
     endif
 
@@ -842,10 +971,9 @@ subroutine getSeed(self)
     integer(kint) :: nMaxParticles, nMaxEdges, nMaxFaces
 
 !    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" entering : ", "getSeed")
-
-    if (associated(self%particles)) deallocate(self%particles)
-    if (associated(self%edges)) deallocate(self%edges)
-    if (associated(self%faces)) deallocate(self%faces)
+!    if (associated(self%particles)) deallocate(self%particles)
+!    if (associated(self%edges)) deallocate(self%edges)
+!    if (associated(self%faces)) deallocate(self%faces)
 
     allocate( Particles :: self%particles)
 
@@ -969,6 +1097,7 @@ subroutine getSeed(self)
     ! initialize mesh
     do i=1, nSeedParticles
         call self%particles%insert(seedXYZ(:,i), seedXYZ(:,i))
+        !print *, "new particles ", i, " = (", self%particles%physCoord(i), ")"
     enddo
 
     if ( self%particles%N /= nSeedParticles ) then
@@ -1043,11 +1172,10 @@ subroutine readSeedFile(self, seedfilename, xyz, origs, dests, lefts, rights, in
     integer(kint), dimension(:,:), intent(inout) :: faceverts, faceedges, facecenters
     !
     integer(kint) :: readStat
-    integer(kint) :: nParticles, nEdges, nFaces, nVertsPerFace, nCentersPerFace, nIntsPerEdge
+    integer(kint) :: nParticles, nEdges, nFaces, nVertsPerFace, nCentersPerFace, nIntsPerEdge, i
     namelist /seed/ xyz, origs, dests, lefts, rights, ints, faceverts, faceedges, facecenters
 
 !    call LogMessage(log, DEBUG_LOGGING_LEVEL,trim(logkey)//" entering : ", "readSeedFile")
-
 !    print *, "nParticles = ", size(xyz,1)
 !    print *, "size(origs) = ", size(origs)
 !    print *, "size(dests) = ", size(dests)
@@ -1070,8 +1198,17 @@ subroutine readSeedFile(self, seedfilename, xyz, origs, dests, lefts, rights, in
         return
     endif
     read(READ_UNIT, nml=seed, iostat=readstat)
+    if (readStat /= 0) then
+        call LogMessage(log, ERROR_LOGGING_LEVEL, "readSeedFile error : cannot read namelist ", seedfilename)
+        return
+    endif    
+    close(READ_UNIT)
 !    print *, "readstat ", readstat
-!    print *, faceVerts
+!    print *, "Particles in file : "
+!    do i=1, nParticles
+!        print *, i, ": (", xyz(:,i), ")"
+!    enddo
+    
     origs = origs+1
     dests = dests+1
     lefts = lefts+1

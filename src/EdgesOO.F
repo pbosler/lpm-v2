@@ -67,6 +67,7 @@ type, abstract :: Edges
         procedure :: countParents
         procedure :: areaFromLeaves
         procedure :: writeMatlab
+        procedure :: vector
 end type
 
 interface
@@ -275,6 +276,7 @@ subroutine copyCubic(self, other)
             self%child1(1:other%N) = other%child1(1:other%N)
             self%child2(1:other%N) = other%child2(1:other%N)
             self%interiorParticles(:,1:other%N) = other%interiorParticles(:,1:other%N)
+            self%N = other%N
         class default
             call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" copy cubic edges error: ", "type mismatch.")
     end select
@@ -535,6 +537,23 @@ subroutine divideCubic(self, index, aParticles)
 
     self%N = self%N + 2
 end subroutine
+
+!>@brief Returns a vector pointing from edge orig to edge dest
+!>@param self Target edges object
+!>@param edgeIndex
+!>@param aParticles particles object associated with this set of edges
+pure function vector(self, index, aParticles)
+    real(kreal), dimension(3) :: vector
+    class(Edges), intent(in) :: self
+    integer(kint), intent(in) :: index
+    class(Particles), intent(in) :: aParticles
+    !
+    real(kreal), dimension(3) :: v1, v2
+    
+    v1 = aParticles%physCoord(self%orig(index))
+    v2 = aParticles%physCoord(self%dest(index))
+    vector = v2-v1
+end function
 
 !> @brief Computes the length of the edge at edgeIndex
 !> @param self Target edge object

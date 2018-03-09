@@ -27,6 +27,7 @@ type Field
         procedure :: linearComb
         procedure :: maxMagnitude
         procedure :: minMagnitude
+        procedure :: copy
         procedure :: maxValue
         procedure :: minValue
         procedure :: avgValue
@@ -95,6 +96,25 @@ subroutine init(self, nDim, nMax, name, units)
     if (present(units)) then
         self%units = units
     endif
+end subroutine
+
+subroutine copy(self, other)
+    class(Field), intent(inout) :: self
+    class(Field), intent(in) :: other
+    select case(self%nDIm)
+        case (1)
+            self%comp1(1:other%n) = other%comp1(1:other%N)
+        case (2)
+            self%comp1(1:other%n) = other%comp1(1:other%N)
+            self%comp2(1:other%n) = other%comp2(1:other%N)
+        case (3)
+            self%comp1(1:other%n) = other%comp1(1:other%N)
+            self%comp2(1:other%n) = other%comp2(1:other%N)
+            self%comp3(1:other%n) = other%comp3(1:other%N)
+    end select
+    self%n = other%n
+    self%name = other%name
+    self%units = other%units
 end subroutine
 
 subroutine insertScalar(self, sval)

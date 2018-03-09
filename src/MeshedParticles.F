@@ -24,6 +24,7 @@ type, extends(PolyMesh2d) :: MeshedParticles
     contains
         procedure :: init => initTransport
         procedure :: addTracers
+        procedure :: copy => copyTransport
         procedure :: set2DVelocityWithFunction
         procedure :: set3DVelocityWithFunction
         procedure :: set2DDensityWithFunction
@@ -74,8 +75,16 @@ subroutine initTransport(self, mesh_type, initNest, maxNest, amrLimit, maxRadius
 
 
     if (.not. logInit) call InitLogger(log, procRank)
-    !call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "entering init MeshedParticles.")
+    
+!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "entering init MeshedParticles.")
+    
     call self%polymesh2d%init(mesh_type, initNest, maxNest, amrLimit, maxRadius)
+    
+!    call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "returned from base case init.")
+!    call StartSection(log, "DEBUG")
+!    call self%logStats(log)
+!    call EndSection(log)
+    
     call self%density%init(1, self%particles%N_Max, "density")
     if (self%geomKind == PLANAR_GEOM) then
         call self%velocity%init(2, self%particles%N_Max, "velocity")
@@ -123,6 +132,35 @@ end subroutine
 subroutine deleteMP(self)
     type(MeshedParticles), intent(inout) :: self
     if (allocated(self%tracers)) deallocate(self%tracers)
+end subroutine
+
+subroutine copyTransport(self, other)
+    class(MeshedParticles), intent(inout) :: self
+    class(PolyMesh2d), intent(in) :: other
+    !
+    integer(kint) :: i    
+    
+    self%meshSeed = other%meshSeed
+    self%initNest = other%initNest
+    self%maxNest = other%maxNest
+    self%amrLimit = other%amrLimit
+    self%maxRadius = other%maxRadius
+    self%t = other%t
+    self%nRootFaces = other%nRootFaces
+    self%geomKind = other%geomKind
+    self%faceKind = other%faceKind
+    call self%particles%copy(other%particles)
+    call self%edges%copy(other%edges)
+    call self%faces%copy(other%faces)
+    
+    select type(other)
+        class is (MeshedParticles)
+            call self%velocity%copy(other%velocity)
+            call self%density%copy(other%density)
+            do i=1, size(self%tracers)
+                call self%tracers(i)%copy(other%tracers(i))
+            enddo
+    end select
 end subroutine
 
 subroutine set2DVelocityWithFunction(self, velFn, t)
@@ -205,6 +243,7 @@ subroutine writeTransportVTK(self, fileunit)
     do i=1, self%ntracers
         call self%tracers(i)%writeVtkPointDataXML(fileunit)
     enddo
+    call self%writeLagCoordsToVTKPointDataXML(fileunit)
     write(fileunit,'(A)') '     </PointData>'
     call self%writeVTKSerialEndXML(fileunit)
     deallocate(tracerIds)

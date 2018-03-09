@@ -18,6 +18,8 @@ character(len=56) :: mesh_type, vtkFile
 real(kreal), parameter :: intCosBump = 16.0_kreal / PI**2
 real(kreal), parameter :: triIntExact = 1.4741613930426135683_kreal
 real(kreal), parameter :: dx = 2.0_kreal / 50.0_kreal
+real(kreal), dimension(3), parameter :: outsidePoint = [3.0_kreal, 3.0_kreal, dzero]
+real(kreal), dimension(3), parameter :: insidePoint = [0.5_kreal, -0.333_kreal, dzero]
 
 
 type(Logger) :: exeLog
@@ -76,16 +78,31 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
     real(kreal) :: computedIntegral
     real(kreal), dimension(3) :: interpTargetPt
     integer(kint) :: i, j
-    real(kreal) :: interpErr
+    real(kreal) :: interpErr, lagErr
     real(kreal), dimension(51) :: unifX, unifY
-    real(kreal), dimension(51,51) :: interp, exact
+    real(kreal), dimension(51,51) :: interp, exact, interpX0, interpY0
+    real(kreal), dimension(3) :: xyz0
+    type(PolyMesh2d) :: copiedMesh
 
     allocate(mesh_ptr)
     allocate(scalarField)
     allocate(vectorField)
     call mesh_ptr%init(mesh_type, initNest, initNest, 0, 1.0_kreal)
     call mesh_ptr%logStats(exeLog)
-
+    
+    call copiedMesh%init(mesh_type, initNest, initNest, 0, 1.0_kreal)
+    call copiedMesh%copy(mesh_ptr)
+    call StartSection(exeLog, "mesh copy")
+    call copiedMesh%logStats(exeLog)
+    call EndSection(exeLog)
+    
+    write(logstring,'(2A)') "point (3,3) is outside mesh; mesh%pointIsOutsideMesh((3,3)) = ", &
+        merge("true ", "false", copiedMesh%pointIsOutsideMesh(outsidePoint))
+    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "outside mesh test: ", trim(logstring))
+    write(logstring,'(2A)') "point (1/2,-1/3) is inside mesh; mesh%pointIsOutsideMesh((1/2,-1/3)) = ", &
+        merge("true ", "false", copiedMesh%pointIsOutsideMesh(insidePoint))
+    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "outside mesh test: ", trim(logstring))
+    
     call scalarField%init(1, mesh_ptr%particles%N, "scalar")
     do i=1, mesh_ptr%particles%N
         call scalarField%insertScalar(cosineBump([mesh_ptr%particles%x(i), mesh_ptr%particles%y(i)]))
@@ -111,15 +128,27 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
             enddo
         enddo
         interpTargetPt = dzero
+        lagErr = dzero
         do j=1,51
             do i=1,51
                 interpTargetPt(1) = unifx(j)
                 interpTargetPt(2) = unify(i)
                 interp(i,j) = mesh_ptr%interpolateScalar(interpTargetPt, scalarField)
+                xyz0 = mesh_ptr%interpolateLagCoord(interpTargetPt)
+                interpX0(i,j) = xyz0(1)
+                interpY0(i,j) = xyz0(2)
+                
+                !write(logString,'(2(A,2G15.8),A)') "(x0,y0) = (", unifx(j), unify(i), &
+                !    "), interp. (x0, y0) = (", xyz0(1), xyz0(2), ")"    
+                !call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "lagCoordInterp: ", logstring)
+                
+                if (sqrt((unifx(j)-xyz0(1))**2 + (unify(i)-xyz0(2))**2) > lagErr) &
+                    lagErr = sqrt((unifx(j)-xyz0(1))**2 + (unify(i)-xyz0(2))**2)
             enddo
         enddo
         interpErr = maxval(abs(exact-interp))
-        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "interp error = ", interpErr)
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "scalar interp error = ", interpErr)
+        call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "lagCoord interp error = ", lagErr)
     endif
 
     call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "scalar integral = ", computedIntegral)
@@ -151,6 +180,8 @@ subroutine runTest(mesh_ptr, mesh_type, initNest, oname)
             call writeToMatlab(unify, WRITE_UNIT_1, "unify")
             call writeToMatlab(exact, WRITE_UNIT_1, "exact")
             call writeToMatlab(interp, WRITE_UNIT_1, "interp")
+            call writeToMatlab(interpX0, WRITE_UNIT_1, "x0interp")
+            call writeToMatlab(interpY0, WRITE_UNIT_1, "y0interp")
             close(WRITE_UNIT_1)
         endif
     endif
@@ -212,5 +243,6 @@ pure function sineWaveGrad(xy)
     sinewaveGrad(1) = 2.0_kreal*PI*1.0_kreal * cos(2.0_kreal*PI*xy(1)*1.0_kreal) * sin(2.0_kreal*PI*xy(2)*1.0_kreal)
     sinewaveGrad(2) = 2.0_kreal*PI*1.0_kreal * sin(2.0_kreal*PI*xy(1)*1.0_kreal) * cos(2.0_kreal*PI*xy(2)*1.0_kreal)
 end function
+
 
 end program
