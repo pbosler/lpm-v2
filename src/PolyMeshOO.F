@@ -116,6 +116,7 @@ type PolyMesh2d
         procedure :: ccwAdjacentFaces
         procedure :: pointIsOutsideMesh
         procedure :: copy
+        procedure :: meshSize
 !        procedure :: refine
 
         final :: deleteMesh
@@ -390,6 +391,12 @@ function interpolateLagCoord(self, xyz)
             endif
         endif
     endif
+end function
+
+pure function meshSize(self)
+    real(kreal) :: meshSize
+    class(PolyMesh2d), intent(in) :: self
+    meshSize = self%edges%avgLength(self%particles)
 end function
 
 !> @brief Outputs basic mesh info to a @ref Logger object.
@@ -828,9 +835,7 @@ function locatePointInFace(self, queryPt)
 
     locatePointInFace = 0
     treeStart = self%nearestRootFace(queryPt)
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, "locatePoint treeStart = ", treeStart)
     walkStart = self%locatePointTree(queryPt, treeStart)
-!    call LogMessage(log, DEBUG_LOGGING_LEVEL, "locatePoint walkStart = ", walkStart)
     locatePointInFace = self%locatePointWalk(queryPt, walkStart)
 end function
 

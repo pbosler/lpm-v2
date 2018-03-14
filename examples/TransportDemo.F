@@ -24,12 +24,16 @@ type(MeshedParticles) :: plane
 type(MeshedParticles), pointer :: tempPlane => null()
 integer(kint) :: i
 real(kreal), dimension(2) :: xy
+logical(klog) :: doOutput = .FALSE.
 
 type(MPIReplicatedData) :: mpiParticles
 type(MPIReplicatedData) :: mpiFaces
 type(TransportStepper) :: time
 real(kreal) :: dt, tfinal
 integer(kint) :: nTimesteps, timeI, frameCounter
+
+real(kreal) :: l2Err, linfErr, l2denom, ev, err
+real(kreal) :: timeStart, timeEnd
 
 character(len=128) :: fname
 
@@ -39,7 +43,9 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, procRank, mpiErrCode)
 
 call New(exeLog, DEBUG_LOGGING_LEVEL)
 
-call getInput(initNest)
+timeStart = MPI_WTIME()
+
+call getInput(initNest, doOutput)
 maxNest = initNest
 amrLimit = 0
 
@@ -59,7 +65,7 @@ do i=1, plane%particles%N
     call plane%tracers(1)%insertScalar(ThreeTracers(xy))
 enddo
 
-if (procRank == 0) then
+if (procRank == 0 .and. doOutput) then
     write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", 0, '.vtp'
     open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
     call plane%writeVTK(WRITE_UNIT_1)
@@ -104,7 +110,7 @@ do timeI = 1, nTimesteps
         deallocate(tempPlane)
         nullify(tempPlane)
         
-        if (procRank == 0) then
+        if (procRank == 0 .and. doOutput) then
             write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", frameCounter, '.vtp'
             open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
             call plane%writeVTK(WRITE_UNIT_1)
@@ -117,7 +123,7 @@ do timeI = 1, nTimesteps
     
     if (mod(timeI, 25) == 0 .and. procRank == 0) call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "time = ", plane%t)
 
-    if (procRank == 0) then
+    if (procRank == 0 .and. doOutput) then
         write(fname, '(A,I1,A,I0.4,A)') "transport_"//trim(mesh_type), initNest, "_", frameCounter, '.vtp'
         open(unit=WRITE_UNIT_1, file=fname, action='write', status='replace')
         call plane%writeVTK(WRITE_UNIT_1)
@@ -125,6 +131,30 @@ do timeI = 1, nTimesteps
         frameCounter = frameCounter + 1
     endif
 enddo
+
+l2denom = dzero
+l2Err = dzero
+linfErr = dzero
+do i=1, plane%particles%N
+    ! compute tracer error, output to console
+    ev = ThreeTracers([plane%particles%x(i), plane%particles%y(i)])
+    err = abs(ev-plane%tracers(1)%comp1(i))
+    if ( err > linfErr) linfErr = err
+    l2denom = l2denom + ev*ev*plane%particles%weight(i)
+    l2Err = l2Err + err*err*plane%particles%weight(i)    
+enddo
+l2Err = sqrt(l2Err/l2denom)
+
+timeEnd = MPI_WTIME()
+
+if (procRank==0) then
+    write(logstring,'(3(A,G15.8))') "mesh size = ", plane%meshSize(), ', lInfErr = ', linfErr, ', l2err = ', l2Err
+    call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "", logString)
+    write(logstring,'(A,G15.8,A)') ' elapsed time ', (timeEnd - timeStart) / 60.0_kreal, '  minutes.'
+    call LogMessage(exeLog,TRACE_LOGGING_LEVEL, "PROGRAM COMPLETE: ", logString)
+endif
+
+
 
 
 call MPI_FINALIZE(mpiErrCode)
@@ -136,43 +166,53 @@ function ThreeTracers(xy)
 	real(kreal), intent(in) :: xy(2)
 	!
 	real(kreal) :: r, cosArg
+	real(kreal), dimension(2) :: gcent
 
-	! cosine hill
-	r = sqrt( (xy(1) - 0.25_kreal)*(xy(1) - 0.25_kreal) + (xy(2) - 0.5_kreal)*(xy(2)-0.5_kreal))
-	if ( r >= 0.15_kreal ) then
-		cosArg = 0.15_kreal
-	else
-		cosArg = r
-	endif
-	cosArg = cosArg / 0.15_kreal
-	ThreeTracers = 0.25_kreal * (1.0_kreal + cos(PI * cosArg))
-
-	! slotted cylinder
-	r = sqrt( (xy(1) - 0.5_kreal)*(xy(1)-0.5_kreal) + (xy(2) - 0.75_kreal)*(xy(2) - 0.75_kreal))
-	if ( r < 0.15_kreal) ThreeTracers = ThreeTracers + 1.0_kreal
-	if ( xy(1) < 0.525_kreal .AND. xy(1) > 0.475_kreal ) then
-		if ( xy(2) > 0.6_kreal .AND. xy(2) < 0.85_kreal ) then
-			ThreeTracers = ThreeTracers - 1.0_kreal
-		endif
-	endif
-
-	! cone
-	r = 0.15_kreal - sqrt( (xy(1) -0.5_kreal)*(xy(1) - 0.5_kreal) + (xy(2) - 0.25_kreal)*(xy(2) - 0.25_kreal))
-	if ( r < 0.0_kreal ) r = 0.0_kreal
-	ThreeTracers = ThreeTracers + r
+    gcent = [0.25_kreal, 0.5_kreal]
+! cosine hill
+!	r = sqrt( (xy(1) - 0.25_kreal)*(xy(1) - 0.25_kreal) + (xy(2) - 0.5_kreal)*(xy(2)-0.5_kreal))
+!	if ( r >= 0.15_kreal ) then
+!		cosArg = 0.15_kreal
+!	else
+!		cosArg = r
+!	endif
+!	cosArg = cosArg / 0.15_kreal
+!	ThreeTracers = 0.25_kreal * (1.0_kreal + cos(PI * cosArg))
+!
+! slotted cylinder
+!	r = sqrt( (xy(1) - 0.5_kreal)*(xy(1)-0.5_kreal) + (xy(2) - 0.75_kreal)*(xy(2) - 0.75_kreal))
+!	if ( r < 0.15_kreal) ThreeTracers = ThreeTracers + 1.0_kreal
+!	if ( xy(1) < 0.525_kreal .AND. xy(1) > 0.475_kreal ) then
+!		if ( xy(2) > 0.6_kreal .AND. xy(2) < 0.85_kreal ) then
+!			ThreeTracers = ThreeTracers - 1.0_kreal
+!		endif
+!	endif
+!
+! cone
+!	r = 0.15_kreal - sqrt( (xy(1) -0.5_kreal)*(xy(1) - 0.5_kreal) + (xy(2) - 0.25_kreal)*(xy(2) - 0.25_kreal))
+!	if ( r < 0.0_kreal ) r = 0.0_kreal
+!	ThreeTracers = ThreeTracers + r
+    ThreeTracers = exp(-10.0_kreal*sum((xy-gcent)*(xy-gcent)))
 end function
 
-subroutine getInput(initNest)
+subroutine getInput(initNest, doOutput)
     integer(kint), intent(out) :: initNest
+    logical(klog), intent(out) :: doOutput
     !
     integer(kint) :: narg
     character(len=128) :: arg
+    integer(kint) :: iread
     narg = IARGC()
     if (narg == 0) then
         initNest = 0
     else
         call GETARG(1,arg)
         read(arg,*) initNest
+        if (narg > 1) then
+            call GETARG(2,arg)
+            read(arg,*) iread
+            doOutput = (iread>0)
+        endif
     endif
 end subroutine
 

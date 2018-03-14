@@ -356,7 +356,7 @@ subroutine stepTransport2d(self, mp, mpiParticles, mpiFaces, dt, velFn, divFn)
     tin = mp%t + dt
     do i=0, mpiParticles%messageSize(procRank)-1
         self%xIn(i+1) = mp%particles%x(i+poffset) + self%xStage3(i+1)
-        self%yIn(i+1) = mp%particles%x(i+poffset) + self%yStage3(i+1)
+        self%yIn(i+1) = mp%particles%y(i+poffset) + self%yStage3(i+1)
     enddo
     do i=0, mpiParticles%messageSize(procRank)-1
         vec = velFn(self%xIn(i+1), self%yIn(i+1), tIn)
