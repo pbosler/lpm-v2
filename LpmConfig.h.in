@@ -1,0 +1,5 @@
+!LPM Auto-config options
+#define LPM_VERSION_MAJOR @LPM_VERSION_MAJOR@
+#define LPM_VERSION_MINOR @LPM_VERSION_MINOR@
+
+#define MESH_SEED_DIR "@PROJECT_SOURCE_DIR@/meshSeeds"
