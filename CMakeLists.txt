@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-project (LPM)
+project (LPM Fortran)
 set ( LPM_VERSION_MAJOR 2)
 set ( LPM_VERSION_MINOR 1)
 
@@ -8,6 +8,7 @@ FIND_PACKAGE(MPI REQUIRED)
 FIND_PACKAGE(LAPACK REQUIRED)
 
 enable_language(Fortran)
+set(CMAKE_Fortran_FORMAT FREE) 
 
 # set default build type to release
 if ( NOT CMAKE_BUILD_TYPE)
@@ -23,8 +24,10 @@ endif ( NOT CMAKE_BUILD_TYPE)
 # FFLAGS depend on the compiler
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   # gfortran
-  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -fopenmp -ffree-form")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -fopenmp -fbacktrace -fbounds-check -ffree-form")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -fopenmp -ffree-form -cpp")
+  set (CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-O2 -cpp")
+  set (CMAKE_Fortran_FLAGS_MINSIZEREL "-O2 -cpp")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -cpp -fopenmp -fbacktrace -fbounds-check -ffree-form")
 elseif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   # ifort
   set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -qopenmp -free -fpp")

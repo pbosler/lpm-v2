@@ -32,22 +32,22 @@ TARGET_LINK_LIBRARIES( ssrfpackTest.exe lpmFortran )
 ADD_EXECUTABLE( spherePSETest.exe SpherePSEConvTest.f90 )
 TARGET_LINK_LIBRARIES( spherePSETest.exe lpmFortran )
 
-ADD_EXECUTABLE(ooMeshTest.exe OOMeshTest.F)
+ADD_EXECUTABLE(ooMeshTest.exe OOMeshTest.f90)
 TARGET_LINK_LIBRARIES(ooMeshTest.exe lpmFortran)
 
-ADD_EXECUTABLE(ooParticlesAndFieldTest.exe OOParticlesAndFieldTest.F)
+ADD_EXECUTABLE(ooParticlesAndFieldTest.exe OOParticlesAndFieldTest.f90)
 TARGET_LINK_LIBRARIES(ooParticlesAndFieldTest.exe lpmFortran)
 
-ADD_EXECUTABLE(ooPlaneMeshTest.exe OOPlaneMeshTest.F)
+ADD_EXECUTABLE(ooPlaneMeshTest.exe OOPlaneMeshTest.f90)
 TARGET_LINK_LIBRARIES(ooPlaneMeshTest.exe lpmFortran)
 
-ADD_EXECUTABLE(ooIcosTriMeshTest.exe OOIcosTriTests.F)
+ADD_EXECUTABLE(ooIcosTriMeshTest.exe OOIcosTriTests.f90)
 TARGET_LINK_LIBRARIES(ooIcosTriMeshTest.exe lpmFortran)
 
-ADD_EXECUTABLE(ooCubedSphereTest.exe OOCubedSphereTests.F)
+ADD_EXECUTABLE(ooCubedSphereTest.exe OOCubedSphereTests.f90)
 TARGET_LINK_LIBRARIES(ooCubedSphereTest.exe lpmFortran)
 
-ADD_EXECUTABLE(cubicGllTest.exe CubicGLLTest.F)
+ADD_EXECUTABLE(cubicGllTest.exe CubicGLLTest.f90)
 TARGET_LINK_LIBRARIES(cubicGllTest.exe lpmFortran)
 
 # Unit Tests

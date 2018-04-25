@@ -12,8 +12,8 @@ add_library( lpmFortran TypeDefs.f90 Utilities.f90 OutputWriter.f90 Logger.f90 S
 						SphereBVE.f90 SphereBVESolver.f90
 						SphereTransport.f90 SphereTransportSolver.f90 SphereTransportVelocities.f90
 						SphereTracers.f90
-						ParticlesOO.F EdgesOO.F FacesOO.F PolyMeshOO.F FieldOO.F CubicGLL.F
-						MPIReplicatedData.F MeshedParticles.F RK4.F
+						ParticlesOO.f90 EdgesOO.f90 FacesOO.f90 PolyMeshOO.f90 FieldOO.f90 CubicGLL.f90
+						MPIReplicatedData.f90 MeshedParticles.f90 RK4.f90
 						)
 						
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
