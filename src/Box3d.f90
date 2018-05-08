@@ -5,6 +5,8 @@ use UtilitiesModule
 use SphereGeomModule
 use LoggerModule
 
+#include "LpmCongfig.h"
+
 implicit none
 private
 

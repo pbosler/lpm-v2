@@ -928,7 +928,7 @@ pure function physCentroid(self, index, aParticles)
             do i=1, 4
                 physCentroid = physCentroid + aParticles%physCoord(self%vertices(i, index))
             enddo
-            physCentroid = physCentroid / real(4, kreal)
+            physCentroid = 0.25_kreal * physCentroid
         class is (QuadCubicFaces)
             do i=1,4
                 physCentroid = physCentroid + aParticles%physCoord(self%vertices(mod(3*i+9,12)+1,index))
