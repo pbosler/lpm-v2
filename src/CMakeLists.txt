@@ -14,6 +14,7 @@ add_library( lpmFortran TypeDefs.f90 Utilities.f90 OutputWriter.f90 Logger.f90 S
 						SphereTracers.f90
 						ParticlesOO.f90 EdgesOO.f90 FacesOO.f90 PolyMeshOO.f90 FieldOO.f90 CubicGLL.f90
 						MPIReplicatedData.f90 MeshedParticles.f90 RK4.f90
+						Box3d.f90
 						)
 						
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")

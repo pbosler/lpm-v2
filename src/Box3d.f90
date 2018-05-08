@@ -3,11 +3,13 @@ module Box3dModule
 use NumberKindsModule
 use UtilitiesModule
 use SphereGeomModule
+use LoggerModule
 
 implicit none
 private
 
 public Box3d
+public BOX_PAD
 
 type :: Box3d
    real(kreal) :: xmin, xmax
@@ -19,11 +21,13 @@ type :: Box3d
    real(kreal) :: aspectRatio
    
    contains
-     procedure :: init
+     procedure :: initSpecific
+     procedure :: initPadded
+     generic :: init => initSpecific, initPadded
      procedure :: containsPoint
      procedure :: bisectAll
      !procedure :: bisectAlongDims
-     !procedure :: logStats
+     procedure :: logStats
      procedure :: minEdgeLength
      procedure :: maxEdgeLength
      procedure, private :: calc_min_radius
@@ -32,9 +36,29 @@ type :: Box3d
      procedure :: faceCentroids
 end type
 
+real(kreal), parameter :: BOX_PAD = 0.00001
+
 contains
 
-pure subroutine init(self, xmin, xmax, ymin, ymax, zmin, zmax)
+pure subroutine initPadded(self, radius)
+    class(Box3d), intent(inout) ::  self
+    real(kreal), intent(in) :: radius
+    
+    self%xmin = -radius - BOX_PAD
+    self%xmax = radius + BOX_PAD
+    self%ymin = -radius - BOX_PAD
+    self%ymax = radius + BOX_PAD
+    self%zmin = -radius - BOX_PAD
+    self%zmax = radius + BOX_PAD
+    
+    self%volume = (2.0_kreal * (radius + BOX_PAD))**3
+    self%centroid = 0.0_kreal
+    self%aspectRatio = 1.0_kreal
+    self%min_radius = self%calc_min_radius()
+    self%max_radius = self%calc_max_radius()
+end subroutine
+
+pure subroutine initSpecific(self, xmin, xmax, ymin, ymax, zmin, zmax)
   class(Box3d), intent(inout) :: self
   real(kreal), intent(in) :: xmin, xmax, ymin, ymax, zmin, zmax
   
@@ -160,5 +184,22 @@ pure function bisectAll(self)
     call bisectAll(7)%init(self%xmin, midx, midy, self%ymax, midz, self%zmax)
     call bisectAll(8)%init(midx, self%xmax, midy, self%ymax, midz, self%zmax)
 end function
+
+subroutine logStats(self, aLog)
+    class(Box3d), intent(in) :: self
+    type(Logger), intent(inout) :: aLog
+    character(len=256) :: infostring
+    
+    call StartSection(aLog)
+    write(infostring,'(6(A,G10.4),A)') 'x in [', self%xmin, ', ', self%xmax, &
+        ']; y in [', self%ymin, ', ', self%ymax, ']; z in [', self%zmin, ', ', self%zmax, ']'
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "box info: ", trim(infostring))
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "volume = ", self%volume)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "aspect ratio = ", self%aspectRatio)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "min_radius = ", self%min_radius)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "max_radius = ", self%max_radius)
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, "centroid = ", self%centroid)
+    call EndSection(aLog)
+end subroutine
 
 end module

@@ -71,6 +71,7 @@ interface LogMessage
 	module procedure LogString
 	module procedure LogInteger
 	module procedure LogReal
+	module procedure LogReal3
 	module procedure LogIntVector
 	module procedure LogIntArray
 end interface
@@ -223,6 +224,19 @@ subroutine LogReal(self,msgLevel,key,val)
 	character(len=*), intent(in) :: key
 	real(kreal), intent(in) :: val
 	if (msgLevel>=self%level) then
+		call Write(self%writer,key,val)
+	endif
+    if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then
+	    testPass = .FALSE.
+	endif
+end subroutine
+
+subroutine LogReal3(self, msgLevel, key, val)
+    type(Logger), intent(in) :: self
+    integer(kint), intent(in) :: msgLevel
+    character(len=*), intent(in) :: key
+    real(kreal), dimension(3), intent(in) :: val
+    if (msgLevel>=self%level) then
 		call Write(self%writer,key,val)
 	endif
     if (msgLevel == ERROR_LOGGING_LEVEL .or. msgLevel == WARNING_LOGGING_LEVEL) then

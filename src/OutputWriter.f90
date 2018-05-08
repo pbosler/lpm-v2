@@ -74,6 +74,7 @@ interface Write
 	module procedure WriteString
 	module procedure WriteInteger
 	module procedure WriteReal
+	module procedure WriteReal3
 	module procedure WriteIntVector
 	module procedure WriteIntegerArray
 end interface
@@ -191,6 +192,17 @@ subroutine WriteReal(self,key,val)
 		form = FormatWithIndent(self,'(A,2X,G15.8)')
 	endif
 	write(self%fileUnit,form) trim(key), val
+end subroutine
+
+subroutine WriteReal3(self, key, val)
+    type(OutputWriter), intent(in) :: self
+    character(len=*), intent(in) :: key
+    real(kreal), dimension(3), intent(in) :: val
+    character(len=56) :: form
+    
+    form = FormatWithIndent(self, '(A, 2X, "(", 3(G15.8,X), ")")')
+    
+    write(self%fileunit, form) trim(key), val
 end subroutine
 
 !> @brief Writes a key/value pair with appropriate indentation

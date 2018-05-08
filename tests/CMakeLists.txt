@@ -50,6 +50,9 @@ TARGET_LINK_LIBRARIES(ooCubedSphereTest.exe lpmFortran)
 ADD_EXECUTABLE(cubicGllTest.exe CubicGLLTest.f90)
 TARGET_LINK_LIBRARIES(cubicGllTest.exe lpmFortran)
 
+ADD_EXECUTABLE(box3dTest.exe Box3dUnitTests.f90)
+TARGET_LINK_LIBRARIES(box3dTest.exe lpmFortran)
+
 # Unit Tests
 create_test(particlesAndFieldTest.exe)
 create_test(stdIntVectorTest.exe)
@@ -62,6 +65,7 @@ create_test(ooPlaneMeshTest.exe)
 create_test(ooIcosTriMeshTest.exe 3)
 create_test(ooCubedSphereTest.exe 3)
 create_test(cubicGllTest.exe)
+create_test(box3dTest.exe)
 
 # Regression tests
 create_test(BivarConvergenceTest.exe)
