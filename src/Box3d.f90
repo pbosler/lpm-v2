@@ -5,7 +5,7 @@ use UtilitiesModule
 use SphereGeomModule
 use LoggerModule
 
-#include "LpmCongfig.h"
+#include "LpmConfig.h"
 
 implicit none
 private
@@ -21,7 +21,7 @@ type :: Box3d
    real(kreal), dimension(3) :: centroid
    real(kreal) :: volume
    real(kreal) :: aspectRatio
-   
+
    contains
      procedure :: initSpecific
      procedure :: initPadded
@@ -45,14 +45,14 @@ contains
 pure subroutine initPadded(self, radius)
     class(Box3d), intent(inout) ::  self
     real(kreal), intent(in) :: radius
-    
+
     self%xmin = -radius - BOX_PAD
     self%xmax = radius + BOX_PAD
     self%ymin = -radius - BOX_PAD
     self%ymax = radius + BOX_PAD
     self%zmin = -radius - BOX_PAD
     self%zmax = radius + BOX_PAD
-    
+
     self%volume = (2.0_kreal * (radius + BOX_PAD))**3
     self%centroid = 0.0_kreal
     self%aspectRatio = 1.0_kreal
@@ -63,7 +63,7 @@ end subroutine
 pure subroutine initSpecific(self, xmin, xmax, ymin, ymax, zmin, zmax)
   class(Box3d), intent(inout) :: self
   real(kreal), intent(in) :: xmin, xmax, ymin, ymax, zmin, zmax
-  
+
   self%xmin = xmin
   self%xmax = xmax
   self%ymin = ymin
@@ -96,7 +96,7 @@ pure function maxEdgeLength(self)
   lens(2) = self%ymax-self%ymin
   lens(3) = self%zmax-self%zmin
   maxEdgeLength = maxval(lens)
-end function 
+end function
 
 pure function calc_min_radius(self)
   class(Box3d), intent(in) :: self
@@ -104,7 +104,7 @@ pure function calc_min_radius(self)
   real(kreal), dimension(3, 6) :: face_locs
   integer(kint) :: i
   real(kreal) :: test_dist
-  
+
   face_locs = self%faceCentroids()
   calc_min_radius = huge(1.0_kreal)
   do i=1, 6
@@ -121,7 +121,7 @@ pure function calc_max_radius(self)
     real(kreal), dimension(3,8) :: corners
     integer(kint) :: i
     real(kreal) :: test_dist
-    
+
     corners = self%corners()
     calc_max_radius = 0.0_kreal
     do i=1,8
@@ -145,7 +145,7 @@ pure function faceCentroids(self)
     faceCentroids(:,4) = [self%xmin, midy, midz]
     faceCentroids(:,5) = [midx, midy, self%zmin]
     faceCentroids(:,6) = [midx, midy, self%zmax]
-end function 
+end function
 
 pure function corners(self)
     real(kreal), dimension(3,8) :: corners
@@ -166,8 +166,8 @@ pure function containsPoint(self, queryPt)
     real(kreal), dimension(3), intent(in) :: queryPt
     containsPoint = (self%xmin <= queryPt(1) .and. queryPt(1) <= self%xmax) .and. &
                     (self%ymin <= queryPt(2) .and. queryPt(2) <= self%ymax) .and. &
-                    (self%zmin <= queryPt(3) .and. queryPt(3) <= self%zmax) 
-end function 
+                    (self%zmin <= queryPt(3) .and. queryPt(3) <= self%zmax)
+end function
 
 pure function bisectAll(self)
     type(Box3d), dimension(8) :: bisectAll
@@ -176,7 +176,7 @@ pure function bisectAll(self)
     midx = 0.5_kreal*(self%xmin + self%xmax)
     midy = 0.5_kreal*(self%ymin + self%ymax)
     midz = 0.5_kreal*(self%zmin + self%zmax)
-    
+
     call bisectAll(1)%init(self%xmin, midx, self%ymin, midy, self%zmin, midz)
     call bisectAll(2)%init(midx, self%xmax, self%ymin, midy, self%zmin, midz)
     call bisectAll(3)%init(self%xmin, midx, midy, self%ymax, self%zmin, midz)
@@ -191,7 +191,7 @@ subroutine logStats(self, aLog)
     class(Box3d), intent(in) :: self
     type(Logger), intent(inout) :: aLog
     character(len=256) :: infostring
-    
+
     call StartSection(aLog)
     write(infostring,'(6(A,G10.4),A)') 'x in [', self%xmin, ', ', self%xmax, &
         ']; y in [', self%ymin, ', ', self%ymax, ']; z in [', self%zmin, ', ', self%zmax, ']'
