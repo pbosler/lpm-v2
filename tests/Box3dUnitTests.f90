@@ -16,11 +16,16 @@ type(Box3d), dimension(:), allocatable :: kids
 type(Box3d) :: box1
 type(Box3d) :: box2
 
+integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
+character(len=28) :: logKey = "Box3dTest"
+
 real(kreal), dimension(3), parameter :: queryPt= one / 2.0_kreal
 integer(kint) :: i, boxid
 
 type(Logger) :: exeLog
 character(len=256) :: logString
+
+call InitLogger(exeLog, procRank)
 
 call logMessage(exeLog, TRACE_LOGGING_LEVEL, "Box3d: ", "Unit Test Start")
 
@@ -55,4 +60,18 @@ if (testPass) then
 else
     call logMessage(exeLog, ERROR_LOGGING_LEVEL, "result: ", "FAIL")
 endif
+
+contains
+
+subroutine InitLogger(log, rank)
+	type(Logger), intent(inout) :: log
+	integer(kint), intent(in) :: rank
+	if ( rank == 0 ) then
+		call New(log, logLevel)
+	else
+		call New(log, ERROR_LOGGING_LEVEL)
+	endif
+	write(logKey,'(A,I0.2,A)') trim(logKey)//"_", rank, ":"
+end subroutine
+
 end program

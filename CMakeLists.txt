@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
 
 project (LPM Fortran)
 set ( LPM_VERSION_MAJOR 2)
@@ -8,7 +8,7 @@ FIND_PACKAGE(MPI REQUIRED)
 FIND_PACKAGE(LAPACK REQUIRED)
 
 enable_language(Fortran)
-set(CMAKE_Fortran_FORMAT FREE) 
+set(CMAKE_Fortran_FORMAT FREE)
 
 # set default build type to release
 if ( NOT CMAKE_BUILD_TYPE)
@@ -20,14 +20,14 @@ endif ( NOT CMAKE_BUILD_TYPE)
 #set (CMAKE_INSTALL_PREFIX ${default_prefix}/install CACHE STRING
 #      "Choose the installation directory; by default it installs in the install directory."
 #      FORCE)
-      
+
 # FFLAGS depend on the compiler
 if ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   # gfortran
-  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -fopenmp -ffree-form -cpp")
-  set (CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-O2 -cpp")
-  set (CMAKE_Fortran_FLAGS_MINSIZEREL "-O2 -cpp")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -cpp -fopenmp -fbacktrace -fbounds-check -ffree-form")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -fopenmp -ffree-form -cpp -fallow-argument-mismatch")
+  set (CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-O2 -cpp -fallow-argument-mismatch")
+  set (CMAKE_Fortran_FLAGS_MINSIZEREL "-O2 -cpp -fallow-argument-mismatch")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g3 -cpp -fopenmp -fbacktrace -fbounds-check -ffree-form -fallow-argument-mismatch")
 elseif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   # ifort
   set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -qopenmp -free -fpp")
@@ -40,7 +40,7 @@ else ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
 endif ( ${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
 
-						
+
 
 configure_file(cubedSphereSeed.dat ${CMAKE_BINARY_DIR}/cubedSphereSeed.dat COPYONLY)
 configure_file(icosTriSeed.dat ${CMAKE_BINARY_DIR}/icosTriSeed.dat COPYONLY)
