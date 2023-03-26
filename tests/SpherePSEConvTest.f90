@@ -17,6 +17,13 @@ implicit none
 include 'mpif.h'
 
 !
+! pse variables
+!
+type(PSE) :: pseSetup
+real(kreal) :: psePower
+!
+
+!
 ! mesh variables
 !
 type(PolyMesh2d) :: sphere
@@ -27,12 +34,7 @@ integer(kint) :: meshSeed
 integer(kint) :: amrLimit
 real(kreal) :: radius = 1.0_kreal
 namelist /meshDefine/ faceKind, initNest, amrLimit, radius, psePower
-!
-! pse variables
-!
-type(PSE) :: pseSetup
-real(kreal) :: psePower
-!
+
 ! test case variables
 !
 type(Field) :: constScalar
@@ -158,11 +160,11 @@ do j = 1, nLon
 	lons(j) = (j-1) * dlam * DEG_2_RAD
 enddo
 
-do j = 1, nLon 
+do j = 1, nLon
 	do i = 1, nLat
 		xx = radius * cos( lons(j) ) * cos(lats(i))
 		yy = radius * sin( lons(j) ) * cos(lats(i))
-		zz = radius * sin( lats(i) )		
+		zz = radius * sin( lats(i) )
 		constData(i,j) = constVal
 		harmData(i,j) = SphericalHarmonicFn( xx, yy, zz)
 		harmLapExact(i,j) = ExactHarmonicLaplacian( xx, yy, zz)
@@ -190,14 +192,14 @@ do j = mpiLongitudes%indexStart(procRank), mpiLongitudes%indexEnd(procRank)
 		zz = radius * sin( lats(i) )
 		constInterp(i,j) = PSESphereInterpolateScalar( pseSetup, sphere, constScalar, [xx, yy, zz])
 		harmInterp(i,j) = PSESphereInterpolateScalar( pseSetup, sphere, harmonic, [xx, yy, zz] )
-		
+
 		do k = 1, sphere%particles%N
 			if ( sphere%particles%isActive(k) ) then
 				pseKin = SphereDistance( PhysCoord(sphere%particles, k), [xx, yy, zz]) / pseSetup%eps
 				lapKernel = bivariateLaplacianKernel8( pseKin ) / pseSetup%eps**2
 				greensKernel = log( radius * radius - xx * sphere%particles%x(k) - yy * sphere%particles%y(k) - &
 					zz * sphere%particles%z(k) ) / fourPi
-							
+
 				constLap(i,j) = constLap(i,j) + lapKernel * ( constScalar%scalar(k) - constData(i,j) ) * &
 					sphere%particles%area(k) / pseSetup%eps**2
 				harmLap(i,j) = harmLap(i,j) + lapKernel * ( harmonic%scalar(k) - harmData(i,j) ) * &
@@ -233,7 +235,7 @@ harmonicLapPSE%N = sphere%particles%N
 harmonicLapError%N = sphere%particles%N
 harmonicInterp%N = sphere%particles%N
 harmonicInterpError%N = sphere%particles%N
-constScalarInterp%N = sphere%particles%N 
+constScalarInterp%N = sphere%particles%N
 streamFnScalar%N = sphere%particles%N
 
 call SetFieldToZero( constScalarLap )
@@ -242,10 +244,10 @@ call SetFieldToZero( streamFnScalar )
 
 do i = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 	xi = PhysCoord(sphere%particles, i)
-	
+
 	constScalarInterp%scalar(i) = PSESphereInterpolateScalar( pseSetup, sphere, constScalar, xi )
 	harmonicInterp%scalar(i) = PSESphereInterpolateScalar( pseSetup, sphere, harmonic, xi)
-	
+
 	do j = 1, sphere%particles%N
 		if ( sphere%particles%isActive(j) ) then
 			xj = PhysCoord(sphere%particles, j)
@@ -254,12 +256,12 @@ do i = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 			greensKernel = log( radius * radius - sum(xi*xj) ) / fourPi
 
 			if ( j == i ) greensKernel = 0.0_kreal
-			
+
 			constScalarLap%scalar(i) = constScalarLap%scalar(i) + lapKernel * ( constScalar%scalar(j) - constScalar%scalar(i)) * &
 				sphere%particles%area(j) / pseSetup%eps**2
 			harmonicLapPSE%scalar(i) = harmonicLapPSE%scalar(i) + lapKernel * ( harmonic%scalar(j) - harmonic%scalar(i) ) * &
 				sphere%particles%area(j) / pseSetup%eps**2
-			
+
 			streamFnScalar%scalar(i) = streamFnScalar%scalar(i) + greensKernel * harmonicLapExact%scalar(j) * &
 				sphere%particles%area(j)
 		endif
@@ -276,7 +278,7 @@ do i = 0, numProcs - 1
 	call MPI_BCAST( harmonicLapPSE%scalar( mpiParticles%indexStart(i): mpiParticles%indexEnd(i)), &
 		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	call MPI_BCAST( streamFnScalar%scalar( mpiParticles%indexStart(i): mpiParticles%indexEnd(i)), &
-		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)		
+		mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 enddo
 
 harmonicInterpError%scalar = abs( harmonicInterp%scalar - harmonic%scalar )
@@ -295,21 +297,21 @@ harmLapDenom = 0.0_kreal
 particlesL2Const = 0.0_kreal
 particlesL2ConstLap = 0.0_kreal
 particlesL2Harm = 0.0_kreal
-particlesL2HarmLap = 0.0_kreal 
+particlesL2HarmLap = 0.0_kreal
 do k = mpiParticles%indexStart(procRank), mpiParticles%indexEnd(procRank)
 	if ( sphere%particles%isActive(k) ) then
 		harmDenom = harmDenom + harmonic%scalar(k)**2 * sphere%particles%area(k)
 		harmLapDenom = harmLapDenom + harmonicLapExact%scalar(k)**2 * sphere%particles%area(k)
-		
+
 		particlesL2Const = particlesL2Const + ( constScalarInterp%scalar(k) - constVal )**2 * sphere%particles%area(k)
 		particlesL2ConstLap = particlesL2ConstLap + constScalarLap%scalar(k)**2 * sphere%particles%area(k)
-		
+
 		particlesL2Harm = particlesL2Harm + harmonicInterpError%scalar(k)**2 * sphere%particles%area(k)
 		particlesL2HarmLap = particlesL2HarmLap + harmonicLapError%scalar(k)**2 * sphere%particles%area(k)
 	endif
 enddo
 
-call MPI_Reduce( [harmDenom, harmLapDenom, particlesL2Const, particlesL2ConstLap, particlesL2Harm, particlesL2HarmLap], & 
+call MPI_Reduce( [harmDenom, harmLapDenom, particlesL2Const, particlesL2ConstLap, particlesL2Harm, particlesL2HarmLap], &
 	[harmDenom, harmLapDenom, particlesL2Const, particlesL2ConstLap, particlesL2Harm, particlesL2HarmLap],&
 	6, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, mpiErrCode )
 
@@ -341,7 +343,7 @@ unifLinfHarmLap = maxval( abs( harmLap - harmLapExact)) / maxval(abs(harmLapExac
 
 unifL2Const = unifL2Const / ( 4.0_kreal * PI * radius * radius * constVal * constVal )
 unifL2Harm = unifL2Harm / harmDenom
-unifL2HarmLap = unifL2HarmLap / harmLapDenom 
+unifL2HarmLap = unifL2HarmLap / harmLapDenom
 
 call StartSection(exeLog, "Particles to Uniform Grid approximations")
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, "constInterpLinf = ", unifLinfConst )
@@ -378,7 +380,7 @@ if (procRank==0) then
         call LogMessage(exeLog, ERROR_LOGGING_LEVEL, " ", "TEST FAIL: uniform harmonic regression.")
     endif
 
-    if (particlesLinfHarm > 0.0176 .OR. particlesL2Harm > 0.0002) then 
+    if (particlesLinfHarm > 0.0176 .OR. particlesL2Harm > 0.0002) then
         call LogMessage(exeLog, ERROR_LOGGING_LEVEL, " ", "TEST FAIL: particles harmonic interpolation regression")
     endif
 
@@ -397,26 +399,26 @@ if ( procRank == 0 ) then
 	open( unit=WRITE_UNIT_1, file=vtkFile, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(vtkFile))
-		else	
+		else
 			call WriteVTKPoints( sphere%particles, WRITE_UNIT_1)
 			call WriteFacesToVTKPolygons( sphere%faces, WRITE_UNIT_1)
-	
+
 			call WriteVTKPointDataSectionHeader(WRITE_UNIT_1, sphere%particles%N)
-		
+
 			call WriteFieldToVTKPointData( constScalar, WRITE_UNIT_1)
 			call WriteFieldToVTKPointData( constScalarInterp, WRITE_UNIT_1)
 			call WriteFieldToVTKPointData( constScalarLap, WRITE_UNIT_1)
-		
+
 			call WriteFieldToVTKPointData( harmonic, WRITE_UNIT_1 )
 			call WriteFieldToVTKPointData( harmonicInterp, WRITE_UNIT_1 )
 			call WriteFieldToVTKPointData( harmonicInterpError, WRITE_UNIT_1 )
-		
-			call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )	
+
+			call WriteFieldToVTKPointData( harmonicLapPSE, WRITE_UNIT_1 )
 			call WriteFieldToVTKPointData( harmonicLapExact, WRITE_UNIT_1 )
 			call WriteFieldToVTKPointData( harmonicLapError, WRITE_UNIT_1 )
-		
+
 			call WriteFieldToVTKPointData( streamFnScalar, WRITE_UNIT_1 )
-	
+
 			call WriteFaceAreaToVTKCellData( sphere%faces, sphere%particles, WRITE_UNIT_1)
 		endif
 	close(WRITE_UNIT_1)
@@ -433,12 +435,12 @@ if ( procRank == 0 ) then
 			call WriteToMatlab( constData, WRITE_UNIT_1, "const")
 			call WriteToMatlab( constLap, WRITE_UNIT_1, "constLap")
 			call WriteToMatlab( constInterp, WRITE_UNIT_1, "constInterp")
-		
-			call WriteToMatlab( harmData, WRITE_UNIT_1, "harm54")		
+
+			call WriteToMatlab( harmData, WRITE_UNIT_1, "harm54")
 			call WriteToMatlab( harmInterp, WRITE_UNIT_1, "harmInterp")
 			call WriteToMatlab( harmLap, WRITE_UNIT_1, "harmLap")
 			call WriteToMatlab( harmLapExact, WRITE_UNIT_1, "harmLapExact")
-		
+
 			call WriteToMatlab( stream, WRITE_UNIT_1, "streamFn")
 		endif
 	close(WRITE_UNIT_1)
@@ -477,7 +479,7 @@ subroutine SetScalarFieldOnMesh(sphere, aField, scalarFn)
 	procedure(scalarFnOf3DSpace) :: scalarFn
 	!
 	integer(kint) :: i
-	
+
 	aField%N = sphere%particles%N
 	do i = 1, sphere%particles%N
 		aField%scalar(i) = scalarFn( sphere%particles%x(i), sphere%particles%y(i), sphere%particles%z(i) )
@@ -495,10 +497,10 @@ pure function SphericalHarmonicFn( x, y, z )
 	real(kreal), intent(in) :: x, y, z
 	!
 	real(kreal) :: lat, lon
-	
+
 	lat = Latitude( x, y, z )
 	lon = Longitude( x, y, z)
-	
+
 	SphericalHarmonicFn = 3.0_kreal * sqrt(35.0_kreal) * cos( 4.0_kreal * lon ) * sin( lat ) *  &
 		(-1.0_kreal + sin( lat ) * sin( lat ) )**2
 end function
@@ -511,7 +513,7 @@ end function
 
 !> @brief Reads a namelist file, which must be specified on the command line at run-time execution as the first argument,
 !> to define the user-specified variables for this driver program.
-!> 
+!>
 !> Only MPI rank 0 reads the file; it then broadcasts the relevant data to all other ranks.
 !>
 !> @param[in] rank MPI rank
@@ -524,26 +526,26 @@ subroutine ReadNamelistFile( rank )
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
 	integer(kint) :: mpiErrCode, readStat
-	
+
 	if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey), " ERROR: expected namelist file as 1st argument.")
 		stop
 	endif
-	
+
 	if ( rank == 0 ) then
 		call GET_COMMAND_ARGUMENT(1, namelistFilename)
-		
+
 		open(unit=READ_UNIT, file=namelistFilename, status='OLD', action='READ', iostat=readStat)
 			if ( readStat /= 0 ) then
 				call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey), " ERROR: cannot read namelist file.")
 				stop
 			endif
-		
+
 			read(READ_UNIT, nml=meshDefine)
 			rewind(READ_UNIT)
 			read(READ_UNIT, nml=fileIO)
 		close(READ_UNIT)
-		
+
 		if ( faceKind == 3 ) then
 			meshSeed = ICOS_TRI_SPHERE_SEED
 		elseif ( faceKind == 4) then
@@ -553,9 +555,9 @@ subroutine ReadNamelistFile( rank )
 				" invalid faceKind -- using triangles.")
 			meshSeed = ICOS_TRI_SPHERE_SEED
 		endif
-		
+
 		maxNest = initNest + amrLimit
-		
+
 		if (meshSeed == ICOS_TRI_SPHERE_SEED) then
 			if ( initNest == maxNest ) then
 				write(meshString, '(A,I1)') '_icosTri', initNest
@@ -571,42 +573,42 @@ subroutine ReadNamelistFile( rank )
 				write(meshString, '(2(A,I1))') '_cubedSphereAMR', initNest, 'to', maxNest
 			endif
 		endif
-	
+
 		write(vtkFile,'(4A)') trim(outputDir), trim(outputRoot), trim(meshString), '.vtk'
 		write(matlabFile,'(5A)') trim(outputDir), '/', trim(outputRoot), trim(meshString), '.m'
-		
+
 		bcastIntegers(1) = meshSeed
 		bcastIntegers(2) = initNest
 		bcastIntegers(3) = maxNest
 		bcastIntegers(4) = amrLimit
-		
+
 		bcastReals(1) = radius
 		bcastReals(2) = psePower
 	endif
-	
+
 	call MPI_BCAST(bcastIntegers, initBCAST_intSize, MPI_INTEGER, 0, MPI_COMM_WORLD, mpiErrCode)
 	if ( mpiErrCode /= 0 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey)//" bcastIntegers, MPI_BCAST ERROR : ", mpiErrCode)
 	endif
-	
+
 	call MPI_BCAST(bcastReals, initBCAST_realSize, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, mpiErrCode)
 	if ( mpiErrCode /= 0 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey)//" bcastReals, MPI_BCAST ERROR : ", mpiErrCode)
 	endif
-	
+
 	meshSeed = bcastIntegers(1)
 	initNest = bcastIntegers(2)
 	maxNest = bcastIntegers(3)
 	amrLimit = bcastIntegers(4)
-	
+
 	radius = bcastReals(1)
 	psePower = bcastReals(2)
 end subroutine
 
 !> @brief Initializes a @ref Logger for this executable program.
-!> 
+!>
 !> Output is controlled by message priority level and MPI rank.
-!> 
+!>
 !> @param[in] log @ref Logger to initialize
 !> @param[in] rank MPI rank
 
