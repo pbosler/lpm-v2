@@ -172,17 +172,25 @@ subroutine outputVTKPrivate( self, filename )
 		call WriteFieldToVTKPointData( self%density, WRITE_UNIT_1 )
 		call WriteFieldToVTKPointData( self%velocity, WRITE_UNIT_1)
 		call WriteFieldToVTKPointData( self%divergence, WRITE_UNIT_1 )
-		if ( allocated(self%tracers) ) then
+
+    if ( allocated(self%tracers) ) then
 			do i = 1, size(self%tracers)
-			  if (self%isPanelTracer(i)) then
-          call WriteFieldToVTKCellData(self%tracers(i), WRITE_UNIT_1, self%mesh%faces)
-        else
+			  if (.NOT. self%isPanelTracer(i)) then
           call WriteFieldToVTKPointData(self%tracers(i), WRITE_UNIT_1)
         endif
 			enddo
 		endif
 
-		call WriteFaceAreaToVTKCellData( self%mesh%faces, self%mesh%particles, WRITE_UNIT_1)
+    call WriteFaceAreaToVTKCellData(self%mesh%faces, self%mesh%particles, WRITE_UNIT_1 )
+
+		if (allocated(self%tracers)) then
+      do i = 1, size(self%tracers)
+        if (self%isPanelTracer(i)) then
+          call WriteFieldToVTKCellData( self%tracers(i), WRITE_UNIT_1, self%mesh%faces )
+        endif
+      enddo
+    endif
+
 	close(WRITE_UNIT_1)
 end subroutine
 
