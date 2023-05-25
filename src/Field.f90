@@ -12,14 +12,14 @@ module FieldModule
 !>
 !> Allows users to set a name and units, if applicable, for each field.
 !> Provides a data type for holding variables associated with an LPM spatial discretization by instances of @ref Particles .
-!> 
+!>
 !> May be scalar or vector data.
-!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with 
-!> the particle whose index is i are in the field object also at index i. 
+!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with
+!> the particle whose index is i are in the field object also at index i.
 !>
 !> The field data structures is a "structure of arrays," so that all information about a scalar of vector field at
-!> particle i is located at index i in the field arrays.  
-!> For example, the value of a scalar carried by particle i is `aField%%scalar(i)`. 
+!> particle i is located at index i in the field arrays.
+!> For example, the value of a scalar carried by particle i is `aField%%scalar(i)`.
 !> Vector field components must be accessed individually using `aField%%xComp(i)`, `aField%%yComp(i)`, etc.
 !>
 !>
@@ -48,8 +48,8 @@ public ScalarAverage
 !> @brief Vectorized class for physical data defined on a particles' spatial discretization of a domain.
 !> May be scalar or vector data.
 !>
-!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with 
-!> the particle whose index is i are in the field object also at index i. 
+!> Field objects have a 1-to-1 correspondence with a @ref Particles object, so that the data associated with
+!> the particle whose index is i are in the field object also at index i.
 type Field
 	real(kreal), allocatable :: scalar(:) !< Array to hold scalar field data
 	real(kreal), allocatable :: xComp(:)  !< Array to hold the x-component of vector field data
@@ -60,10 +60,10 @@ type Field
 	integer(kint) :: N = 0 !< Number of field values stored (should be equal to the number of particles)
 	integer(kint) :: N_Max = 0 !< maximum number of field values allowed in memory
 	integer(kint) :: nDim = 0 !< dimension of field, 1 = scalar, >= 2 for vector fields
-	
-	contains	
+
+	contains
 		final :: deletePrivate
-end type	
+end type
 
 !> @brief Allocates memory and initializes to null/zero a Field object.
 interface New
@@ -105,14 +105,14 @@ subroutine newPrivate(self, nDim, nMax, name, units )
 	type(Field), intent(out) :: self
 	integer(kint), intent(in) :: nDim, nMax
 	character(len=*), intent(in), optional :: name, units
-	
+
 	if ( .NOT. logInit ) call InitLogger(log, procRank)
-	
+
 	if ( nDim <= 0 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " invalid nMax.")
 		return
 	endif
-	
+
 	self%N_Max = nMax
 	self%nDim = nDim
 	self%N = 0
@@ -133,12 +133,12 @@ subroutine newPrivate(self, nDim, nMax, name, units )
 			self%yComp = 0.0
 			self%zComp = 0.0
 		case default
-	end select 
-	
+	end select
+
 	if ( present(name) ) then
 		self%name = trim(name)
 	endif
-	
+
 	if ( present(units) ) then
 		self%units = trim(units)
 	endif
@@ -162,8 +162,8 @@ subroutine copyPrivate( self, other )
 	type(Field), intent(in) :: other
 	integer(kint) :: i
 	if ( self%nDim /= other%nDim .OR. self%N_Max < other%N ) then
-		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " Copy Field ERROR : memory not allocated.") 
-		return 
+		call LogMessage(log, ERROR_LOGGING_LEVEL, logkey, " Copy Field ERROR : memory not allocated.")
+		return
 	endif
 	self%N = other%N
 	self%name = other%name
@@ -178,7 +178,7 @@ subroutine copyPrivate( self, other )
 			self%xComp(i) = other%xComp(i)
 			self%yComp(i) = other%yComp(i)
 		enddo
-		
+
 	else
 		do i = 1, other%N
 			self%xComp(i) = other%xComp(i)
@@ -190,7 +190,7 @@ end subroutine
 
 !> @brief Inserts a scalar value to a preallocated Field object.
 !> @param self Target field object
-!> @param val 
+!> @param val
 subroutine InsertScalarToField(self, val)
 	type(Field), intent(inout) :: self
 	real(kreal), intent(in) :: val
@@ -212,7 +212,7 @@ end subroutine
 subroutine InsertVectorToField( self, vecVal )
 	type(Field), intent(inout) :: self
 	real(kreal), intent(in) :: vecVal(:)
-	
+
 	if ( self%N >= self%N_Max ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " InsertVectorToField : out of memory.")
 		return
@@ -287,11 +287,11 @@ subroutine WriteFieldToVTKPointData( self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: j
-	
+
 	!write(fileunit,'(A,I8)') "POINT_DATA ", self%N
 	write(fileunit,'(5A,I4)') "SCALARS ", trim(self%name), "_", trim(self%units) , "  double ", self%nDim
 	write(fileunit,'(A)') "LOOKUP_TABLE default"
-	
+
 	select case (self%nDim)
 		case (1)
 			do j = 1, self%N
@@ -312,7 +312,7 @@ subroutine WriteFieldToVTKPointData( self, fileunit )
 	end select
 end subroutine
 
-!> @brief Outputs Field object data to a .vtk PolyData file for use with VTK or ParaView, 
+!> @brief Outputs Field object data to a .vtk PolyData file for use with VTK or ParaView,
 !> if this field is also associated with a faces object.
 !> @param self
 !> @param fileunit
@@ -323,14 +323,14 @@ subroutine WriteFieldToVTKCellData( self, fileunit, aFaces )
 	type(Faces), intent(in) :: aFaces
 	!
 	integer(kint) :: i, j, nCells, nVerts
-	
+
 	nVerts = size(aFaces%vertices, 1)
 	nCells = nVerts * aFaces%N_Active
-	
+
 	!write(fileunit,'(A,I8)') "CELL_DATA ", nCells
 	write(fileunit,'(5A,I4)') "SCALARS ", trim(self%name), "_", trim(self%units) , "  double ", self%nDim
 	write(fileunit,'(A)') "LOOKUP_TABLE default"
-	
+
 	select case ( self%nDim )
 		case (1)
 			do i = 1, aFaces%N
@@ -339,7 +339,7 @@ subroutine WriteFieldToVTKCellData( self, fileunit, aFaces )
 						write(fileunit,*) self%scalar( aFaces%centerParticle(i) )
 					enddo
 				endif
-			enddo 
+			enddo
 		case (2)
 			do i = 1, aFaces%N
 				if ( .NOT. aFaces%hasChildren(i) ) then
@@ -360,13 +360,28 @@ subroutine WriteFieldToVTKCellData( self, fileunit, aFaces )
 	end select
 end subroutine
 
-!> @brief Writes Field information to console using a loggermodule::logger object for formatting. 
+!> @brief Writes Field information to console using a loggermodule::logger object for formatting.
 !> @param self
 !> @param aLog
-subroutine logStatsPrivate(self, aLog )
+subroutine logStatsPrivate(self, aLog, panelField )
 	type(Field), intent(in) :: self
-	type(Logger), intent(inout) :: aLog 
-	call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, "FieldStats:"//trim(self%name) )
+	type(Logger), intent(inout) :: aLog
+	!
+	logical, intent(in), optional :: panelField
+	!
+	logical :: isPanelField
+
+	if (present(panelField)) then
+	  isPanelField = panelField
+	else
+	  isPanelField = .FALSE.
+	endif
+
+	if (isPanelField) then
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, "(panel) FieldStats:"//trim(self%name) )
+  else
+    call LogMessage(aLog, TRACE_LOGGING_LEVEL, logkey, "(point) FieldStats:"//trim(self%name) )
+  endif
 	call StartSection(aLog)
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "Field.nDim = ", self%nDim)
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "Field.N = ", self%N)
@@ -376,7 +391,7 @@ subroutine logStatsPrivate(self, aLog )
 		 call LogMessage(alog, TRACE_LOGGING_LEVEL,"max scalar = ", maxval(self%scalar(1:self%N)))
 		 call LogMessage(alog, TRACE_LOGGING_LEVEL,"min scalar = ", minval(self%scalar(1:self%N)))
 	else
-		call LogMessage(alog, TRACE_LOGGING_LEVEL, "max magnitude = ", MaxMagnitude(self) ) 
+		call LogMessage(alog, TRACE_LOGGING_LEVEL, "max magnitude = ", MaxMagnitude(self) )
 		call LogMessage(aLog, TRACE_LOGGING_LEVEL, "min magnitude = ", MinMagnitude(self) )
 	endif
 	call EndSection(aLog)
@@ -385,7 +400,7 @@ end subroutine
 !> @brief Returns the maximum magnitude of a vector field
 !> @param self
 pure function MaxMagnitude(self)
-	real(kreal) :: MaxMagnitude 
+	real(kreal) :: MaxMagnitude
 	type(Field), intent(in) :: self
 	!
 	integer(kint) :: i
@@ -400,14 +415,14 @@ pure function MaxMagnitude(self)
 		do i = 1, self%N
 			mag = sqrt( self%xComp(i)*self%xComp(i) + self%yComp(i)*self%yComp(i) + self%zComp(i)*self%zComp(i))
 			if ( mag > MaxMagnitude ) MaxMagnitude = mag
-		enddo 	
+		enddo
 	endif
-end function 
+end function
 
 !> @brief Returns the minimum magnitude of a vector field
 !> @param self
 pure function MinMagnitude(self)
-	real(kreal) :: MinMagnitude 
+	real(kreal) :: MinMagnitude
 	type(Field), intent(in) :: self
 	!
 	integer(kint) :: i
@@ -422,7 +437,7 @@ pure function MinMagnitude(self)
 		do i = 1, self%N
 			mag = sqrt( self%xComp(i)*self%xComp(i) + self%yComp(i)*self%yComp(i) + self%zComp(i)*self%zComp(i))
 			if ( mag < MinMagnitude ) MinMagnitude = mag
-		enddo 	
+		enddo
 	endif
 end function
 
@@ -446,7 +461,7 @@ subroutine WriteFieldToMatlab( self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: i
-	
+
 	select case ( self%nDim )
 		case (1)
 			write(fileunit,*) "scalarField_", trim(self%name), " = [", self%scalar(1), ", ..."
@@ -465,9 +480,9 @@ subroutine WriteFieldToMatlab( self, fileunit )
 										 self%yComp(1), ", ", self%zComp(1), "; ..."
 			do i = 2, self%N-1
 				write(fileunit,*) self%xComp(i), ", ", self%yComp(i), ", ", self%zComp(i), "; ..."
-			enddo							 
+			enddo
 			write(fileunit,*) self%xComp(self%N), ", ", self%yComp(self%N), ", ", self%zComp(self%N), "];"
-	end select	
+	end select
 end subroutine
 
 !
@@ -478,7 +493,7 @@ end subroutine
 
 
 !> @brief Initializes a logger for the Field module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor
