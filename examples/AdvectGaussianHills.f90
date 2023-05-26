@@ -45,8 +45,8 @@ real(kreal) :: qMinTrue, qMaxTrue
 real(kreal) :: qMinComp, qMaxComp
 real(kreal) :: qMinErr, qMaxErr
 real(kreal), parameter :: qRange = 0.95_kreal
-integer(kint), parameter :: nTracers = 3
-integer(kint), dimension(3), parameter :: tracerDims = [1,1,1]
+integer(kint), parameter :: nTracers = 5
+integer(kint), dimension(5), parameter :: tracerDims = [1,1,1,1,1]
 
 ! remeshing variables
 type(TransportRemesh) :: remesh
@@ -86,7 +86,7 @@ real(kreal) :: rmTimeStart, rmTimeEnd, rmTimeTotal
 real(kreal) :: stepTimeStart, stepTimeEnd, stepTimeTotal
 integer(kint) :: i
 real(kreal), dimension(3) :: vec
-
+real(kreal) :: FTLE_,FTLE_Error_
 
 !--------------------------------
 !	initialize : setup computing environment
@@ -110,10 +110,16 @@ call AddTracers(sphere, nTracers, tracerDims)
 sphere%tracers(1)%name = "gaussianHills"
 sphere%tracers(2)%name = "initialLatitude"
 sphere%tracers(3)%name = "relError"
+sphere%tracers(4)%name = "FTLE"
+sphere%tracers(5)%name = "FTLEError"
+sphere%isPanelTracer(4)=.TRUE.
+sphere%isPanelTracer(5)=.TRUE.
 call SetInitialDensityOnMesh(sphere)
 call SetTracerOnMesh( sphere, 1, GaussianHillsTracer )
 sphere%tracers(3)%N = sphere%mesh%particles%N
 call SetFieldToZero(sphere%tracers(3))
+call SetFieldToZero(sphere%tracers(4))
+call SetFieldToZero(sphere%tracers(5))
 
 call SetVelocityOnMesh( sphere, velFn, t)
 call SetDivergenceOnMesh(sphere)
@@ -123,6 +129,12 @@ do i = 1, sphere%mesh%particles%N
 	call InsertScalarToField( sphere%tracers(2), Latitude(vec) )
 enddo
 
+do i = 1, sphere%mesh%particles%N
+
+FTLE_=0.d0;FTLE_Error_=0.d0
+call InsertScalarToField( sphere%tracers(4), FTLE_ )
+call InsertScalarToField( sphere%tracers(5), FTLE_Error_ )
+enddo
 ! TO DO : AMR
 
 !
@@ -150,6 +162,7 @@ if ( procRank == 0 ) then
 	write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 
 	call OutputToVTK(sphere, vtkFile)
+	!call OutputInverseFlowMapToVTK(sphere, vtkFile)
 	frameCounter = frameCounter + 1
 
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" t = ", t)
@@ -187,6 +200,10 @@ do timeJ = 0, nTimesteps - 1
 		tempSphere%tracers(1)%name = "gaussianHills"
 		tempSphere%tracers(2)%name = "initialLatitude"
 		tempSphere%tracers(3)%name = "relError"
+		tempSphere%tracers(4)%name = "FTLE"
+		tempSphere%tracers(5)%name = "FTLEError"
+		tempSphere%isPanelTracer(4)=.TRUE.
+		tempSphere%isPanelTracer(5)=.TRUE.
 
 		if ( useDirectRemesh ) then
 			call DirectRemeshTransport( remesh, sphere, tempSphere, .FALSE., velFn, t )
@@ -209,6 +226,7 @@ do timeJ = 0, nTimesteps - 1
 
 	stepTimeStart = MPI_WTIME()
 	call Timestep(solver, sphere, t, dt, velFn)
+
 	stepTimeEnd = MPI_WTIME()
 	stepTimeTotal = stepTimeTotal + (stepTimeEnd - stepTimeStart)
 
@@ -227,9 +245,19 @@ do timeJ = 0, nTimesteps - 1
 		enddo
 	endif
 
+	do i = 1, sphere%mesh%faces%N
+		if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+			call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
+			sphere%tracers(4)%scalar(i)=FTLE_
+			sphere%tracers(5)%scalar(i)=FTLE_Error_
+	endif
+enddo
+
+
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 		call OutputToVTK(sphere, vtkFile)
+		!call OutputInverseFlowMapToVTK(sphere, vtkFile)
 		frameCounter = frameCounter + 1
 		call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//" t = ", t)
 	endif

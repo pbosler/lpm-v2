@@ -1,5 +1,5 @@
 &meshDefine
-	faceKind = 3 
+	faceKind = 3
 	initNest = 3
 	amrLimit = 0
 /
