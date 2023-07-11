@@ -2,15 +2,15 @@ module SphereBVEModule
 !> @file SphereBVE.f90
 !> Data structure for representing solutions of the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere
 !> @author Peter Bosler, Sandia National Laboratories Center for Computing Research
-!> 
+!>
 !>
 !> @defgroup SphereBVE SphereBVE
 !> @brief Data structure for representing solutions of the Barotropic Vorticity Equation (BVE) on the surface of a rotating sphere.
 !>
-!> Combines a @ref PolyMesh2d with the data @ref Field objects for the BVE.  
+!> Combines a @ref PolyMesh2d with the data @ref Field objects for the BVE.
 !> Allows users to optionally add @ref Field objects for passive tracers.
-!> 
-!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates), 
+!>
+!> In addition to the variables carried by the base @ref Particles object (e.g., physical and Lagrangian coordinates),
 !> the BVEMesh data type adds fields for relative vorticity @f$ \zeta(x,y,z,t) @f$ and the materially conserved absolute vorticity @f$ \omega(x_0,y_0,z_0) @f$.
 !> These variables are related by the equation
 !> @f[
@@ -19,8 +19,8 @@ module SphereBVEModule
 !> where @f$ f = \frac{2\Omega}{a}z(t) @f$ is the Coriolis parameter, @f$ \Omega @f$ is the constant angular velocity of the sphere about the z-axis,
 !> and @f$ a @f$ is the radius of the sphere.
 !>
-!> Two stream functions are defined on the particles, @f$ \psi_r(x,y,z,t) @f$ is defined with respect to the rotating frame 
-!> and @f$ \psi_a(x,y,z,t) @f$ is defined with respect to the inertial frame. 
+!> Two stream functions are defined on the particles, @f$ \psi_r(x,y,z,t) @f$ is defined with respect to the rotating frame
+!> and @f$ \psi_a(x,y,z,t) @f$ is defined with respect to the inertial frame.
 !> Both are represented (and computed) by convolution with the Green's function kernel,
 !> @f{align*}{
 !> 		\psi_r(\vec{x},t) &= \frac{1}{4\pi a}\int_{S} \log( 1 - \vec{x} \cdot \vec{\tilde{x}})\zeta(\vec{\tilde{x}})\,dA, \\
@@ -29,13 +29,13 @@ module SphereBVEModule
 !>
 !> The particles also have a @ref Field to track their velocity, which is given by convolution with the Biot-Savart kernel,
 !> @f[
-!> 		\vec{u}(\vec{x},t) = -\frac{1}{4\pi a}\int_{S} \frac{ \vec{x} \times \vec{\tilde{x}} }{a^2 - \vec{x}\cdot\vec{\tilde{x}}} \zeta(\vec{\tilde{x}})\,dA.	
+!> 		\vec{u}(\vec{x},t) = -\frac{1}{4\pi a}\int_{S} \frac{ \vec{x} \times \vec{\tilde{x}} }{a^2 - \vec{x}\cdot\vec{\tilde{x}}} \zeta(\vec{\tilde{x}})\,dA.
 !> @f]
-!> 
+!>
 !>	For a more detailed discussion, see @n
 !> * P. Bosler, L. Wang, C. Jablonowski, and R. Krasny, A Lagrangian particle/panel method for the barotropic vorticity
 !> 	equations on a rotating sphere, _Fluid Dynamics Research_ 46 (2014).  DOI: 10.1088/0169-5983/46/3/031406.
-!>  
+!>
 !>
 !> @{
 use NumberKindsModule
@@ -76,10 +76,11 @@ type BVEMesh
 	type(Field) :: absStream !< scalar @ref Field
 	type(Field) :: velocity !< vector @ref Field
 	type(Field), dimension(:), allocatable :: tracers !< allocatable array of scalar and vector @ref Field objects
+	logical, dimension(:), allocatable :: isPanelTracer !< allocatable array of booleans; true if tracer should be associated with panels, rather than points
 	real(kreal) :: radius = 1.0_kreal !< radius of sphere
 	real(kreal) :: rotationRate = 0.0_kreal !< background rotation rate (angular velocity)
 	type(MPISetup) :: mpiParticles !< @ref MPISetup to distribute all particles over the available MPI ranks
-	
+
 	contains
 		final :: deletePrivate
 end type
@@ -149,25 +150,25 @@ subroutine newPrivate( self, meshSeed, initNest, maxNest, amrLimit, sphereRadius
 	integer(kint), intent(in) :: amrLimit
 	real(kreal), intent(in) :: sphereRadius
 	real(kreal), intent(in) :: rotationRate
-	
+
 	if ( .NOT. logInit) call InitLogger(log, procRank)
-	
+
 	if ( meshSeed /= ICOS_TRI_SPHERE_SEED .AND. meshSeed /= CUBED_SPHERE_SEED ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logKey), "new BVEMesh ERROR : invalid meshSeed.")
 		return
 	endif
-	
+
 	call New(self%mesh, meshSeed, initNest, maxNest, amrLimit, sphereRadius)
-	
+
 	call New(self%absVort, 1, self%mesh%particles%N_Max, "absVort", "1/s")
 	call New(self%relVort, 1, self%mesh%particles%N_Max, "relVort", "1/s")
 	call New(self%absStream, 1, self%mesh%particles%N_Max, "absStreamFn", "m^2/s")
 	call New(self%relStream, 1, self%mesh%particles%N_Max, "relStreamFn", "m^2/s")
 	call New(self%velocity, 3, self%mesh%particles%N_Max, "velocity", "m/s")
 	call New(self%mpiParticles, self%mesh%particles%N, numProcs)
-	
+
 	self%radius = sphereRadius
-	self%rotationRate = rotationRate	
+	self%rotationRate = rotationRate
 end subroutine
 
 !> @brief Deletes and frees memory associated with a spherical BVE Mesh
@@ -175,7 +176,7 @@ end subroutine
 subroutine deletePrivate( self )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint) :: i
-	
+
 	call Delete(self%mpiParticles)
 	call Delete(self%velocity)
 	call Delete(self%relStream)
@@ -184,6 +185,7 @@ subroutine deletePrivate( self )
 	call Delete(self%relVort)
 	call Delete(self%mesh)
 	if ( allocated(self%tracers) ) then
+	  deallocate(self%isPanelTracer)
 		do i = 1, size(self%tracers)
 			call Delete(self%tracers(i))
 		enddo
@@ -191,7 +193,7 @@ subroutine deletePrivate( self )
 	endif
 end subroutine
 
-!> @brief Performs a deep copy of a BVE mesh and all of its variables.  
+!> @brief Performs a deep copy of a BVE mesh and all of its variables.
 !> The target mesh must have been allocated prior to calling this subroutine.
 !>
 !> @param[inout] self Target BVE mesh
@@ -200,7 +202,7 @@ subroutine copyPrivate(self, other)
 	type(BVEMesh), intent(inout) :: self
 	type(BVEMesh), intent(in) :: other
 	integer(kint) :: i
-	
+
 	call Copy(self%mesh, other%mesh)
 	call Copy(self%relVort, other%relVort)
 	call Copy(self%absVort, other%absVort)
@@ -210,7 +212,7 @@ subroutine copyPrivate(self, other)
 	call Copy(self%mpiParticles, other%mpiParticles)
 	self%rotationRate = other%rotationRate
 	self%radius = other%radius
-	
+
 	if ( allocated(other%tracers)) then
 		if ( allocated(self%tracers)) then
 			if ( size(self%tracers) /= size(other%tracers) ) then
@@ -219,6 +221,7 @@ subroutine copyPrivate(self, other)
 				do i = 1, size(other%tracers)
 					call Copy(self%tracers(i), other%tracers(i))
 				enddo
+				self%isPanelTracer = other%isPanelTracer
 			endif
 		else
 			call LogMessage(log, WARNING_LOGGING_LEVEL, logKey, " copy BVEMesh WARNING : tracers not copied.")
@@ -229,21 +232,23 @@ end subroutine
 !> @brief Adds memory for passive tracers to a spherical BVE mesh.
 !> @param[inout] self Target BVE mesh
 !> @param[in] nTracers number of tracers to add
-!> @param[in] tracerDims array of values (each 1, 2, or 3) corresponding to the dimensions of each tracer.  
+!> @param[in] tracerDims array of values (each 1, 2, or 3) corresponding to the dimensions of each tracer.
 !> Scalar tracers will have dimension 1, vector tracers will have dimension 2 or 3, depending on their coordinate system.
 subroutine AddTracers(self, nTracers, tracerDims)
 	type(BVEMesh), intent(inout) :: self
 	integer(kint), intent(in) :: nTracers
 	integer(kint), dimension(:), intent(in) :: tracerDims
 	integer(kint) :: i
-	
+
 	if ( size(tracerDims) /= nTracers ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" AddTracers ERROR : ", &
 			" must specify dimension of each tracer field.")
 		return
 	endif
-	
+
 	allocate(self%tracers(nTracers))
+	allocate(self%isPanelTracer(nTracers))
+	self%isPanelTracer = .FALSE.
 	do i = 1, nTracers
 		call New(self%tracers(i), tracerDims(i), self%mesh%particles%N_Max)
 	enddo
@@ -257,7 +262,7 @@ subroutine logStatsPrivate( self, aLog)
 	type(Logger), intent(inout) :: aLog
 	!
 	integer(kint) :: i
-	
+
 	call LogMessage(aLog, TRACE_LOGGING_LEVEL, "BVEMesh ", "stats : ")
 	call LogStats(self%mesh, aLog)
 	call LogStats(self%velocity, aLog)
@@ -279,7 +284,7 @@ subroutine outputVTKPrivate(self, filename)
 	type(BVEMesh), intent(in) :: self
 	character(len=*), intent(in) :: filename
 	integer(kint) :: i, writeStat
-	
+
 	open(unit=WRITE_UNIT_1, file=filename, status='REPLACE', action='WRITE', iostat=writeStat)
 		if ( writeStat /= 0 ) then
 			call LogMessage(log, ERROR_LOGGING_LEVEL, trim(logkey)//" OutputToVTK ERROR writing to file = ", trim(filename))
@@ -302,18 +307,28 @@ subroutine outputVTKPrivate(self, filename)
 		call WriteFieldToVTKPointData( self%absStream, WRITE_UNIT_1)
 		if ( allocated( self%tracers ) ) then
 			do i = 1, size(self%tracers)
-				call WriteFieldToVTKPointData( self%tracers(i), WRITE_UNIT_1)
+			  if (.NOT. self%isPanelTracer(i)) then
+          call WriteFieldToVTKPointData( self%tracers(i), WRITE_UNIT_1)
+				endif
 			enddo
 		endif
 		!
 		!	write vtk cell data
 		!
 		call WriteFaceAreaToVTKCellData( self%mesh%faces, self%mesh%particles, WRITE_UNIT_1)
+
+		if (allocated(self%tracers)) then
+		  do i=1, size(self%tracers)
+		    if (self%isPanelTracer(i)) then
+		      call WriteFieldToVTKCellData(self%tracers(i), WRITE_UNIT_1, self%mesh%faces)
+		    endif
+		  enddo
+		endif
 	close(WRITE_UNIT_1)
 end subroutine
 
 !> @brief Defines an initial vorticity distribution on a BVE mesh.
-!> 
+!>
 !> @param[inout] self BVE mesh
 !> @param[in] relVortFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
 subroutine SetInitialVorticityOnMesh(self, relVortFn )
@@ -321,7 +336,7 @@ subroutine SetInitialVorticityOnMesh(self, relVortFn )
 	procedure(scalarFnOf3DSpace) :: relVortFn
 	integer(kint) :: i
 	real(kreal) :: zeta
-	
+
 	self%relVort%N = self%mesh%particles%N
 	self%absVort%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
@@ -334,14 +349,14 @@ subroutine SetInitialVorticityOnMesh(self, relVortFn )
 end subroutine
 
 !> @brief Defines an initial velocity distribution on a BVE mesh.
-!> 
+!>
 !> @param[inout] self BVE mesh
 !> @param[in] velFn Velocity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf3DSpace
 subroutine setVelocityFromFunction(self, velFn )
 	type(BVEMesh), intent(inout) :: self
-	procedure(vectorFnOf3DSpace) :: velFn 
+	procedure(vectorFnOf3DSpace) :: velFn
 	integer(kint) :: i
-	
+
 	do i = 1, self%mesh%particles%N
 		call InsertVectorToField(self%velocity, &
 			velFn( self%mesh%particles%x0(i), self%mesh%particles%y0(i), self%mesh%particles%z0(i)) )
@@ -349,7 +364,7 @@ subroutine setVelocityFromFunction(self, velFn )
 end subroutine
 
 !> @brief Defines an initial tracer distribution on a BVE mesh.
-!> 
+!>
 !> @param[inout] self BVE mesh
 !> @param[in] tracerID index of tracer in `bveMesh%%tracers(:)`
 !> @param[in] tracerFn Vorticity distribution function.  Must have same interface as numberkindsmodule::scalarFnOf3DSpace
@@ -358,7 +373,7 @@ subroutine SetScalarTracerOnMesh(self, tracerId, tracerFn )
 	integer(kint), intent(in) :: tracerId
 	procedure(scalarFnOf3DSpace) :: tracerFn
 	integer(kint) :: i
-	
+
 	call SetFieldToZero(self%tracers(tracerID))
 	self%tracers(tracerId)%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
@@ -368,7 +383,7 @@ subroutine SetScalarTracerOnMesh(self, tracerId, tracerFn )
 end subroutine
 
 !> @brief Defines an initial tracer distribution on a BVE mesh.
-!> 
+!>
 !> @param[inout] self BVE mesh
 !> @param[in] tracerID index of tracer in `bveMesh%%tracers(:)`
 !> @param[in] tracerFn Vorticity distribution function.  Must have same interface as numberkindsmodule::vectorFnOf3DSpace
@@ -378,7 +393,7 @@ subroutine SetVectorTracerOnMesh( self, tracerID, tracerFn )
 	procedure(vectorFnOf3DSpace) :: tracerFn
 	integer(kint) :: i
 	real(kreal), dimension(3) :: vec
-	
+
 	call SetFieldToZero(self%tracers(tracerID))
 	self%tracers(tracerID)%N = self%mesh%particles%N
 	do i = 1, self%mesh%particles%N
@@ -415,14 +430,14 @@ function TotalEnstrophy( self )
 	real(kreal) :: TotalEnstrophy
 	type(BVEMesh), intent(in) :: self
 	integer(kint) :: i
-	
+
 	TotalEnstrophy = 0.0_kreal
 	do i = 1, self%mesh%particles%N
 		if ( self%mesh%particles%isActive(i) ) then
 			TotalEnstrophy = TotalEnstrophy + self%relVort%scalar(i)**2 * self%mesh%particles%area(i)
 		endif
 	enddo
-	TotalEnstrophy = 0.5_kreal * TotalEnstrophy 
+	TotalEnstrophy = 0.5_kreal * TotalEnstrophy
 end function
 
 !> @brief Defines the absolute and relative stream functions on a BVE mesh using the Green's function integral.
@@ -430,9 +445,9 @@ end function
 subroutine SetStreamFunctionsOnMesh( self )
 	type(BVEMesh), intent(inout) :: self
 	integer(kint) :: i, j, mpiErrCode
-	real(kreal) :: greensKernel 
+	real(kreal) :: greensKernel
 	real(kreal), dimension(3) :: xi, xj
-	
+
 	self%relStream%n = self%mesh%particles%n
 	self%absStream%n = self%mesh%particles%n
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
@@ -455,17 +470,17 @@ subroutine SetStreamFunctionsOnMesh( self )
 				greensKernel = - dlog( self%radius * self%radius - sum(xi * xj)) / (4.0_kreal * PI )
 				self%relStream%scalar(i) = self%relStream%scalar(i) + greensKernel * &
 					self%relVort%scalar(j) * self%mesh%particles%area(j)
-				self%absStream%scalar(i) = self%absStream%scalar(i) + greensKernel * & 
+				self%absStream%scalar(i) = self%absStream%scalar(i) + greensKernel * &
 					self%absVort%scalar(j) * self%mesh%particles%area(j)
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%relStream%scalar(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(self%absStream%scalar(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
-			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)			
+			self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	enddo
 end subroutine
 
@@ -476,7 +491,7 @@ subroutine setVelocityFromVorticity( self )
 	integer(kint) :: i, j, mpiErrCode
 	real(kreal) :: strength
 	real(kreal), dimension(3) :: xi, xj
-	
+
 	self%velocity%n = self%mesh%particles%N
 	do i = self%mpiParticles%indexStart(procRank), self%mpiParticles%indexEnd(procRank)
 		self%velocity%xComp(i) = 0.0_kreal
@@ -488,8 +503,8 @@ subroutine setVelocityFromVorticity( self )
 				xj = PhysCoord(self%mesh%particles, j)
 				strength = -self%relVort%scalar(j)*self%mesh%particles%area(j) / &
 					(4.0_kreal * PI * self%radius * (self%radius * self%radius - sum( xi * xj )))
-				self%velocity%xComp(i) = self%velocity%xComp(i) + (xi(2)*xj(3) - xi(3)*xj(2)) * strength 
-				self%velocity%yComp(i) = self%velocity%yComp(i) + (xi(3)*xj(1) - xi(1)*xj(3)) * strength 
+				self%velocity%xComp(i) = self%velocity%xComp(i) + (xi(2)*xj(3) - xi(3)*xj(2)) * strength
+				self%velocity%yComp(i) = self%velocity%yComp(i) + (xi(3)*xj(1) - xi(1)*xj(3)) * strength
 				self%velocity%zComp(i) = self%velocity%zComp(i) + (xi(1)*xj(2) - xi(2)*xj(1)) * strength
 			endif
 		enddo
@@ -499,19 +514,19 @@ subroutine setVelocityFromVorticity( self )
 				strength = -self%relVort%scalar(j)*self%mesh%particles%area(j) / &
 					(4.0_kreal * PI * self%radius * (self%radius * self%radius - sum( xi * xj )))
 				self%velocity%xComp(i) = self%velocity%xComp(i) + (xi(2)*xj(3) - xi(3)*xj(2)) * strength
-				self%velocity%yComp(i) = self%velocity%yComp(i) + (xi(3)*xj(1) - xi(1)*xj(3)) * strength 
+				self%velocity%yComp(i) = self%velocity%yComp(i) + (xi(3)*xj(1) - xi(1)*xj(3)) * strength
 				self%velocity%zComp(i) = self%velocity%zComp(i) + (xi(1)*xj(2) - xi(2)*xj(1)) * strength
 			endif
 		enddo
 	enddo
-	
+
 	do i = 0, numProcs - 1
 		call MPI_BCAST(self%velocity%xComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(self%velocity%yComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
 					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		call MPI_BCAST(self%velocity%zComp(self%mpiParticles%indexStart(i):self%mpiParticles%indexEnd(i)), &
-					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)					   					   
+					   self%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 	enddo
 end subroutine
 
@@ -525,7 +540,7 @@ function MaxCirculationMagnitudePerFace( self )
 	integer(kint) :: i
 	real(kreal) :: testCirc
 	integer(kint) :: particleIndex
-	
+
 	MaxCirculationMagnitudePerFace = 0.0_kreal
 	do i = 1, self%mesh%faces%N
 		if ( .NOT. self%mesh%faces%hasChildren(i) ) then
@@ -543,7 +558,7 @@ end function
 !
 
 !> @brief Initializes a logger for the BVE module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor

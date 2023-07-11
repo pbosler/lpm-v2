@@ -9,7 +9,7 @@ program BVESingleGaussianVortexDriver
 !>
 !> @image html BVEGaussVortSol.png "Late-time vorticity distribution of an initially Gaussian vortex on a rotating sphere (coarse resolution)."
 !>
-!> 
+!>
 use NumberKindsModule
 use OutputWriterModule
 use LoggerModule
@@ -56,6 +56,7 @@ real(kreal) :: vortInitLon
 real(kreal), dimension(3) :: vortCenter
 real(kreal) :: flowMapVarTol
 real(kreal) :: circulationTol
+real(kreal) :: ftle_val, ftle_error
 namelist /gaussVort/ shapeParam, rotRate, vortStrength, vortInitLat, vortInitLon, flowMapVarTol, circulationTol
 
 ! remeshing
@@ -124,7 +125,7 @@ call SetInitialVorticityOnMesh( sphere, GaussianVortexVorticity)
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logKey)//" ", "uniform mesh ready...")
 
 AMR = (maxNest > initNest)
-if ( AMR ) then 
+if ( AMR ) then
 	call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logKey)//" ", "starting adaptive refinement...")
 	call New(refinement, sphere%mesh%faces%N_Max)
 	call SetAbsoluteTolerances( sphere, circulationTol, flowMapVarTol)
@@ -135,14 +136,14 @@ if ( AMR ) then
 		call StartSection(exeLog, trim(logString) )
 		call IterateMeshRefinementOneVariableAndFlowMap( refinement, sphere%mesh, sphere%relVort, ScalarIntegralRefinement, &
 			circulationTol, "circulation refinement", flowMapVarTol, nParticlesBefore, nParticlesAfter)
-		
+
 		call SetInitialVorticityOnMesh(sphere, GaussianVortexVorticity)
 		GAUSS_CONST = SetGaussConst(sphere)
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" GAUSS_CONST = ", GAUSS_CONST)
-		call SetInitialVorticityOnMesh(sphere, GaussianVortexVorticity)	
+		call SetInitialVorticityOnMesh(sphere, GaussianVortexVorticity)
 		call EndSection(exeLog)
 	enddo
-	
+
 	call Delete(refinement)
 	call LoadBalance(sphere%mpiParticles, sphere%mesh%particles%N, numProcs)
 endif
@@ -150,9 +151,17 @@ endif
 call SetStreamFunctionsOnMesh(sphere)
 call SetVelocityOnMesh(sphere)
 
-call AddTracers(sphere, 1, [1])
+call AddTracers(sphere, 3, [1, 1, 1])
 sphere%tracers(1)%name = "initLat"
 sphere%tracers(1)%units = "radians"
+sphere%tracers(2)%name = "FTLE"
+sphere%tracers(3)%name = "FTLE_error"
+sphere%isPanelTracer(2) = .TRUE.
+sphere%isPanelTracer(3) = .TRUE.
+call SetFieldToZero(sphere%tracers(2))
+call SetFieldToZero(sphere%tracers(3))
+sphere%tracers(2)%N = sphere%mesh%particles%N
+sphere%tracers(3)%N = sphere%mesh%particles%N
 do i = 1, sphere%mesh%particles%N
 	vec3 = PhysCoord(sphere%mesh%particles, i)
 	call InsertScalarToField(sphere%tracers(1), Latitude(vec3))
@@ -175,13 +184,13 @@ if ( procRank == 0 ) then
 			write(meshString, '(2(A,I1),A)') '_cubedSphereAMR', initNest, 'to', maxNest, '_'
 		endif
 	endif
-	
+
 	write(vtkRoot,'(4A)') trim(outputDir), '/vtkOut/', trim(outputRoot), trim(meshString)
 	write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
-	
+
 	call OutputToVTK(sphere, vtkFile)
 	frameCounter = frameCounter + 1
-	
+
 	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" t = ", t)
 endif
 
@@ -200,7 +209,7 @@ allocate(enstrophy(nTimesteps+1))
 kineticEnergy(1) = TotalKE(sphere)
 enstrophy(1) = TotalEnstrophy(sphere)
 !--------------------------------
-!	run : evolve the problem in time 
+!	run : evolve the problem in time
 !--------------------------------
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
@@ -208,38 +217,50 @@ do timeJ = 0, nTimesteps - 1
 
 	if ( mod(timeJ+1, remeshInterval) == 0 ) then
 		call New(remesh, sphere)
-	
+
 		call New( tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, rotRate )
-		call AddTracers(tempSphere, 1, [1])
+		call AddTracers(tempSphere, 2, [1, 1, 1])
 		tempSphere%tracers(1)%name = "initLat"
 		tempSphere%tracers(1)%units = "radians"
-		
+		tempSphere%tracers(2)%name = "FTLE"
+		tempSphere%tracers(3)%name = "FTLE_error"
+		tempSphere%isPanelTracer(2) = .TRUE.
+		tempSphere%isPanelTracer(3) = .TRUE.
+
 		call LagrangianRemeshBVEWithVorticityFunction(remesh, sphere, tempSphere, AMR, GaussianVortexVorticity, &
 					scalarIntegralRefinement, circulationTol, "circulation refinement", &
 					RefineFlowMapYN = .TRUE., flowMapVarTol = flowMapVarTol, nLagTracers = 1, tracerFn1 = InitLatTracer )
-		
+
 		call Copy(sphere, tempSphere)
-		
+
 		remeshCounter = remeshCounter + 1
-		
+
 		call Delete(tempSphere)
 		call Delete(remesh)
-		
+
 		call Delete(solver)
 		!$acc exit data delete(solver)
-		
-		
+
+
 		call New(solver, sphere)
 	endif
-	
+
 	call Timestep(solver, sphere, dt)
-	
+
 	t = real(timeJ +1, kreal) * dt
 	sphere%mesh%t = t
-	
+
 	enstrophy(timeJ+2) = TotalEnstrophy(sphere)
 	kineticEnergy(timeJ+2) = TotalKE(sphere)
-	
+
+	do i=1,sphere%mesh%faces%N
+	  if (.NOT. sphere%mesh%faces%hasChildren(i)) then
+	    call FTLECalc(sphere%mesh, i, ftle_val, ftle_error)
+	    sphere%tracers(2)%scalar(sphere%mesh%faces%centerParticle(i)) = ftle_val
+	    sphere%tracers(3)%scalar(sphere%mesh%faces%centerParticle(i)) = ftle_error
+	  endif
+	enddo
+
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 		call OutputToVTK(sphere, vtkFile)
@@ -280,8 +301,8 @@ call MPI_FINALIZE(mpiErrCode)
 
 contains
 
-!> @brief Returns the latitude of a Lagrangian coordinate.  
-!> 
+!> @brief Returns the latitude of a Lagrangian coordinate.
+!>
 !> Conforms to numberkindsmodule::scalarFnOf3DSpace interface.
 pure function InitLatTracer( x0, y0, z0 )
 	real(kreal) :: InitLatTracer
@@ -306,10 +327,10 @@ end subroutine
 !> to @f$ t = 0 @f$.
 !>
 !> Conforms to the numberkindsmodule::scalarFnOf3DSpace interface.
-!> 
+!>
 !> @param[in] x
 !> @param[in] y
-!> @param[in] z 
+!> @param[in] z
 !> @return initial vorticity value at at location (x,y,z)
 function GaussianVortexVorticity( x, y, z )
 	real(kreal) :: GaussianVortexVorticity
@@ -319,9 +340,9 @@ function GaussianVortexVorticity( x, y, z )
 end function
 
 !> @brief Defines a constant to ensure that the total integral of vorticity is zero over the whole sphere.
-!> 
+!>
 !> @param[in] aBVEMesh @ref SphereBVE mesh
-!> @return C such that 
+!> @return C such that
 !> @f[
 !> 		\int_S \zeta(\vec{x})\,dA = \int_{S} \zeta_G(\vec{x})\,dA - C = 0,
 !> @f]
@@ -337,7 +358,7 @@ end function
 
 !> @brief Reads a namelist file, which must be specified on the command line at run-time execution as the first argument,
 !> to define the user-specified variables for this driver program.
-!> 
+!>
 !> Only MPI rank 0 reads the file; it then broadcasts the relevant data to all other ranks.
 !>
 !> @param[in] rank MPI rank
@@ -350,21 +371,21 @@ subroutine ReadNamelistFile( rank )
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
 	integer(kint) :: mpiErrCode, readStat
-	
+
 	if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey), " ERROR: expected namelist file as 1st argument.")
 		stop
 	endif
-	
+
 	if ( rank == 0 ) then
 		call GET_COMMAND_ARGUMENT(1, namelistFilename)
-		
+
 		open(unit=READ_UNIT, file=namelistFilename, status='OLD', action='READ', iostat=readStat)
 			if ( readStat /= 0 ) then
 				call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey), " ERROR: cannot read namelist file.")
 				stop
 			endif
-		
+
 			read(READ_UNIT, nml=meshDefine)
 			rewind(READ_UNIT)
 			read(READ_UNIT, nml=gaussVort)
@@ -373,7 +394,7 @@ subroutine ReadNamelistFile( rank )
 			rewind(READ_UNIT)
 			read(READ_UNIT, nml=fileIO)
 		close(READ_UNIT)
-		
+
 		if ( faceKind == 3 ) then
 			meshSeed = ICOS_TRI_SPHERE_SEED
 		elseif ( faceKind == 4) then
@@ -383,11 +404,11 @@ subroutine ReadNamelistFile( rank )
 				" invalid faceKind -- using triangles.")
 			meshSeed = ICOS_TRI_SPHERE_SEED
 		endif
-		
+
 		maxNest = initNest + amrLimit
 
 !		namelist /meshDefine/ faceKind, initNest, maxNest, amrLimit, radius
-!		namelist /timestepping/ dt, tfinal		
+!		namelist /timestepping/ dt, tfinal
 !		namelist /fileIO/ outputDir, outputRoot, frameOut
 
 		bcastIntegers(1) = meshSeed
@@ -396,7 +417,7 @@ subroutine ReadNamelistFile( rank )
 		bcastIntegers(4) = amrLimit
 		bcastIntegers(5) = frameOut
 		bcastIntegers(6) = remeshInterval
-		
+
 		bcastReals(1) = dt
 		bcastReals(2) = tfinal
 		bcastReals(3) = shapeParam
@@ -407,24 +428,24 @@ subroutine ReadNamelistFile( rank )
 		bcastReals(8) = circulationTol
 		bcastReals(9) = flowMapVarTol
 	endif
-	
+
 	call MPI_BCAST(bcastIntegers, initBCAST_intSize, MPI_INTEGER, 0, MPI_COMM_WORLD, mpiErrCode)
 	if ( mpiErrCode /= 0 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey)//" bcastIntegers, MPI_BCAST ERROR : ", mpiErrCode)
 	endif
-	
+
 	call MPI_BCAST(bcastReals, initBCAST_realSize, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, mpiErrCode)
 	if ( mpiErrCode /= 0 ) then
 		call LogMessage(exeLog, ERROR_LOGGING_LEVEL, trim(logKey)//" bcastReals, MPI_BCAST ERROR : ", mpiErrCode)
 	endif
-	
+
 	meshSeed = bcastIntegers(1)
 	initNest = bcastIntegers(2)
 	maxNest = bcastIntegers(3)
 	amrLimit = bcastIntegers(4)
 	frameOut = bcastIntegers(5)
 	remeshInterval = bcastIntegers(6)
-	
+
 	dt = bcastReals(1)
 	tfinal = bcastReals(2)
 	shapeParam = bcastReals(3)
@@ -437,9 +458,9 @@ subroutine ReadNamelistFile( rank )
 end subroutine
 
 !> @brief Initializes a @ref Logger for this executable program.
-!> 
+!>
 !> Output is controlled by message priority level and MPI rank.
-!> 
+!>
 !> @param[in] log @ref Logger to initialize
 !> @param[in] rank MPI rank
 
