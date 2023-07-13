@@ -4,6 +4,8 @@
 *.o
 *.obj
 build/*
+build-debug/*
+build-release/*
 
 
 # Precompiled Headers
@@ -37,3 +39,8 @@ CMakeCache.txt
 CMakeFiles/*
 build*.cmake
 *.make
+
+# Doxygen stuff
+html/*
+doc/html/*
+doc/latex/*
