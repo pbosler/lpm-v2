@@ -3,6 +3,8 @@
 *.lo
 *.o
 *.obj
+build/*
+
 
 # Precompiled Headers
 *.gch
@@ -27,4 +29,11 @@
 *.out
 *.app
 
+# OS stuff
 .DS_Store
+
+# CMake stuff
+CMakeCache.txt
+CMakeFiles/*
+build*.cmake
+*.make
