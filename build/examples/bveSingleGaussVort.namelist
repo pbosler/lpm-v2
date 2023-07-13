@@ -1,0 +1,27 @@
+&meshDefine
+	faceKind = 4
+	initNest = 4
+	amrLimit = 2
+/
+
+&gaussVort
+	shapeParam = 4.0
+	rotRate = 6.283185307179586
+	vortStrength = 12.566370614359172
+	vortInitLon = 0.0
+	vortInitLat = 0.157079632679490
+	flowMapVarTol = 0.5
+	circulationTol = 0.25
+/
+
+&timestepping
+	dt = 0.0025
+	tfinal = 5.0
+	remeshInterval = 100
+/
+
+&fileIO
+	outputDir = '/Users/asharm1/Documents/lpm-v2/build/BVE/FTLETest'
+	outputRoot = 'gaussVort_midlat_FTLE_space_p25'
+	frameOut = 1
+/

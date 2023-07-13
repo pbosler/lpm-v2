@@ -15,8 +15,8 @@ module ParticlesModule
 !> to facilitate interpolation, differentiation, quadrature, etc.
 !>
 !> The particles data structures is a "structure of arrays," so that all information about a particle i is located at
-!> index i in the relevant arrays.  
-!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`. 
+!> index i in the relevant arrays.
+!> For example, the x-coordinate in physical space of particle i is `aParticles%%x(i)`.
 !> Its Lagrangian coordinates are given by `aParticles%%x0(i)`, `aParticles%%y0(i)`, etc.
 !>
 !> Particles that contribute to a midpoint quadrature rule are called "active," and this status is recorded in the `isActive` array.
@@ -24,12 +24,12 @@ module ParticlesModule
 !> Particles that do not contribute to the midpoint rule (i.e., vertex particles) are considered "passive."
 !> Passive particles have zero area or volume.
 !>
-!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$; 
+!> Each particle has physical coordinates @f$ (x(t),y(t),z(t)) @f$ and Lagrangian coordinates @f$ (x_0, y_0, z_0) @f$;
 !> area (for 2d models) or volume (for 3d models).
 !>
 !> Particle sets used with a mesh are initialized in the @ref PolyMesh2d module.
-!> 
-!> 
+!>
+!>
 !> @{
 !
 !------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ private
 public Particles
 public New, Delete, Copy
 public InsertParticle, ReplaceParticle
-public PhysCoord, LagCoord
+public PhysCoord, LagCoord, RMCoord
 public LogStats, PrintDebugInfo
 public TotalArea, TotalVolume
 public WriteVTKLagCoords, WriteVTKParticleArea, WriteVTKParticleVolume, WriteVTKPoints
@@ -57,7 +57,7 @@ public ResetLagrangianParameter
 !----------------
 !
 
-!> @brief Class used to define a spatial discretization that may move in physical space.  
+!> @brief Class used to define a spatial discretization that may move in physical space.
 type Particles
 	real(kreal), allocatable :: x(:)   !< physical coordinate
 	real(kreal), allocatable :: y(:)   !< physical coordinate
@@ -65,6 +65,9 @@ type Particles
 	real(kreal), allocatable :: x0(:)  !< Lagrangian coordinate
 	real(kreal), allocatable :: y0(:)  !< Lagrangian coordinate
 	real(kreal), allocatable :: z0(:)  !< Lagrangian coordinate
+	real(kreal), allocatable :: xrm(:)  !< Lagrangian coordinate
+	real(kreal), allocatable :: yrm(:)  !< Lagrangian coordinate
+	real(kreal), allocatable :: zrm(:)  !< Lagrangian coordinate
 	real(kreal), allocatable :: area(:)  !< area represented by each particle
 	real(kreal), allocatable :: volume(:)  !< volume represented by each particle
 	integer(kint), allocatable :: nEdges(:)  !< number of edges (if a mesh is used) incident to each particle
@@ -126,19 +129,19 @@ contains
 !
 
 !> @brief Allocates memory for  a new particles object.  All values are zeroed and must be initialized separately.
-!> 
-!> 
-!> 
+!>
+!>
+!>
 !> @param self Target Particles object
 !> @param nMax Number of maximum particles required
-!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds 
+!> @param geomKind Geometry kind (e.g., spherical or planar) as defined in @ref NumberKinds
 subroutine NewPrivate( self, nMax, geomKind )
 	type(Particles), intent(out) :: self
 	integer(kint), intent(in) :: nMax
 	integer(kint), intent(in) :: geomKind
-	
+
 	if (.NOT. logInit ) call InitLogger(log, procRank)
-	
+
 	! error checking
 	if ( nMax <= 0 ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " invalid nMax.")
@@ -148,7 +151,7 @@ subroutine NewPrivate( self, nMax, geomKind )
 		call LogMessage(log, ERROR_LOGGING_LEVEL, logKey, " invalid geometry.")
 		return
 	endif
-	
+
 	self%N_Max = nMax
 	self%N = 0
 	self%geomKind = geomKind
@@ -160,12 +163,18 @@ subroutine NewPrivate( self, nMax, geomKind )
 	self%x0 = 0.0_kreal
 	allocate(self%y0(nMax))
 	self%y0 = 0.0_kreal
+	allocate(self%xrm(nMax))
+	self%xrm = 0.0_kreal
+	allocate(self%yrm(nMax))
+	self%yrm = 0.0_kreal
 	if ( geomKind /= PLANAR_GEOM ) then
 		allocate(self%z(nMax))
 		self%z = 0.0
 		allocate(self%z0(nMax))
 		self%z0 = 0.0
-	endif	
+		allocate(self%zrm(nMax))
+		self%zrm = 0.0
+	endif
 
 	if ( geomKind == EUCLIDEAN_3D ) then
 		allocate(self%volume(nMax))
@@ -174,12 +183,12 @@ subroutine NewPrivate( self, nMax, geomKind )
 		allocate(self%area(nMax))
 		self%area = 0.0_kreal
 	endif
-	
+
 	allocate(self%isActive(nMax))
 	self%isActive = .FALSE.
 	allocate(self%isPassive(nMax))
 	self%isPassive = .FALSE.
-	
+
 	allocate(self%nEdges(nMax))
 	self%nEdges = 0
 	allocate(self%incidentEdges(MAX_VERTEX_DEGREE,nMax))
@@ -196,6 +205,8 @@ subroutine DeletePrivate(self)
 	if ( allocated(self%y)) deallocate(self%y)
 	if ( allocated(self%x0)) deallocate(self%x0)
 	if ( allocated(self%y0)) deallocate(self%y0)
+	if ( allocated(self%xrm)) deallocate(self%xrm)
+	if ( allocated(self%yrm)) deallocate(self%yrm)
 	if ( allocated(self%incidentEdges)) deallocate(self%incidentEdges)
 	if ( allocated(self%incidentAngles)) deallocate(self%incidentAngles)
 	if ( allocated(self%nEdges)) deallocate(self%nEdges)
@@ -205,6 +216,7 @@ subroutine DeletePrivate(self)
 	if ( allocated(self%area)) deallocate(self%area)
 	if ( allocated(self%z)) deallocate(self%z)
 	if ( allocated(self%z0)) deallocate(self%z0)
+	if ( allocated(self%zrm)) deallocate(self%zrm)
 	self%N = 0
 	self%N_Max = 0
 	self%geomKind = 0
@@ -218,12 +230,12 @@ subroutine copyPrivate(self, other )
 	type(Particles), intent(in) :: other
 	!
 	integer(kint) :: i
-	
+
 	if ( self%N_Max < other%N ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " not enough memory.")
 		return
 	endif
-	
+
 	if ( allocated(other%z) .AND. .NOT. allocated(self%z) ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " dimension mismatch.")
 		return
@@ -233,12 +245,12 @@ subroutine copyPrivate(self, other )
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " area array not allocated.")
 		return
 	endif
-	
+
 	if ( allocated(other%volume) .AND. .NOT. allocated(self%volume) ) then
 		call LogMessage(log, ERROR_LOGGING_LEVEL,logkey//" CopyParticles ERROR : ", " volume array not allocated.")
 		return
 	endif
-	
+
 	do i = 1, other%N
 		self%x(i) = other%x(i)
 		self%x0(i) = other%x0(i)
@@ -292,7 +304,7 @@ end subroutine
 
 !> @brief Prints a large amount of information to the console.  Used for debugging.
 !> @param self Target Particles object
-subroutine PrintDebugPrivate( self ) 
+subroutine PrintDebugPrivate( self )
 	type(Particles), intent(in) :: self
 	integer(kint) :: i, j
 	print *, "Particles DEBUG info : "
@@ -371,7 +383,7 @@ subroutine WriteVTKPoints( self, fileunit, title )
 	character(len=*), intent(in), optional :: title
 	!
 	integer(kint) :: j
-	
+
 	if ( present(title)) then
 		call WriteVTKFileHeader(fileunit, title)
 	else
@@ -395,7 +407,7 @@ subroutine WriteVTKPointsInverse( self, fileunit, title )
 	character(len=*), intent(in), optional :: title
 	!
 	integer(kint) :: j
-	
+
 	if ( present(title)) then
 		call WriteVTKFileHeader(fileunit, title)
 	else
@@ -421,7 +433,7 @@ subroutine WriteVTKLagCoords( self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: j
-	
+
 	write(fileunit,'(A)') "SCALARS lagParam double 3"
 	write(fileunit,'(A)') "LOOKUP_TABLE default"
 	if ( self%geomKind == PLANAR_GEOM ) then
@@ -440,7 +452,7 @@ subroutine WriteVTKPhysCoords( self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: j
-	
+
 	write(fileunit,'(A)') "SCALARS physCoord double 3"
 	write(fileunit,'(A)') "LOOKUP_TABLE default"
 	if ( self%geomKind == PLANAR_GEOM ) then
@@ -462,7 +474,7 @@ subroutine WriteVTKParticleArea(self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: j
-	
+
 	if ( .NOT. allocated(self%area) ) then
 		call LogMessage(log, WARNING_LOGGING_LEVEL, "WriteVKTParticleArea : "," area not allocated.")
 		return
@@ -470,7 +482,7 @@ subroutine WriteVTKParticleArea(self, fileunit )
 	do j = 1, self%N
 		write(fileunit,*) self%area(j)
 	enddo
-end subroutine 
+end subroutine
 
 !> @brief Writes particle volume to VTK PolyData Output
 !> @param self
@@ -480,7 +492,7 @@ subroutine WriteVTKParticleVolume(self, fileunit )
 	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: j
-	
+
 	if ( .NOT. allocated(self%volume) ) then
 		call LogMessage(log, WARNING_LOGGING_LEVEL, "WriteVKTParticleVolume : "," volume not allocated.")
 		return
@@ -497,17 +509,17 @@ end subroutine
 subroutine InsertParticle( self, physX, lagX )
 	type(Particles), intent(inout) :: self
 	real(kreal), intent(in) :: physX(:), lagX(:)
-	
+
 	if ( self%N >= self%N_Max ) then
 		call LogMessage(log,ERROR_LOGGING_LEVEL,logKey," InsertParticle : out of memory.")
 		return
 	endif
-	
+
 	self%x( self%N + 1 ) = physx(1)
 	self%y( self%N + 1 ) = physx(2)
 	self%x0(self%N + 1 ) = lagX(1)
 	self%y0(self%N + 1 ) = lagX(2)
-	
+
 	if ( self%geomKind /= PLANAR_GEOM ) then
 		self%z( self%N + 1 ) = physx(3)
 		self%z0(self%N + 1 ) = lagX(3)
@@ -520,7 +532,7 @@ subroutine ReplaceParticle(self, index, physX, lagX)
     type(Particles), intent(inout) :: self
     integer(kint), intent(in) :: index
     real(kreal), intent(in) :: physX(:), lagX(:)
-    
+
     self%x(index) = physX(1)
     self%y(index) = physX(2)
     self%x0(index) = lagX(1)
@@ -531,11 +543,11 @@ subroutine ReplaceParticle(self, index, physX, lagX)
     endif
 end subroutine
 
-!> @brief Changes a passive particle to an active particle. 
+!> @brief Changes a passive particle to an active particle.
 !> Area/volume must be set separately.
 !> @param self
 !> @param index index of particle to be changed.
-subroutine MakeParticleActive( self, index ) 
+subroutine MakeParticleActive( self, index )
 	type(Particles), intent(inout) :: self
 	integer(kint), intent(in) :: index
 	if ( self%isActive(index) ) then
@@ -546,7 +558,7 @@ subroutine MakeParticleActive( self, index )
 	self%isPassive(index) = .FALSE.
 end subroutine
 
-!> @brief Changes an active particle to a passive particle. 
+!> @brief Changes an active particle to a passive particle.
 !> Area/volume may be set to zero separately.
 !> @param self
 !> @param index index of particle to be changed.
@@ -564,13 +576,13 @@ end subroutine
 
 subroutine ResetLagrangianParameter( self )
 	type(Particles), intent(inout) :: self
-	
+
 	self%x0(1:self%N) = self%x(1:self%N)
 	self%y0(1:self%N) = self%y(1:self%N)
 	if ( self%geomKind /= PLANAR_GEOM ) self%z0(1:self%N) = self%z(1:self%N)
 end subroutine
 
-!> @brief Writes particles information to console using a loggermodule::logger object for formatting. 
+!> @brief Writes particles information to console using a loggermodule::logger object for formatting.
 !> @param self
 !> @param aLog
 subroutine LogStatsPrivate(self, aLog )
@@ -605,8 +617,8 @@ subroutine SortIncidentEdgesAtParticle( self, index )
 	integer(kint), intent(in) :: index
 	!
 	integer(kint) :: i, j
-	
-	
+
+
 	if ( self%nEdges(index) == 0 ) then
 		write(logString,*) "no edges at particle ", index, "."
 		call LogMessage(log, WARNING_LOGGING_LEVEL,"SortEdgesAtParticle : ",trim(logString))
@@ -624,17 +636,17 @@ subroutine SortIncidentEdgesAtParticle( self, index )
 			return
 		endif
 	endif
-	
+
 !	print *, "particle ", index, ", nEdges = ", self%nEdges(index)
 !	print *, "edges at particle = ", self%incidentEdges(1:self%nEdges(index), index)
-	
+
 	do i = 1, self%nEdges(index)
 		do j = self%nEdges(index), i + 1, -1
 			call OrderEdgePair(self%incidentEdges(j-1,index), self%incidentAngles(j-1,index), &
 							   self%incidentEdges(j,index), self%incidentAngles(j,index) )
 		enddo
 	enddo
-	
+
 !	print *, "sorted edges at particle = ", self%incidentEdges(1:self%nEdges(index), index)
 end subroutine
 
@@ -653,7 +665,7 @@ pure subroutine OrderEdgePair( index1, angle1, index2, angle2 )
 		angle1 = angle2
 		index2 = tempIndex
 		angle2 = tempAngle
-	endif 	
+	endif
 end subroutine
 
 !> @brief Returns a particle's physical coordinate vector
@@ -684,13 +696,27 @@ pure function LagCoord( self, index )
 	if ( allocated(self%z0) ) LagCoord(3) = self%z0(index)
 end function
 
+!> @brief Returns a particle's remeshed Lagrangian coordinate vector
+!> @param self
+!> @param index
+!> @return RMCoord coordinate vector
+pure function RMCoord( self, index )
+	real(kreal) :: RMCoord(3)
+	type(Particles), intent(in) :: self
+	integer(kint), intent(in) :: index
+	RMCoord = 0.0
+	RMCoord(1) = self%xrm(index)
+	RMCoord(2) = self%yrm(index)
+	if ( allocated(self%zrm) ) RMCoord(3) = self%zrm(index)
+end function
+
 !> @brief Returns the total area represented by all active ParticlesModule
 !> @param self
 !> @return TotalArea
-pure function TotalArea( self ) 
+pure function TotalArea( self )
 	real(kreal) :: TotalArea
 	type(Particles), intent(in) :: self
-	TotalArea = sum(self%area(1:self%N), MASK=self%isActive(1:self%N) )	
+	TotalArea = sum(self%area(1:self%N), MASK=self%isActive(1:self%N) )
 end function
 
 !> @brief Returns the total volume represented by all active ParticlesModule
@@ -708,16 +734,16 @@ end function
 !> @param fileunit
 subroutine WriteParticlesToMatlab( self, fileunit )
 	type(Particles), intent(in) :: self
-	integer(kint), intent(in) :: fileunit 
+	integer(kint), intent(in) :: fileunit
 	!
 	integer(kint) :: i
-	
+
 	write(fileunit,*) "x = [", self%x(1), ", ..."
 	do i = 2, self%N-1
 		write(fileunit,*) self%x(i), ", ..."
 	enddo
 	write(fileunit,*) self%x(self%N), "];"
-	
+
 	write(fileunit,*) "x0 = [", self%x0(1), ", ..."
 	do i = 2, self%N-1
 		write(fileunit,*) self%x0(i), ", ..."
@@ -729,13 +755,13 @@ subroutine WriteParticlesToMatlab( self, fileunit )
 		write(fileunit,*) self%y(i), ", ..."
 	enddo
 	write(fileunit,*) self%y(self%N), "];"
-	
+
 	write(fileunit,*) "y0 = [", self%y0(1), ", ..."
 	do i = 2, self%N-1
 		write(fileunit,*) self%y0(i), ", ..."
 	enddo
-	write(fileunit,*) self%y0(self%N), "];"	
-	
+	write(fileunit,*) self%y0(self%N), "];"
+
 	if ( self%geomKind /= PLANAR_GEOM ) then
 		write(fileunit,*) "z = [", self%z(1), ", ..."
 		do i = 2, self%N-1
@@ -749,7 +775,7 @@ subroutine WriteParticlesToMatlab( self, fileunit )
 		enddo
 		write(fileunit,*) self%z0(self%N), "];"
 	endif
-	
+
 	if ( allocated(self%area) ) then
 		write(fileunit,*) "area = [", self%area(1), ", ..."
 		do i = 2, self%N-1
@@ -757,7 +783,7 @@ subroutine WriteParticlesToMatlab( self, fileunit )
 		enddo
 		write(fileunit, *) self%area(self%N), "];"
 	endif
-	
+
 	if ( allocated(self%volume) ) then
 		write(fileunit,*) "volume = [", self%volume(1), ", ..."
 		do i = 2, self%N-1
@@ -775,7 +801,7 @@ end subroutine
 
 
 !> @brief Initializes a logger for the Particles module
-!> 
+!>
 !> Output is controlled both by message priority and by MPI Rank
 !> @param aLog Target Logger object
 !> @param rank Rank of this processor

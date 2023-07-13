@@ -38,6 +38,7 @@ public LagrangianRemeshBVEWithVorticityFunction
 public LagrangianRemeshBVEToReferenceMesh
 public LagrangianRemeshTransportWithFunctions
 public FTLECalc
+public BackFTLECalc
 
 !----------------
 ! types and module variables
@@ -431,7 +432,7 @@ subroutine LagrangianRemeshBVEWithVorticityFunction( self, oldSphere, newSphere,
 
 	do i = 1, newSphere%mesh%particles%N
 		lon = Longitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
-		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
+		lat = Latitude ( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
 		newSphere%mesh%particles%x0(i) = x0(1)
 		newSphere%mesh%particles%y0(i) = x0(2)
@@ -767,7 +768,9 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		newSphere%mesh%particles%x0(i) = x0(1)
 		newSphere%mesh%particles%y0(i) = x0(2)
 		newSphere%mesh%particles%z0(i) = x0(3)
-
+		! newSphere%mesh%particles%xrm(i) = newSphere%mesh%particles%x(i)
+		! newSphere%mesh%particles%yrm(i) = newSphere%mesh%particles%y(i)
+		! newSphere%mesh%particles%zrm(i) = newSphere%mesh%particles%z(i)
 		!
 		!	direct interpolation for density
 		!
@@ -1133,14 +1136,14 @@ subroutine FTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
 
 		pi=atan(1.d0)*4.d0
 		pIndex = amesh%faces%centerParticle(faceIndex) ! Indices of the active particles
-		x0face=	LagCoord (amesh%particles, pIndex)
+		x0face=	RMCoord (amesh%particles, pIndex)
 		xface=	PhysCoord(amesh%particles, pIndex)
 		! Renormalize advected locations to remove any error
 		xface=xface/dsqrt(xface(1)**2+xface(2)**2+xface(3)**2)
 		! Rotate the coordinate system such that the normal aligns with
 		! [0 0 1].
 		! The tangent space will then be x-y plane coordinates.
-		Zvec=0.d0;Zvec(3)=1.d0; Zvec=Zvec/dsqrt(Zvec(1)**2+Zvec(2)**2+Zvec(3)**2)
+		Zvec=0.d0;Zvec(2)=1.d0; Zvec=Zvec/dsqrt(Zvec(1)**2+Zvec(2)**2+Zvec(3)**2)
 		Eye=0.d0; Eye(1,1)=1.d0;Eye(2,2)=1.d0;Eye(3,3)=1.d0
 
 		! The tensor R0 is the rotation matrix in reference/ t=0 configuration
@@ -1164,7 +1167,7 @@ subroutine FTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
 		!#$!xf_center=xface(1);	yf_center=xface(3);
 
 		do i = 1, amesh%faceKind ! Coordinates of the passive particles/ vertices
-        x0i = LagCoord(amesh%particles, amesh%faces%vertices(i,faceIndex))
+        x0i = RMCoord(amesh%particles, amesh%faces%vertices(i,faceIndex))
 				xi  = PhysCoord(amesh%particles, amesh%faces%vertices(i,faceIndex))
 
 				! Normalize to remove errors
@@ -1182,8 +1185,8 @@ subroutine FTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
 				xi (2)=R (2,1)*xi_t (1)+R (2,2)*xi_t (2)+R (2,3)*xi_t (3)
 				xi (3)=R (3,1)*xi_t (1)+R (3,2)*xi_t (2)+R (3,3)*xi_t (3)
 
-				x0(i)=x0i(1);			y0(i)=x0i(2)
-				xf(i)=xi(1);			yf (i)=xi(2)
+				x0(i)=x0i(1);			y0(i)=x0i(3)
+				xf(i)=xi(1);			yf (i)=xi(3)
 	  enddo
 		! ========================================================================
 		! Locating points on the quadrilateral inscribed on the sphere
@@ -1243,7 +1246,196 @@ subroutine FTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
 	! ========================================================================
 		Dx0=x0(loc4)-x0(loc1);Dx=xf(loc4)-xf(loc1);Dycross=yf(loc4)-yf(loc1);
 
-		ly=loc2;if (abs(y0(loc3))>abs(y0(loc2))) ly=loc2;
+		ly=loc3;	if (abs(y0(loc3))>abs(y0(loc2))) ly=loc2;
+		Dy0=y0(ly);
+		a=(x0(ly)-x0(loc1))/(x0(loc4)-x0(loc1));
+		b=1.d0-a
+		Dy=yf(ly)-(yf(loc4)*a+yf(loc1)*b);
+		Dxcross=xf(ly)-(xf(loc4)*a+xf(loc1)*b);
+
+		! Dy0=0.5d0*(y0(loc2)+y0(loc3))
+		! x0star=0.5d0*(x0(loc2)+x0(loc3))
+		! a=(x0star-x0(loc1))/(x0(loc4)-x0(loc1));
+		! b=1.d0-a
+		! Dy=0.5d0*(yf(loc2)+yf(loc3))-(yf(loc1)*b+yf(loc4)*a);
+		! Dxcross=0.5d0*(yf(loc2)+yf(loc3))-(xf(loc1)*b+xf(loc4)*a);
+
+		! 	x014=x0_center;y014=y0(loc1)+(y0(loc4)-y0(loc1))/(x0(loc4)-x0(loc1))*(x014-x0(loc1));
+		! 	a_14=dsqrt(((y014-y0(loc1))**2+(x014-x0(loc1))**2)/((y0(loc4)-y0(loc1))**2+(x0(loc4)-x0(loc1))**2))
+		! 	x14=xf(1)+a_14*(xf(loc4)-xf(loc1));y14=yf(loc1)+a_14*(yf(loc4)-yf(loc1))
+		!
+		! 	x023=x0_center;y023=y0(loc2)+(y0(loc3)-y0(loc2))/(x0(loc3)-x0(loc2))*(x023-x0(loc2));
+		! 	a_23=dsqrt(((y023-y0(loc2))**2+(x023-x0(loc2))**2)/((y0(loc3)-y0(loc2))**2+(x0(loc3)-x0(loc2))**2))
+		! 	x23=xf(2)+a_23*(xf(loc3)-xf(loc2));y23=yf(loc2)+a_23*(yf(loc3)-yf(loc2))
+		!
+		! 	y012=y0_center;x012=x0(loc1)+(x0(loc2)-x0(loc1))/(y0(loc2)-y0(loc1))*(y012-y0(loc1));
+		! 	a_12=dsqrt(((y012-y0(loc1))**2+(x012-x0(loc1))**2)/((y0(loc2)-y0(loc1))**2+(x0(loc2)-x0(loc1))**2))
+		! 	x12=xf(loc1)+a_12*(xf(loc2)-xf(loc1));y12=yf(loc1)+a_12*(yf(loc2)-yf(loc1))
+		!
+		! 	y043=y0_center;x043=x0(loc4)+(x0(loc3)-x0(loc4))/(y0(loc3)-y0(loc4))*(y043-y0(loc4));
+		! 	a_43=dsqrt(((y043-y0(loc4))**2+(x043-x0(loc4))**2)/((y0(loc3)-y0(loc4))**2+(x0(loc3)-x0(loc4))**2))
+		! 	x43=xf(loc4)+a_43*(xf(loc3)-xf(loc4));y43=yf(loc4)+a_43*(yf(loc3)-yf(loc4))
+		!
+		! ! ========================================================================
+		!
+		! 	Dx0=x043-x012;Dx=x43-x12;Dycross=y43-y12;
+		! 	Dy0=y023-y014;Dy=y23-y14;Dxcross=y23-y14;
+
+		FlowMapGrad(1,1)=Dx/Dx0
+		FlowMapGrad(2,1)=Dycross/Dx0
+		FlowMapGrad(1,2)=Dxcross/Dy0
+		FlowMapGrad(2,2)=Dy/Dy0
+
+		! =========== Derivative of yf/ xf current w.r.t. reference ==========
+    CG_11=FlowMapGrad(1,1)*FlowMapGrad(1,1)+FlowMapGrad(2,1)*FlowMapGrad(2,1)
+    CG_22=FlowMapGrad(1,2)*FlowMapGrad(1,2)+FlowMapGrad(2,2)*FlowMapGrad(2,2)
+    CG_12=FlowMapGrad(1,1)*FlowMapGrad(1,2)+FlowMapGrad(2,1)*FlowMapGrad(2,2)
+
+		Eigmin=((CG_11+CG_22)-dsqrt(4.d0*CG_12**2+(CG_11-CG_22)**2))/2.d0
+		Eigmax=((CG_11+CG_22)+dsqrt(4.d0*CG_12**2+(CG_11-CG_22)**2))/2.d0
+
+    FTLE_=dlog(Eigmax)!/amesh%t/2.d0! Fix it later /(2.d0*dtLastUpdate)
+		FTLE_Error_=Eigmin*Eigmax-1.d0
+		! if (faceIndex.eq.370.or.faceindex.eq.371.or.faceindex.eq.383)then
+		!print*,faceIndex,'FTLE_',Eigmin,Eigmax,Eigmin*Eigmax-1.d0,FTLE_
+		!  endif
+end subroutine FTLECalc
+
+subroutine BackFTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
+    type(PolyMesh2d), intent(in) :: amesh
+		integer(kint), intent(in) :: faceIndex
+		real(kreal),intent(out) :: FTLE_,FTLE_Error_
+    !
+    integer(kint) :: pIndex, i
+		real(kreal),dimension(1:3) :: x0i,xi,x0i_t,xi_t,x0face,xface,x0face_t,xface_t
+		real(kreal), dimension(1:2,1:2) :: FlowMapGrad
+		real(kreal), dimension(1:4) :: x0,xf,y0,yf,x0filter
+		real(kreal) :: DyDy0,DxDy0,DxDx0,DyDx0
+		real(kreal) :: CG_11,CG_22,CG_12,Eigmin,Eigmax,x0_center,y0_center,xf_center,yf_center
+		integer(kint) :: thmin1,thmin2,thmax1,thmax2,loc1,loc2,loc3,loc4,ly
+
+		real(kreal),dimension(1:3)::Zvec,Zvec0
+  	real(kreal),dimension(1:3,1:3)::Eye,S,R,Eye0,S0,R0
+    real(kreal) :: pi
+    real(kreal) :: Dx,Dy,Dx0,Dy0,Dxcross,Dycross,a,b
+
+		real(kreal), dimension(1:4) :: x0_t,x_t,y0_t,y_t
+		real(kreal),dimension(1:2) :: Zvec_2,xaxis_2,yaxis_2
+		real(kreal),dimension(1:2,1:2)::Eye_2,S_2,R_2
+
+		pi=atan(1.d0)*4.d0
+		pIndex = amesh%faces%centerParticle(faceIndex) ! Indices of the active particles
+		x0face=	LagCoord (amesh%particles, pIndex)
+		xface=	PhysCoord(amesh%particles, pIndex)
+		! Renormalize advected locations to remove any error
+		xface=xface/dsqrt(xface(1)**2+xface(2)**2+xface(3)**2)
+		! Rotate the coordinate system such that the normal aligns with
+		! [0 0 1].
+		! The tangent space will then be x-y plane coordinates.
+		Zvec=0.d0;Zvec(2)=1.d0; Zvec=Zvec/dsqrt(Zvec(1)**2+Zvec(2)**2+Zvec(3)**2)
+		Eye=0.d0; Eye(1,1)=1.d0;Eye(2,2)=1.d0;Eye(3,3)=1.d0
+
+		! The tensor R0 is the rotation matrix in reference/ t=0 configuration
+		call reflection (S,Eye,Zvec+x0face);call reflection (R0,S,Zvec)
+		! The tensor R is the rotation matrix in current configuration
+		call reflection (S,Eye,Zvec+xface); call reflection (R,S,Zvec)
+
+		!#$! x0face_t=x0face;xface_t=xface
+
+		! Rotate the face centers. Don't really need these so commented with !#$!
+		! a) reference configuration
+		!#$! x0face(1)=R0(1,1)*x0face_t(1)+R0(1,2)*x0face_t(2)+R0(1,3)*x0face_t(3)
+		!#$! x0face(2)=R0(2,1)*x0face_t(1)+R0(2,2)*x0face_t(2)+R0(2,3)*x0face_t(3)
+		!#$! x0face(3)=R0(3,1)*x0face_t(1)+R0(3,2)*x0face_t(2)+R0(3,3)*x0face_t(3)
+		! b) current configuration
+		!#$! xface (1)=R (1,1)*xface_t (1)+R (1,2)*xface_t (2)+R (1,3)*xface_t (3)
+		!#$! xface (2)=R (2,1)*xface_t (1)+R (2,2)*xface_t (2)+R (2,3)*xface_t (3)
+		!#$! xface (3)=R (3,1)*xface_t (1)+R (3,2)*xface_t (2)+R (3,3)*xface_t (3)
+
+		!#$!x0_center=x0face(1);y0_center=x0face(3);
+		!#$!xf_center=xface(1);	yf_center=xface(3);
+
+		do i = 1, amesh%faceKind ! Coordinates of the passive particles/ vertices
+        x0i = LagCoord (amesh%particles, amesh%faces%vertices(i,faceIndex))
+				xi  = PhysCoord(amesh%particles, amesh%faces%vertices(i,faceIndex))
+
+				! Normalize to remove errors
+				x0i=x0i/dsqrt(x0i(1)**2+x0i(2)**2+x0i(3)**2)
+				xi=xi/dsqrt(xi(1)**2+xi(2)**2+xi(3)**2)
+
+				x0i_t=x0i;xi_t=xi
+				! Rotate the face vertices
+				! a) reference configuration
+			  x0i(1)=R0(1,1)*x0i_t(1)+R0(1,2)*x0i_t(2)+R0(1,3)*x0i_t(3)
+				x0i(2)=R0(2,1)*x0i_t(1)+R0(2,2)*x0i_t(2)+R0(2,3)*x0i_t(3)
+				x0i(3)=R0(3,1)*x0i_t(1)+R0(3,2)*x0i_t(2)+R0(3,3)*x0i_t(3)
+				! a) current configuration
+				xi (1)=R (1,1)*xi_t (1)+R (1,2)*xi_t (2)+R (1,3)*xi_t (3)
+				xi (2)=R (2,1)*xi_t (1)+R (2,2)*xi_t (2)+R (2,3)*xi_t (3)
+				xi (3)=R (3,1)*xi_t (1)+R (3,2)*xi_t (2)+R (3,3)*xi_t (3)
+
+				x0(i)=x0i(1);			y0(i)=x0i(3)
+				xf(i)=xi(1);			yf (i)=xi(3)
+	  enddo
+		! ========================================================================
+		! Locating points on the quadrilateral inscribed on the sphere
+		! 1, 2, 3 and 4 in clockwise direction
+		! thmin1=minloc(x0,dim=1);
+		! x0filter=10.d0 ! Largest value of xf will be pi
+		! do i=1,4
+		! if (i.ne.thmin1) x0filter(i)=x0(i)
+		! end do
+		! thmin2=minloc(x0filter,dim=1);
+		! do i=1,4
+		! 	if( i.ne.thmin1.and.i.ne.thmin2) thmax1=i
+		! end do
+		! do i=1,4
+		! 	if( i.ne.thmin1.and.i.ne.thmin2.and.i.ne.thmax1) thmax2=i
+		! end do
+		! loc1=thmin1;loc2=thmin2;
+		! if (y0(thmin1)>y0(thmin2)) then
+		! 	loc1=thmin2;loc2=thmin1;
+		! endif
+		! loc3=thmax1;loc4=thmax2;
+		! if (y0(thmax2)>y0(thmax1)) then
+		! 	loc3=thmax2;loc4=thmax1;
+		! endif
+		loc1=1;loc2=2;loc3=3;loc4=4;
+
+		! Linear map to a properly oriented rectangle
+		! OriginShift
+		x0=x0-x0(loc1);y0=y0-y0(loc1);!x0_center=x0_center-x0(loc1);y0_center=y0_center-y0(loc1);
+		xf=xf-xf(loc1);yf=yf-yf(loc1);!xf_center=xf_center-xf(loc1);yf_center=yf_center-yf(loc1) ;
+
+		Eye_2=0.d0; Eye_2(1,1)=1.d0;Eye_2(2,2)=1.d0;S_2=Eye_2;R_2=Eye_2;
+		Zvec_2=0.d0;Zvec_2(1)=x0(loc4)-x0(loc1); Zvec_2(2)=y0(loc4)-y0(loc1);
+		Zvec_2=Zvec_2/dsqrt(Zvec_2(1)**2+Zvec_2(2)**2)
+		xaxis_2=0.d0;xaxis_2(1)=1.d0;xaxis_2=xaxis_2/dsqrt(xaxis_2(1)**2+xaxis_2(2)**2)
+	  call reflection_2D (S_2,Eye_2,xaxis_2+Zvec_2)
+		call reflection_2D (R_2,S_2,xaxis_2)
+		x0_t(loc1)=R_2(1,1)*x0(loc1)+R_2(1,2)*y0(loc1)
+		y0_t(loc1)=R_2(2,1)*x0(loc1)+R_2(2,2)*y0(loc1)
+		x0_t(loc2)=R_2(1,1)*x0(loc2)+R_2(1,2)*y0(loc2)
+		y0_t(loc2)=R_2(2,1)*x0(loc2)+R_2(2,2)*y0(loc2)
+		x0_t(loc3)=R_2(1,1)*x0(loc3)+R_2(1,2)*y0(loc3)
+		y0_t(loc3)=R_2(2,1)*x0(loc3)+R_2(2,2)*y0(loc3)
+		x0_t(loc4)=R_2(1,1)*x0(loc4)+R_2(1,2)*y0(loc4)
+		y0_t(loc4)=R_2(2,1)*x0(loc4)+R_2(2,2)*y0(loc4)
+
+		x_t(loc1)=R_2(1,1)*xf(loc1)+R_2(1,2)*yf(loc1)
+		y_t(loc1)=R_2(2,1)*xf(loc1)+R_2(2,2)*yf(loc1)
+		x_t(loc2)=R_2(1,1)*xf(loc2)+R_2(1,2)*yf(loc2)
+		y_t(loc2)=R_2(2,1)*xf(loc2)+R_2(2,2)*yf(loc2)
+		x_t(loc3)=R_2(1,1)*xf(loc3)+R_2(1,2)*yf(loc3)
+		y_t(loc3)=R_2(2,1)*xf(loc3)+R_2(2,2)*yf(loc3)
+		x_t(loc4)=R_2(1,1)*xf(loc4)+R_2(1,2)*yf(loc4)
+		y_t(loc4)=R_2(2,1)*xf(loc4)+R_2(2,2)*yf(loc4)
+
+		x0=x0_t;y0=y0_t;xf=x_t;yf=y_t
+	! ========================================================================
+		Dx0=x0(loc4)-x0(loc1);Dx=xf(loc4)-xf(loc1);Dycross=yf(loc4)-yf(loc1);
+
+		ly=loc3;	if (abs(y0(loc3))>abs(y0(loc2))) ly=loc2;
 		Dy0=y0(ly);
 		a=(x0(ly)-x0(loc1))/(x0(loc4)-x0(loc1));
 		b=1.d0-a
@@ -1294,9 +1486,9 @@ subroutine FTLECalc( amesh, faceIndex,FTLE_,FTLE_Error_ )
     FTLE_=dlog(Eigmax)/amesh%t/2.d0! Fix it later /(2.d0*dtLastUpdate)
 		FTLE_Error_=Eigmin*Eigmax-1.d0
 		! if (faceIndex.eq.370.or.faceindex.eq.371.or.faceindex.eq.383)then
-		print*,faceIndex,'FTLE_',Eigmin,Eigmax,Eigmin*Eigmax-1.d0,FTLE_
+		!print*,faceIndex,'FTLE_',Eigmin,Eigmax,Eigmin*Eigmax-1.d0,FTLE_
 		!  endif
-end subroutine FTLECalc
+end subroutine BackFTLECalc
 
 subroutine reflection (R,A,n)
 

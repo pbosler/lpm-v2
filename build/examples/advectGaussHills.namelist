@@ -1,0 +1,17 @@
+&meshDefine
+	faceKind = 4
+	initNest = 5
+	amrLimit = 0
+/
+
+&timestepping
+	dt = 0.0125
+	tfinal = 5
+	remeshInterval = 20
+/
+
+&fileIO
+	outputDir = '/Users/asharm1/Documents/lpm-v2/build/FTLETest'
+	outputRoot = 'gaussHillsAdvectionFTLE2'
+	frameOut = 1
+/

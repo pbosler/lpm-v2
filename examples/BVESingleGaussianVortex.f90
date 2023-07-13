@@ -56,7 +56,6 @@ real(kreal) :: vortInitLon
 real(kreal), dimension(3) :: vortCenter
 real(kreal) :: flowMapVarTol
 real(kreal) :: circulationTol
-real(kreal) :: ftle_val, ftle_error
 namelist /gaussVort/ shapeParam, rotRate, vortStrength, vortInitLat, vortInitLon, flowMapVarTol, circulationTol
 
 ! remeshing
@@ -92,8 +91,11 @@ integer(kint), parameter :: logLevel = DEBUG_LOGGING_LEVEL
 character(len=28) :: logKey = "BVEGaussianVortex"
 integer(kint) :: mpiErrCode
 real(kreal) :: timeStart, timeEnd
-integer(kint) :: i
+integer(kint) :: i,j,pIndex
 real(kreal), dimension(3) :: vec3
+real(kreal) :: FTLE_,FTLE_Error_,Bkd_FTLE_,Bkd_FTLE_Error_,maxftle_val
+
+real(kreal), dimension(:),allocatable :: maxftle_
 
 !--------------------------------
 !	initialize : setup computing environment
@@ -151,20 +153,33 @@ endif
 call SetStreamFunctionsOnMesh(sphere)
 call SetVelocityOnMesh(sphere)
 
-call AddTracers(sphere, 3, [1, 1, 1])
-sphere%tracers(1)%name = "initLat"
+call AddTracers(sphere, 5, [1,1,1,1,1])
+sphere%tracers(1)%name  = "initLat"
 sphere%tracers(1)%units = "radians"
-sphere%tracers(2)%name = "FTLE"
-sphere%tracers(3)%name = "FTLE_error"
-sphere%isPanelTracer(2) = .TRUE.
-sphere%isPanelTracer(3) = .TRUE.
+sphere%tracers(2)%name  = "FTLE"
+sphere%tracers(3)%name  = "FTLEError"
+sphere%tracers(4)%name  = "BackFTLE"
+sphere%tracers(5)%name  = "BackFTLEError"
+sphere%isPanelTracer(2)=.TRUE.
+sphere%isPanelTracer(3)=.TRUE.
+sphere%isPanelTracer(4)=.TRUE.
+sphere%isPanelTracer(5)=.TRUE.
 call SetFieldToZero(sphere%tracers(2))
 call SetFieldToZero(sphere%tracers(3))
+call SetFieldToZero(sphere%tracers(4))
+call SetFieldToZero(sphere%tracers(5))
+FTLE_=0.d0;FTLE_Error_=0.d0;Bkd_FTLE_=0.d0;Bkd_FTLE_Error_=0.d0
 sphere%tracers(2)%N = sphere%mesh%particles%N
 sphere%tracers(3)%N = sphere%mesh%particles%N
+sphere%tracers(4)%N = sphere%mesh%particles%N
+sphere%tracers(5)%N = sphere%mesh%particles%N
 do i = 1, sphere%mesh%particles%N
 	vec3 = PhysCoord(sphere%mesh%particles, i)
-	call InsertScalarToField(sphere%tracers(1), Latitude(vec3))
+	call InsertScalarToField( sphere%tracers(1), Latitude(vec3))
+	call InsertScalarToField( sphere%tracers(2), FTLE_ )
+	call InsertScalarToField( sphere%tracers(3), FTLE_Error_ )
+	call InsertScalarToField( sphere%tracers(4), Bkd_FTLE_ )
+	call InsertScalarToField( sphere%tracers(5), Bkd_FTLE_Error_ )
 enddo
 
 frameCounter = 0
@@ -211,22 +226,35 @@ enstrophy(1) = TotalEnstrophy(sphere)
 !--------------------------------
 !	run : evolve the problem in time
 !--------------------------------
+allocate(maxftle_(0:nTimesteps-1)) 
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
+Sphere%mesh%particles%xrm = Sphere%mesh%particles%x0
+Sphere%mesh%particles%yrm = Sphere%mesh%particles%y0
+Sphere%mesh%particles%zrm = Sphere%mesh%particles%z0
+maxftle_val=0.0_kreal
 do timeJ = 0, nTimesteps - 1
-
-	if ( mod(timeJ+1, remeshInterval) == 0 ) then
+	!if ( mod(timeJ+1, remeshInterval) == 0 ) then
+		if ( maxftle_val> 2.d0 ) then
 		call New(remesh, sphere)
 
 		call New( tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, rotRate )
-		call AddTracers(tempSphere, 2, [1, 1, 1])
-		tempSphere%tracers(1)%name = "initLat"
+		call AddTracers(tempSphere, 5, [1,1,1,1,1])
+		tempSphere%tracers(1)%name  = "initLat"
 		tempSphere%tracers(1)%units = "radians"
-		tempSphere%tracers(2)%name = "FTLE"
-		tempSphere%tracers(3)%name = "FTLE_error"
-		tempSphere%isPanelTracer(2) = .TRUE.
-		tempSphere%isPanelTracer(3) = .TRUE.
+		tempSphere%tracers(2)%name  = "FTLE"
+		tempSphere%tracers(3)%name  = "FTLEError"
+		tempSphere%tracers(4)%name  = "BackFTLE"
+		tempSphere%tracers(5)%name  = "BackFTLEError"
+		tempSphere%isPanelTracer(2)=.TRUE.
+		tempSphere%isPanelTracer(3)=.TRUE.
+		tempSphere%isPanelTracer(4)=.TRUE.
+		tempSphere%isPanelTracer(5)=.TRUE.
 
+		tempSphere%tracers(2)%scalar=sphere%tracers(2)%scalar
+		tempSphere%tracers(3)%scalar=sphere%tracers(3)%scalar
+		tempSphere%tracers(4)%scalar=sphere%tracers(4)%scalar
+		tempSphere%tracers(5)%scalar=sphere%tracers(5)%scalar
 		call LagrangianRemeshBVEWithVorticityFunction(remesh, sphere, tempSphere, AMR, GaussianVortexVorticity, &
 					scalarIntegralRefinement, circulationTol, "circulation refinement", &
 					RefineFlowMapYN = .TRUE., flowMapVarTol = flowMapVarTol, nLagTracers = 1, tracerFn1 = InitLatTracer )
@@ -234,6 +262,9 @@ do timeJ = 0, nTimesteps - 1
 		call Copy(sphere, tempSphere)
 
 		remeshCounter = remeshCounter + 1
+		Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
+		Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
+		Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
 
 		call Delete(tempSphere)
 		call Delete(remesh)
@@ -243,7 +274,21 @@ do timeJ = 0, nTimesteps - 1
 
 
 		call New(solver, sphere)
-	endif
+		do i = 1, sphere%mesh%faces%N
+			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
+				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+				do j = 1, Sphere%mesh%faceKind
+				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
+				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+				enddo
+			endif
+		enddo
+endif
 
 	call Timestep(solver, sphere, dt)
 
@@ -253,13 +298,30 @@ do timeJ = 0, nTimesteps - 1
 	enstrophy(timeJ+2) = TotalEnstrophy(sphere)
 	kineticEnergy(timeJ+2) = TotalKE(sphere)
 
-	do i=1,sphere%mesh%faces%N
-	  if (.NOT. sphere%mesh%faces%hasChildren(i)) then
-	    call FTLECalc(sphere%mesh, i, ftle_val, ftle_error)
-	    sphere%tracers(2)%scalar(sphere%mesh%faces%centerParticle(i)) = ftle_val
-	    sphere%tracers(3)%scalar(sphere%mesh%faces%centerParticle(i)) = ftle_error
-	  endif
-	enddo
+	sphere%tracers(2)%scalar=0.d0
+	sphere%tracers(3)%scalar=0.d0
+	maxftle_(timeJ)=0.d0
+		do i = 1, sphere%mesh%faces%N
+			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+				call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
+				sphere%tracers(2)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_
+				if (FTLE_>maxftle_(timeJ))maxftle_(timeJ)=FTLE_
+				sphere%tracers(3)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_Error_
+			endif
+		enddo
+		! maxftle_(timeJ)=maxval(sphere%tracers(4)%scalar)
+	maxftle_val=maxftle_(timeJ)
+		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
+
+		 sphere%tracers(4)%scalar=0.d0
+	 	sphere%tracers(5)%scalar=0.d0
+	 		do i = 1, sphere%mesh%faces%N
+	 			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+	 				call BackFTLECalc (sphere%mesh,i,Bkd_FTLE_,Bkd_FTLE_Error_)
+	 				sphere%tracers(4)%scalar(sphere%mesh%faces%centerParticle(i))=Bkd_FTLE_
+	 				sphere%tracers(5)%scalar(sphere%mesh%faces%centerParticle(i))=Bkd_FTLE_Error_
+	 			endif
+	 		enddo
 
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
@@ -268,6 +330,8 @@ do timeJ = 0, nTimesteps - 1
 		call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//" t = ", t)
 	endif
 enddo
+print*,'Maximum FTLE values'
+print*,maxftle_
 
 !
 !	write t = tfinal output

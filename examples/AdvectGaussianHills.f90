@@ -84,9 +84,11 @@ integer(kint) :: mpiErrCode
 real(kreal) :: timeStart, timeEnd
 real(kreal) :: rmTimeStart, rmTimeEnd, rmTimeTotal
 real(kreal) :: stepTimeStart, stepTimeEnd, stepTimeTotal
-integer(kint) :: i
+integer(kint) :: i,j,pIndex
 real(kreal), dimension(3) :: vec
-real(kreal) :: FTLE_,FTLE_Error_
+real(kreal) :: FTLE_,FTLE_Error_,maxftle_val
+
+real(kreal), dimension(:),allocatable :: maxftle_
 
 !--------------------------------
 !	initialize : setup computing environment
@@ -179,17 +181,24 @@ ghMass(1) = TracerMass(sphere, 1)
 qMinTrue = MinScalarVal(sphere%tracers(1))
 qMaxTrue = MaxScalarVal(sphere%tracers(1))
 
+allocate(maxftle_(0:nTimesteps-1))
 !--------------------------------
 !	run : evolve the problem in time
 !--------------------------------
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
 
+	Sphere%mesh%particles%xrm = Sphere%mesh%particles%x0
+	Sphere%mesh%particles%yrm = Sphere%mesh%particles%y0
+	Sphere%mesh%particles%zrm = Sphere%mesh%particles%z0
+
 rmTimeTotal = 0.0_kreal
 stepTimeTotal = 0.0_kreal
+maxftle_val=0.0_kreal
 do timeJ = 0, nTimesteps - 1
 
-	if ( mod(timeJ+1, remeshInterval) == 0 ) then
+!	if ( mod(timeJ+1, remeshInterval) == 0 ) then
+		if ( maxftle_val> 2.d0 ) then
 		rmTimeStart = MPI_WTIME()
 		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" remesh triggered by remesh interval : ",&
 			 remeshCounter)
@@ -215,13 +224,39 @@ do timeJ = 0, nTimesteps - 1
 		call Copy(sphere, tempSphere)
 		remeshCounter = remeshCounter + 1
 
-		call Delete(tempSphere)
+		Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
+		Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
+		Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
+	call Delete(tempSphere)
 		call Delete(remesh)
 
 		call Delete(solver)
 		call New(solver, sphere)
 		rmTimeEnd = MPI_WTIME()
 		rmTimeTotal = rmTimeTotal + (rmTimeEnd - rmTimeStart)
+! print*,'lllll'
+! 		do i = Sphere%mpiParticles%indexStart(procRank), Sphere%mpiParticles%indexEnd(procRank)
+! 			Sphere%mesh%particles%xrm(i) = Sphere%mesh%particles%x(i)
+! 			Sphere%mesh%particles%yrm(i) = Sphere%mesh%particles%y(i)
+! 			Sphere%mesh%particles%zrm(i) = Sphere%mesh%particles%z(i)
+! 		enddo
+		do i = 1, sphere%mesh%faces%N
+			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
+				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+				do j = 1, Sphere%mesh%faceKind
+				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
+				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+				enddo
+			endif
+		enddo
+
+
+
 	endif
 
 	stepTimeStart = MPI_WTIME()
@@ -244,14 +279,18 @@ do timeJ = 0, nTimesteps - 1
 				 sphere%mesh%particles%y(i), sphere%mesh%particles%z(i) ) - sphere%tracers(1)%scalar(i) ) / qRange
 		enddo
 	endif
-
-	do i = 1, sphere%mesh%faces%N
-		if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
-			call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
-			sphere%tracers(4)%scalar(i)=FTLE_
-			sphere%tracers(5)%scalar(i)=FTLE_Error_
-	endif
-enddo
+	maxftle_(timeJ)=0.d0
+		do i = 1, sphere%mesh%faces%N
+			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+				call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
+				sphere%tracers(4)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_
+				if (FTLE_>maxftle_(timeJ))maxftle_(timeJ)=FTLE_
+				sphere%tracers(5)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_Error_
+			endif
+		enddo
+		! maxftle_(timeJ)=maxval(sphere%tracers(4)%scalar)
+maxftle_val=maxftle_(timeJ)
+		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
 
 
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
@@ -263,6 +302,8 @@ enddo
 	endif
 enddo
 
+print*,'Maximum FTLE values'
+print*,maxftle_
 
 
 !

@@ -1,6 +1,6 @@
 &meshDefine
-	faceKind = 3 
-	initNest = 5
+	faceKind = 4
+	initNest = 3
 	amrLimit = 0
 /
 
@@ -16,12 +16,12 @@
 
 &timestepping
 	dt = 0.01
-	tfinal = 0.05
+	tfinal = 5.0
 	remeshInterval = 20
 /
 
 &fileIO
-	outputDir = '/Users/pabosle/Desktop/dataTemp/BVE'
+	outputDir = '/Users/asharm1/Documents/lpm-v2/build/BVE/FTLETest'
 	outputRoot = 'gaussVort_midlat_Ro1'
 	frameOut = 1
 /

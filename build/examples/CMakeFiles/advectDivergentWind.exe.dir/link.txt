@@ -1,0 +1,1 @@
+/opt/homebrew/bin/mpifort -O3 -fopenmp -ffree-form -cpp -fallow-argument-mismatch -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk CMakeFiles/advectDivergentWind.exe.dir/AdvectDivergentWind.f90.o -o advectDivergentWind.exe  ../src/liblpmFortran.a -Wl,-framework,Accelerate 
