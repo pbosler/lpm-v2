@@ -173,14 +173,6 @@ sphere%tracers(2)%N = sphere%mesh%particles%N
 sphere%tracers(3)%N = sphere%mesh%particles%N
 sphere%tracers(4)%N = sphere%mesh%particles%N
 sphere%tracers(5)%N = sphere%mesh%particles%N
-do i = 1, sphere%mesh%particles%N
-	vec3 = PhysCoord(sphere%mesh%particles, i)
-	call InsertScalarToField( sphere%tracers(1), Latitude(vec3))
-	call InsertScalarToField( sphere%tracers(2), FTLE_ )
-	call InsertScalarToField( sphere%tracers(3), FTLE_Error_ )
-	call InsertScalarToField( sphere%tracers(4), Bkd_FTLE_ )
-	call InsertScalarToField( sphere%tracers(5), Bkd_FTLE_Error_ )
-enddo
 
 frameCounter = 0
 remeshCounter = 0
@@ -226,7 +218,7 @@ enstrophy(1) = TotalEnstrophy(sphere)
 !--------------------------------
 !	run : evolve the problem in time
 !--------------------------------
-allocate(maxftle_(0:nTimesteps-1)) 
+allocate(maxftle_(0:nTimesteps-1))
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
 Sphere%mesh%particles%xrm = Sphere%mesh%particles%x0
@@ -310,8 +302,6 @@ endif
 			endif
 		enddo
 		! maxftle_(timeJ)=maxval(sphere%tracers(4)%scalar)
-	maxftle_val=maxftle_(timeJ)
-		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
 
 		 sphere%tracers(4)%scalar=0.d0
 	 	sphere%tracers(5)%scalar=0.d0
@@ -324,6 +314,9 @@ endif
 	 		enddo
 
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
+	  	maxftle_val=maxftle_(timeJ)
+		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
+
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 		call OutputToVTK(sphere, vtkFile)
 		frameCounter = frameCounter + 1
