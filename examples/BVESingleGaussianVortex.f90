@@ -147,8 +147,8 @@ if ( AMR ) then
 	enddo
 
 	call Delete(refinement)
-	call LoadBalance(sphere%mpiParticles, sphere%mesh%particles%N, numProcs)
 endif
+call LoadBalance(sphere%mpiParticles, sphere%mesh%particles%N, numProcs)
 
 call SetStreamFunctionsOnMesh(sphere)
 call SetVelocityOnMesh(sphere)
@@ -156,6 +156,10 @@ call SetVelocityOnMesh(sphere)
 call AddTracers(sphere, 5, [1,1,1,1,1])
 sphere%tracers(1)%name  = "initLat"
 sphere%tracers(1)%units = "radians"
+do i = 1, sphere%mesh%particles%N
+	vec3 = LagCoord(sphere%mesh%particles, i)
+	call InsertScalarToField( sphere%tracers(1), Latitude(vec3) )
+enddo
 sphere%tracers(2)%name  = "FTLE"
 sphere%tracers(3)%name  = "FTLEError"
 sphere%tracers(4)%name  = "BackFTLE"
@@ -168,7 +172,7 @@ call SetFieldToZero(sphere%tracers(2))
 call SetFieldToZero(sphere%tracers(3))
 call SetFieldToZero(sphere%tracers(4))
 call SetFieldToZero(sphere%tracers(5))
-FTLE_=0.d0;FTLE_Error_=0.d0;Bkd_FTLE_=0.d0;Bkd_FTLE_Error_=0.d0
+! FTLE_=0.d0;FTLE_Error_=0.d0;Bkd_FTLE_=0.d0;Bkd_FTLE_Error_=0.d0
 sphere%tracers(2)%N = sphere%mesh%particles%N
 sphere%tracers(3)%N = sphere%mesh%particles%N
 sphere%tracers(4)%N = sphere%mesh%particles%N
@@ -266,20 +270,21 @@ do timeJ = 0, nTimesteps - 1
 
 
 		call New(solver, sphere)
-		do i = 1, sphere%mesh%faces%N
-			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
-				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
-				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-				do j = 1, Sphere%mesh%faceKind
-				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
-				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-				enddo
-			endif
-		enddo
+! 		do i = 1, sphere%mesh%faces%N
+! 			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+! 				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
+! 				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+! 				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+! 				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+! 				do j = 1, Sphere%mesh%faceKind
+! 				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
+! 				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+! 				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+! 				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+! 				enddo
+! 			endif
+! 		enddo
+
 endif
 
 	call Timestep(solver, sphere, dt)
