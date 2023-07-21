@@ -85,6 +85,7 @@ interface WriteToMatlab
 	module procedure WriteMatrixToMatlab
 	module procedure WriteIntegerMatrixToMatlab
 	module procedure WriteRealScalarToMatlab
+	module procedure WriteIntegerToMatlab
 end interface
 
 contains
@@ -148,7 +149,7 @@ end subroutine
 
 !> @brief Writes a key/value pair with appropriate indentation
 !> @param self Target OutputWriter object
-!> @param key identification key 
+!> @param key identification key
 !> @param str value associated with key
 subroutine WriteString(self,key,str)
 	type(OutputWriter), intent(in) :: self
@@ -166,7 +167,7 @@ end subroutine
 
 !> @brief Writes a key/value pair with appropriate indentation
 !> @param self Target OutputWriter object
-!> @param key identification key 
+!> @param key identification key
 !> @param val value associated with key
 subroutine WriteInteger(self,key,val)
 	type(OutputWriter), intent(in) :: self
@@ -179,7 +180,7 @@ end subroutine
 
 !> @brief Writes a key/value pair with appropriate indentation
 !> @param self Target OutputWriter object
-!> @param key identification key 
+!> @param key identification key
 !> @param val value associated with key
 subroutine WriteReal(self,key,val)
 	type(OutputWriter), intent(in) :: self
@@ -199,22 +200,22 @@ subroutine WriteReal3(self, key, val)
     character(len=*), intent(in) :: key
     real(kreal), dimension(3), intent(in) :: val
     character(len=56) :: form
-    
+
     form = FormatWithIndent(self, '(A, 2X, "(", 3(G15.8,X), ")")')
-    
+
     write(self%fileunit, form) trim(key), val
 end subroutine
 
 !> @brief Writes a key/value pair with appropriate indentation
 !> @param self Target OutputWriter object
-!> @param key identification key 
+!> @param key identification key
 !> @param val value associated with key
 subroutine WriteIntVector(self, key, val)
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: key
 	type(STDIntVector), intent(in) :: val
 	character(len=32) :: form
-	
+
 	write(form,'(A,I4,A)') "(A,2X,", val%N, "(I8,2X) )"
 	form = FormatWithIndent(self, form)
 	write(self%fileUnit, form) trim(key), val%integers(1:val%N)
@@ -301,7 +302,7 @@ subroutine WriteArrayToMatlab( array, fileunit, name)
 	character(len=*), intent(in) :: name
 	!
 	integer(kint) :: i, n
-	
+
 	n = size(array)
 	write(fileunit,'(A,A)',advance='NO') trim(name), " = [ "
 	do i = 1, n-1
@@ -320,17 +321,17 @@ subroutine WriteMatrixToMatlab( matrix, fileunit, name )
 	character(len=*), intent(in) :: name
 	!
 	integer(kint) :: i, j, m, n
-	
+
 	m = size(matrix,1)
 	n = size(matrix,2)
 	write(fileunit,'(A,A)',advance='NO') trim(name), " = [ "
 	do i = 1, m - 1
-		do j = 1, n -1 
+		do j = 1, n -1
 			write(fileunit, '(F24.12,A)', advance='NO') matrix(i,j), ", "
 		enddo
 		write(fileunit, '(F24.12,A)') matrix(i,n), "; ... "
 	enddo
-	do j = 1, n -1 
+	do j = 1, n -1
 		write(fileunit, '(F24.12,A)', advance='NO') matrix(m,j), ", "
 	enddo
 	write(fileunit, '(F24.12,A)') matrix(m,n), "]; "
@@ -346,7 +347,7 @@ subroutine WriteIntegerMatrixToMatlab( matrix, fileunit, name )
 	character(len=*), intent(in) :: name
 	!
 	integer(kint) :: i, j, m, n
-	
+
 	m = size(matrix,1)
 	n = size(matrix,2)
 	write(fileunit,'(A,A)', advance='NO') trim(name), " = ["
@@ -374,6 +375,12 @@ subroutine WriteRealScalarToMatlab( scalar, fileUnit, name )
 	endif
 end subroutine
 
+subroutine WriteIntegerToMatlab( int, fileUnit, name )
+  integer(kint), intent(in) :: int
+  integer(kint), intent(in) :: fileUnit
+  character(len=*), intent(in) :: name
+  write(fileUnit, '(A,A,I8,A)') trim(name), " = ", int, ";"
+end subroutine
 
 !
 !----------------
@@ -385,7 +392,7 @@ end subroutine
 !> @param self Target OutputWriter object
 !> @param formatString Format intsructions for console output
 function FormatWithIndent(self,formatString)
-	
+
 	type(OutputWriter), intent(in) :: self
 	character(len=*), intent(in) :: formatString
 	character(len=len(formatString)+10) :: FormatWithIndent

@@ -223,10 +223,12 @@ allocate(kineticEnergy(nTimesteps+1))
 allocate(enstrophy(nTimesteps+1))
 kineticEnergy(1) = TotalKE(sphere)
 enstrophy(1) = TotalEnstrophy(sphere)
+allocate(maxftle_(nTimesteps+1))
+maxftle_(1) = 0.0_kreal
 !--------------------------------
 !	run : evolve the problem in time
 !--------------------------------
-allocate(maxftle_(0:nTimesteps-1))
+
 
 call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "starting timestepping loop.")
 Sphere%mesh%particles%xrm = Sphere%mesh%particles%x0
@@ -289,16 +291,16 @@ do timeJ = 0, nTimesteps - 1
 
 	sphere%tracers(2)%scalar=0.d0
 	sphere%tracers(3)%scalar=0.d0
-	maxftle_(timeJ)=0.d0
+	maxftle_(timeJ+1)=0.d0
 		do i = 1, sphere%mesh%faces%N
 			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
 				call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
 				sphere%tracers(2)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_
-				if (FTLE_>maxftle_(timeJ))maxftle_(timeJ)=FTLE_
+				if (FTLE_>maxftle_(timeJ+1)) maxftle_(timeJ+1)=FTLE_
 				sphere%tracers(3)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_Error_
 			endif
 		enddo
-		! maxftle_(timeJ)=maxval(sphere%tracers(4)%scalar)
+		maxftle_val = maxftle_(timeJ+1)
 
 		 sphere%tracers(4)%scalar=0.d0
 	 	sphere%tracers(5)%scalar=0.d0
@@ -311,8 +313,8 @@ do timeJ = 0, nTimesteps - 1
 	 		enddo
 
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
-	  	maxftle_val=maxftle_(timeJ)
-		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
+	  	maxftle_val=maxftle_(timeJ+1)
+		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ+1)
 
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 		call OutputToVTK(sphere, vtkFile)
@@ -320,8 +322,8 @@ do timeJ = 0, nTimesteps - 1
 		call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//" t = ", t)
 	endif
 enddo
-print*,'Maximum FTLE values'
-print*,maxftle_
+! print*,'Maximum FTLE values'
+! print*,maxftle_
 
 !
 !	write t = tfinal output
@@ -332,9 +334,11 @@ if ( procRank == 0 ) then
 		write(WRITE_UNIT_1,'(A,F12.9,A,F12.6,A)') "t = 0:", dt,":", tfinal, ";"
 		call WriteToMatlab(kineticEnergy, WRITE_UNIT_1, "kineticEnergy")
 		call WriteToMatlab(enstrophy, WRITE_UNIT_1, "enstrophy")
+		call WriteToMatlab(maxftle_, WRITE_UNIT_1, "max_ftle")
+		call WriteToMatlab(remeshCounter, WRITE_UNIT_1, "remeshCounter")
 	close(WRITE_UNIT_1)
+	call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" remeshCounter = ", remeshCounter)
 endif
-
 
 !--------------------------------
 !	finalize : clean up
@@ -347,6 +351,7 @@ call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" ", logstring)
 
 deallocate(kineticEnergy)
 deallocate(enstrophy)
+deallocate(maxftle_)
 call Delete(solver)
 call Delete(sphere)
 if (AMR) call Delete(refinement)
