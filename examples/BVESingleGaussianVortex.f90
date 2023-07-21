@@ -196,9 +196,10 @@ if ( procRank == 0 ) then
 		endif
 	endif
 
-	write(vtkRoot,'(4A)') trim(outputDir), '/vtkOut/', trim(outputRoot), trim(meshString)
+	write(vtkRoot,'(3A)') trim(outputDir)//'/', trim(outputRoot), trim(meshString)
 	write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
 
+  call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" writing output to: "//vtkFile)
 	call OutputToVTK(sphere, vtkFile)
 	frameCounter = frameCounter + 1
 

@@ -28,8 +28,8 @@ TARGET_LINK_LIBRARIES( sphereSWETC2.exe lpmFortran )
 ADD_EXECUTABLE( bveSolidBodyRotation.exe BVESolidBody.f90 )
 TARGET_LINK_LIBRARIES( bveSolidBodyRotation.exe lpmFortran )
 
-ADD_EXECUTABLE( sphereGaussianVortex.exe BVESingleGaussianVortex.f90)
-TARGET_LINK_LIBRARIES( sphereGaussianVortex.exe lpmFortran)
+ADD_EXECUTABLE( bveGaussianVortex.exe BVESingleGaussianVortex.f90)
+TARGET_LINK_LIBRARIES( bveGaussianVortex.exe lpmFortran)
 
 ADD_EXECUTABLE( betaPlaneGaussianVortex.exe BetaPlaneGaussianVortex.f90)
 TARGET_LINK_LIBRARIES( betaPlaneGaussianVortex.exe lpmFortran)
