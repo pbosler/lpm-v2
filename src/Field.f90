@@ -169,9 +169,7 @@ subroutine copyPrivate( self, other )
 	self%name = other%name
 	self%units = other%units
 	if ( self%nDim == 1 ) then
-		do i = 1, other%N
-			self%scalar(i) = other%scalar(i)
-		enddo
+		self%scalar(1:self%N) = other%scalar(1:other%N)
 		self%scalar(self%N+1:self%N_Max) = 0.0_kreal
 	elseif ( self%nDim == 2 ) then
 		do i = 1, other%N

@@ -71,7 +71,9 @@ real(kreal) :: t
 real(kreal) :: tfinal
 integer(kint) :: nTimesteps
 integer(kint) :: timeJ
-namelist /timestepping/ dt, tfinal, remeshInterval
+logical(klog) :: useFtleRemesh
+real(kreal) :: ftle_tol
+namelist /timestepping/ dt, tfinal, remeshInterval, useFtleRemesh, ftle_tol
 
 ! i/o
 character(len=MAX_STRING_LENGTH) :: outputDir
@@ -96,6 +98,7 @@ real(kreal), dimension(3) :: vec3
 real(kreal) :: FTLE_,FTLE_Error_,Bkd_FTLE_,Bkd_FTLE_Error_,maxftle_val
 
 real(kreal), dimension(:),allocatable :: maxftle_
+logical(klog) :: doRemesh
 
 !--------------------------------
 !	initialize : setup computing environment
@@ -231,62 +234,50 @@ Sphere%mesh%particles%yrm = Sphere%mesh%particles%y0
 Sphere%mesh%particles%zrm = Sphere%mesh%particles%z0
 maxftle_val=0.0_kreal
 do timeJ = 0, nTimesteps - 1
-	!if ( mod(timeJ+1, remeshInterval) == 0 ) then
-		if ( maxftle_val> 2.d0 ) then
-		call New(remesh, sphere)
+    doRemesh = (.NOT. useFtleRemesh .AND. mod(timeJ+1, remeshInterval) == 0) .OR. (maxftle_val > ftle_tol)
+	  if ( doRemesh ) then
+      call New(remesh, sphere)
 
-		call New( tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, rotRate )
-		call AddTracers(tempSphere, 5, [1,1,1,1,1])
-		tempSphere%tracers(1)%name  = "initLat"
-		tempSphere%tracers(1)%units = "radians"
-		tempSphere%tracers(2)%name  = "FTLE"
-		tempSphere%tracers(3)%name  = "FTLEError"
-		tempSphere%tracers(4)%name  = "BackFTLE"
-		tempSphere%tracers(5)%name  = "BackFTLEError"
-		tempSphere%isPanelTracer(2)=.TRUE.
-		tempSphere%isPanelTracer(3)=.TRUE.
-		tempSphere%isPanelTracer(4)=.TRUE.
-		tempSphere%isPanelTracer(5)=.TRUE.
+      call New( tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, rotRate )
+      call AddTracers(tempSphere, 5, [1,1,1,1,1])
+      tempSphere%tracers(1)%name  = "initLat"
+      tempSphere%tracers(1)%units = "radians"
+      tempSphere%tracers(2)%name  = "FTLE"
+      tempSphere%tracers(3)%name  = "FTLEError"
+      tempSphere%tracers(4)%name  = "BackFTLE"
+      tempSphere%tracers(5)%name  = "BackFTLEError"
+      tempSphere%isPanelTracer(2)=.TRUE.
+      tempSphere%isPanelTracer(3)=.TRUE.
+      tempSphere%isPanelTracer(4)=.TRUE.
+      tempSphere%isPanelTracer(5)=.TRUE.
 
-		tempSphere%tracers(2)%scalar=sphere%tracers(2)%scalar
-		tempSphere%tracers(3)%scalar=sphere%tracers(3)%scalar
-		tempSphere%tracers(4)%scalar=sphere%tracers(4)%scalar
-		tempSphere%tracers(5)%scalar=sphere%tracers(5)%scalar
-		call LagrangianRemeshBVEWithVorticityFunction(remesh, sphere, tempSphere, AMR, GaussianVortexVorticity, &
-					scalarIntegralRefinement, circulationTol, "circulation refinement", &
-					RefineFlowMapYN = .TRUE., flowMapVarTol = flowMapVarTol, nLagTracers = 1, tracerFn1 = InitLatTracer )
+      tempSphere%tracers(2)%scalar=sphere%tracers(2)%scalar
+      tempSphere%tracers(3)%scalar=sphere%tracers(3)%scalar
+      tempSphere%tracers(4)%scalar=sphere%tracers(4)%scalar
+      tempSphere%tracers(5)%scalar=sphere%tracers(5)%scalar
+      tempSphere%tracers(2)%N = tempSphere%mesh%particles%N
+      tempSphere%tracers(3)%N = tempSphere%mesh%particles%N
+      tempSphere%tracers(4)%N = tempSphere%mesh%particles%N
+      tempSphere%tracers(5)%N = tempSphere%mesh%particles%N
+      call LagrangianRemeshBVEWithVorticityFunction(remesh, sphere, tempSphere, AMR, GaussianVortexVorticity, &
+            scalarIntegralRefinement, circulationTol, "circulation refinement", &
+            RefineFlowMapYN = .TRUE., flowMapVarTol = flowMapVarTol, nLagTracers = 1, tracerFn1 = InitLatTracer )
 
-		call Copy(sphere, tempSphere)
+      call Copy(sphere, tempSphere)
 
-		remeshCounter = remeshCounter + 1
-		Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
-		Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
-		Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
+      remeshCounter = remeshCounter + 1
+      Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
+      Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
+      Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
 
-		call Delete(tempSphere)
-		call Delete(remesh)
+      call Delete(tempSphere)
+      call Delete(remesh)
 
-		call Delete(solver)
-		!$acc exit data delete(solver)
+      call Delete(solver)
 
-
-		call New(solver, sphere)
-! 		do i = 1, sphere%mesh%faces%N
-! 			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
-! 				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
-! 				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-! 				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-! 				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-! 				do j = 1, Sphere%mesh%faceKind
-! 				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
-! 				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-! 				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-! 				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-! 				enddo
-! 			endif
-! 		enddo
-
-endif
+      call New(solver, sphere)
+      call LogMessage(exeLog, DEBUG_LOGGING_LEVEL, trim(logkey)//" ", "remesh done.")
+    endif
 
 	call Timestep(solver, sphere, dt)
 
@@ -429,8 +420,8 @@ subroutine ReadNamelistFile( rank )
 	integer(kint), intent(in) :: rank
 	!
 	character(len=MAX_STRING_LENGTH) :: namelistFilename
-	integer(kint), parameter :: initBcast_intSize = 6
-	integer(kint), parameter :: initBcast_realSize = 9
+	integer(kint), parameter :: initBcast_intSize = 7
+	integer(kint), parameter :: initBcast_realSize = 10
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
 	integer(kint) :: mpiErrCode, readStat
@@ -480,6 +471,11 @@ subroutine ReadNamelistFile( rank )
 		bcastIntegers(4) = amrLimit
 		bcastIntegers(5) = frameOut
 		bcastIntegers(6) = remeshInterval
+		if (useFtleRemesh) then
+      bcastIntegers(7) = 1
+		else
+      bcastIntegers(7) = 0
+		endif
 
 		bcastReals(1) = dt
 		bcastReals(2) = tfinal
@@ -490,6 +486,7 @@ subroutine ReadNamelistFile( rank )
 		bcastReals(7) = vortInitLat
 		bcastReals(8) = circulationTol
 		bcastReals(9) = flowMapVarTol
+		bcastReals(10) = ftle_tol
 	endif
 
 	call MPI_BCAST(bcastIntegers, initBCAST_intSize, MPI_INTEGER, 0, MPI_COMM_WORLD, mpiErrCode)
@@ -508,6 +505,11 @@ subroutine ReadNamelistFile( rank )
 	amrLimit = bcastIntegers(4)
 	frameOut = bcastIntegers(5)
 	remeshInterval = bcastIntegers(6)
+	if (bcastIntegers(7) == 1) then
+	  useFtleRemesh = .TRUE.
+	else
+	  useFtleRemesh = .FALSE.
+	endif
 
 	dt = bcastReals(1)
 	tfinal = bcastReals(2)
@@ -518,6 +520,7 @@ subroutine ReadNamelistFile( rank )
 	vortInitLat = bcastReals(7)
 	circulationTol = bcastReals(8)
 	flowMapVarTol = bcastReals(9)
+	ftle_tol = bcastReals(10)
 end subroutine
 
 !> @brief Initializes a @ref Logger for this executable program.

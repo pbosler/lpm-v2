@@ -254,8 +254,10 @@ subroutine copyPrivate(self, other )
 	do i = 1, other%N
 		self%x(i) = other%x(i)
 		self%x0(i) = other%x0(i)
+		self%xrm(i) = other%xrm(i)
 		self%y(i) = other%y(i)
 		self%y0(i) = other%y0(i)
+		self%yrm(i) = other%yrm(i)
 		self%nEdges(i) = other%nEdges(i)
 		self%incidentEdges(:,i) = other%incidentEdges(:,i)
 		self%incidentAngles(:,i) = other%incidentAngles(:,i)
@@ -265,8 +267,10 @@ subroutine copyPrivate(self, other )
 	do i = other%N+1, self%N_Max
 		self%x(i) = 0.0_kreal
 		self%x0(i) = 0.0_kreal
+		self%xrm(i) = 0.0_kreal
 		self%y(i) = 0.0_kreal
 		self%y0(i) = 0.0_kreal
+		self%yrm(i) = 0.0_kreal
 		self%nEdges(i) = 0
 		self%incidentEdges(:,i) = 0
 		self%incidentAngles(:,i) = 0.0_kreal
@@ -277,10 +281,12 @@ subroutine copyPrivate(self, other )
 		do i = 1, other%N
 			self%z(i) = other%z(i)
 			self%z0(i) = other%z0(i)
+			self%zrm(i) = other%zrm(i)
 		enddo
 		do i = other%N+1, self%N_Max
 			self%z(i) = 0.0_kreal
 			self%z0(i) = 0.0_kreal
+			self%zrm(i) = 0.0_kreal
 		enddo
 	endif
 	if ( allocated(other%area)) then

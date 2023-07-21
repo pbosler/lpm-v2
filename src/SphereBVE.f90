@@ -227,6 +227,7 @@ subroutine copyPrivate(self, other)
 			call LogMessage(log, WARNING_LOGGING_LEVEL, logKey, " copy BVEMesh WARNING : tracers not copied.")
 		endif
 	endif
+	call LogMessage(log, TRACE_LOGGING_LEVEL, trim(logkey)//" copySphere completed.")
 end subroutine
 
 !> @brief Adds memory for passive tracers to a spherical BVE mesh.
