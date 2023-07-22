@@ -752,7 +752,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	else
 		nLagTracers = 0
 	endif
-
+  call LogMessage(log, DEBUG_LOGGING_LEVEL, trim(logKey)//" LagrangianRemesh: nLagTracers = ", nLagTracers)
 	newSphere%density%N = newSphere%mesh%particles%N
 	if ( allocated(newSphere%tracers) ) then
 		do i = 1, size(newSphere%tracers)
@@ -761,16 +761,15 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 	endif
 
 
-	do i = newSphere%mpiParticles%indexStart(procRank), newSphere%mpiParticles%indexEnd(procRank)
+  do i=1, newSphere%mesh%particles%N
 		lon = Longitude(newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		lat = Latitude( newSphere%mesh%particles%x(i), newSphere%mesh%particles%y(i), newSphere%mesh%particles%z(i))
 		x0 = InterpolateLagParam( lon, lat, self%lagParamSource, oldSphere%mesh, self%delTri)
 		newSphere%mesh%particles%x0(i) = x0(1)
 		newSphere%mesh%particles%y0(i) = x0(2)
 		newSphere%mesh%particles%z0(i) = x0(3)
-		! newSphere%mesh%particles%xrm(i) = newSphere%mesh%particles%x(i)
-		! newSphere%mesh%particles%yrm(i) = newSphere%mesh%particles%y(i)
-		! newSphere%mesh%particles%zrm(i) = newSphere%mesh%particles%z(i)
+	enddo
+	do i = newSphere%mpiParticles%indexStart(procRank), newSphere%mpiParticles%indexEnd(procRank)
 		!
 		!	direct interpolation for density
 		!
@@ -781,24 +780,25 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 			!
 			!	indirect interpolation for tracers 1 and 2
 			!
+			x0 = [newSphere%mesh%particles%x0(i), newSphere%mesh%particles%y0(i), newSphere%mesh%particles%z0(i)]
 			if ( nLagTracers == 1 ) then
 				newSphere%tracers(1)%scalar(i) = tracerFn1( x0(1), x0(2), x0(3) )
 			elseif ( nLagTracers == 2 ) then
 				newSphere%tracers(1)%scalar(i) = tracerFn1( x0(1), x0(2), x0(3) )
 				newSphere%tracers(2)%scalar(i) = tracerFn2( x0(1), x0(2), x0(3) )
 			endif
-			do j = nLagTracers + 1, size(newSphere%tracers)
-				if ( newSphere%tracers(j)%nDim == 1 ) then
-					newSphere%tracers(j)%scalar(i) = InterpolateScalar(lon, lat, self%tracerSource(j), oldSphere%mesh, &
-																	   self%delTri, oldSphere%tracers(j) )
-				else
-					vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, &
-											 self%delTri, oldSphere%tracers(j) )
-					newSphere%tracers(j)%xComp(i) = vec(1)
-					newSphere%tracers(j)%yComp(i) = vec(2)
-					newSphere%tracers(j)%zComp(i) = vec(3)
-				endif
-			enddo
+! 			do j = nLagTracers + 1, size(newSphere%tracers)
+! 				if ( newSphere%tracers(j)%nDim == 1 ) then
+! 					newSphere%tracers(j)%scalar(i) = InterpolateScalar(lon, lat, self%tracerSource(j), oldSphere%mesh, &
+! 																	   self%delTri, oldSphere%tracers(j) )
+! 				else
+! 					vec = InterpolateVector(lon, lat, self%tracerSource(j), oldSphere%mesh, &
+! 											 self%delTri, oldSphere%tracers(j) )
+! 					newSphere%tracers(j)%xComp(i) = vec(1)
+! 					newSphere%tracers(j)%yComp(i) = vec(2)
+! 					newSphere%tracers(j)%zComp(i) = vec(3)
+! 				endif
+! 			enddo
 		endif
 	enddo
 
@@ -807,7 +807,7 @@ subroutine LagrangianRemeshTransportWithFunctions( self, oldSphere, newSphere, A
 		call MPI_BCAST(newSphere%density%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
 			newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)
 		! broadcast tracers
-		do j = 1, size(newSphere%tracers)
+		do j = 1, nLagTracers
 			if ( newSphere%tracers(j)%nDim == 1) then
 				call MPI_BCAST(newSphere%tracers(j)%scalar(newSphere%mpiParticles%indexStart(i):newSphere%mpiParticles%indexEnd(i)), &
 					newSphere%mpiParticles%messageLength(i), MPI_DOUBLE_PRECISION, i, MPI_COMM_WORLD, mpiErrCode)

@@ -53,6 +53,9 @@ type(TransportRemesh) :: remesh
 integer(kint) :: remeshInterval
 integer(kint) :: remeshCounter
 type(TransportMesh) :: tempSphere
+logical(klog) :: useFtleRemesh
+real(kreal) :: ftle_tol
+logical(klog) :: doRemesh
 
 ! timestepping
 type(TransportSolver) :: solver
@@ -62,7 +65,7 @@ real(kreal) :: tfinal
 integer(kint) :: nTimesteps
 integer(kint) :: timeJ
 logical(klog) :: useDirectRemesh
-namelist /timestepping/ dt, tfinal, remeshInterval, useDirectRemesh
+namelist /timestepping/ dt, tfinal, remeshInterval, useDirectRemesh, useFtleRemesh, ftle_tol
 
 ! i/o
 character(len=MAX_STRING_LENGTH) :: outputDir
@@ -118,25 +121,22 @@ sphere%isPanelTracer(4)=.TRUE.
 sphere%isPanelTracer(5)=.TRUE.
 call SetInitialDensityOnMesh(sphere)
 call SetTracerOnMesh( sphere, 1, GaussianHillsTracer )
-sphere%tracers(3)%N = sphere%mesh%particles%N
 call SetFieldToZero(sphere%tracers(3))
 call SetFieldToZero(sphere%tracers(4))
 call SetFieldToZero(sphere%tracers(5))
+do i=2,5
+  sphere%tracers(i)%N = sphere%mesh%particles%N
+enddo
 
 call SetVelocityOnMesh( sphere, velFn, t)
 call SetDivergenceOnMesh(sphere)
 
 do i = 1, sphere%mesh%particles%N
 	vec = LagCoord(sphere%mesh%particles, i)
-	call InsertScalarToField( sphere%tracers(2), Latitude(vec) )
+	sphere%tracers(2)%scalar(i) =  Latitude(vec)
 enddo
 
-do i = 1, sphere%mesh%particles%N
 
-FTLE_=0.d0;FTLE_Error_=0.d0
-call InsertScalarToField( sphere%tracers(4), FTLE_ )
-call InsertScalarToField( sphere%tracers(5), FTLE_Error_ )
-enddo
 ! TO DO : AMR
 
 !
@@ -181,7 +181,7 @@ ghMass(1) = TracerMass(sphere, 1)
 qMinTrue = MinScalarVal(sphere%tracers(1))
 qMaxTrue = MaxScalarVal(sphere%tracers(1))
 
-allocate(maxftle_(0:nTimesteps-1))
+allocate(maxftle_(nTimesteps+1))
 !--------------------------------
 !	run : evolve the problem in time
 !--------------------------------
@@ -196,67 +196,67 @@ rmTimeTotal = 0.0_kreal
 stepTimeTotal = 0.0_kreal
 maxftle_val=0.0_kreal
 do timeJ = 0, nTimesteps - 1
+    doRemesh = (.NOT. useFtleRemesh .AND. mod(timeJ+1, remeshInterval) == 0) .OR. (useFtleRemesh .AND. maxftle_val > ftle_tol)
+    if ( doRemesh ) then
+      rmTimeStart = MPI_WTIME()
+      call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" remesh triggered by remesh interval : ",&
+         remeshCounter)
+      call New(remesh, sphere)
 
-!	if ( mod(timeJ+1, remeshInterval) == 0 ) then
-		if ( maxftle_val> 2.d0 ) then
-		rmTimeStart = MPI_WTIME()
-		call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logkey)//" remesh triggered by remesh interval : ",&
-			 remeshCounter)
-		call New(remesh, sphere)
+      call New(tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
+      call AddTracers(tempSphere, nTracers, tracerDims)
+      tempSphere%tracers(1)%name = "gaussianHills"
+      tempSphere%tracers(2)%name = "initialLatitude"
+      tempSphere%tracers(3)%name = "relError"
+      tempSphere%tracers(4)%name = "FTLE"
+      tempSphere%tracers(5)%name = "FTLEError"
+      tempSphere%isPanelTracer(4)=.TRUE.
+      tempSphere%isPanelTracer(5)=.TRUE.
+      do i=2,5
+        tempSphere%tracers(i)%N = tempSphere%mesh%particles%N
+      enddo
 
-		call New(tempSphere, meshSeed, initNest, maxNest, amrLimit, radius, .FALSE.)
-		call AddTracers(tempSphere, nTracers, tracerDims)
-		tempSphere%tracers(1)%name = "gaussianHills"
-		tempSphere%tracers(2)%name = "initialLatitude"
-		tempSphere%tracers(3)%name = "relError"
-		tempSphere%tracers(4)%name = "FTLE"
-		tempSphere%tracers(5)%name = "FTLEError"
-		tempSphere%isPanelTracer(4)=.TRUE.
-		tempSphere%isPanelTracer(5)=.TRUE.
+      if ( useDirectRemesh ) then
+        call DirectRemeshTransport( remesh, sphere, tempSphere, .FALSE., velFn, t )
+      else
+        call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
+          tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
+      endif
 
-		if ( useDirectRemesh ) then
-			call DirectRemeshTransport( remesh, sphere, tempSphere, .FALSE., velFn, t )
-		else
-			call LagrangianRemeshTransportWithFunctions(remesh, sphere, tempSphere, .FALSE., velFn, t, &
-				tracerFn1 = GaussianHillsTracer, tracerFn2 = InitLatTracer )
-		endif
+      call Copy(sphere, tempSphere)
+      remeshCounter = remeshCounter + 1
 
-		call Copy(sphere, tempSphere)
-		remeshCounter = remeshCounter + 1
+      Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
+      Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
+      Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
 
-		Sphere%mesh%particles%xrm=Sphere%mesh%particles%x
-		Sphere%mesh%particles%yrm=Sphere%mesh%particles%y
-		Sphere%mesh%particles%zrm=Sphere%mesh%particles%z
-	call Delete(tempSphere)
-		call Delete(remesh)
+      call Delete(tempSphere)
+      call Delete(remesh)
 
-		call Delete(solver)
-		call New(solver, sphere)
-		rmTimeEnd = MPI_WTIME()
-		rmTimeTotal = rmTimeTotal + (rmTimeEnd - rmTimeStart)
-! print*,'lllll'
-! 		do i = Sphere%mpiParticles%indexStart(procRank), Sphere%mpiParticles%indexEnd(procRank)
-! 			Sphere%mesh%particles%xrm(i) = Sphere%mesh%particles%x(i)
-! 			Sphere%mesh%particles%yrm(i) = Sphere%mesh%particles%y(i)
-! 			Sphere%mesh%particles%zrm(i) = Sphere%mesh%particles%z(i)
-! 		enddo
-		do i = 1, sphere%mesh%faces%N
-			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
-				pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
-				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-				do j = 1, Sphere%mesh%faceKind
-				pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
-				Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
-				Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
-				Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
-				enddo
-			endif
-		enddo
-
-
-
+      call Delete(solver)
+      call New(solver, sphere)
+      rmTimeEnd = MPI_WTIME()
+      rmTimeTotal = rmTimeTotal + (rmTimeEnd - rmTimeStart)
+  ! print*,'lllll'
+  ! 		do i = Sphere%mpiParticles%indexStart(procRank), Sphere%mpiParticles%indexEnd(procRank)
+  ! 			Sphere%mesh%particles%xrm(i) = Sphere%mesh%particles%x(i)
+  ! 			Sphere%mesh%particles%yrm(i) = Sphere%mesh%particles%y(i)
+  ! 			Sphere%mesh%particles%zrm(i) = Sphere%mesh%particles%z(i)
+  ! 		enddo
+!       do i = 1, sphere%mesh%faces%N
+!         if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
+!           pIndex = sphere%mesh%faces%centerParticle(i) ! Indices of the active particles
+!           Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+!           Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+!           Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+!           do j = 1, Sphere%mesh%faceKind
+!           pIndex = sphere%mesh%faces%vertices(j,i) ! Indices of the active particles
+!           Sphere%mesh%particles%xrm(pIndex)=Sphere%mesh%particles%x(pIndex)
+!           Sphere%mesh%particles%yrm(pIndex)=Sphere%mesh%particles%y(pIndex)
+!           Sphere%mesh%particles%zrm(pIndex)=Sphere%mesh%particles%z(pIndex)
+!           enddo
+!         endif
+!       enddo
 	endif
 
 	stepTimeStart = MPI_WTIME()
@@ -279,19 +279,17 @@ do timeJ = 0, nTimesteps - 1
 				 sphere%mesh%particles%y(i), sphere%mesh%particles%z(i) ) - sphere%tracers(1)%scalar(i) ) / qRange
 		enddo
 	endif
-	maxftle_(timeJ)=0.d0
+	maxftle_val = 0.0_kreal
 		do i = 1, sphere%mesh%faces%N
 			if ( .NOT. sphere%mesh%faces%hasChildren(i) ) then
 				call FTLECalc (sphere%mesh,i,FTLE_,FTLE_Error_)
 				sphere%tracers(4)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_
-				if (FTLE_>maxftle_(timeJ))maxftle_(timeJ)=FTLE_
+				if (FTLE_>maxftle_val ) maxftle_val=FTLE_
 				sphere%tracers(5)%scalar(sphere%mesh%faces%centerParticle(i))=FTLE_Error_
 			endif
 		enddo
 		! maxftle_(timeJ)=maxval(sphere%tracers(4)%scalar)
-maxftle_val=maxftle_(timeJ)
-		 print*,'MaxFTLE',sphere%mesh%t,timeJ,maxftle_(timeJ)
-
+     maxftle_(timeJ+1) = maxftle_val
 
 	if ( procRank == 0 .AND. mod(timeJ+1, frameOut) == 0 ) then
 		write(vtkFile,'(A,I0.4,A)') trim(vtkRoot), frameCounter, '.vtk'
@@ -301,10 +299,6 @@ maxftle_val=maxftle_(timeJ)
 		call LogMessage(exelog, TRACE_LOGGING_LEVEL, trim(logKey)//" t = ", t)
 	endif
 enddo
-
-print*,'Maximum FTLE values'
-print*,maxftle_
-
 
 !
 !	write t = tfinal output
@@ -345,6 +339,8 @@ if ( procRank == 0 ) then
 		call WriteToMatlab(l2Err, WRITE_UNIT_1, "l2Err")
 		call WriteToMatlab(lInfErr, WRITE_UNIT_1, "lInfErr")
 		call WriteToMatlab(ghMass, WRITE_UNIT_1, "ghMass")
+		call WriteToMatlab(maxftle_, WRITE_UNIT_1, "max_ftle")
+		call WriteToMatlab(remeshCounter, WRITE_UNIT_1, "remesh_counter")
 	close(WRITE_UNIT_1)
 endif
 
@@ -365,6 +361,7 @@ write(logstring,'(A,F12.2,A)') "PROGRAM COMPLETE : elapsed time ", timeEnd - tim
 call LogMessage(exeLog, TRACE_LOGGING_LEVEL, trim(logKey)//" ", logstring)
 
 deallocate(ghMass)
+deallocate(maxftle_)
 
 call MPI_FINALIZE(mpiErrCode)
 
@@ -374,8 +371,8 @@ subroutine ReadNamelistFile( rank )
 	integer(kint), intent(in) :: rank
 	!
 	character(len=MAX_STRING_LENGTH) :: namelistFilename
-	integer(kint), parameter :: initBcast_intSize = 7
-	integer(kint), parameter :: initBcast_realSize = 2
+	integer(kint), parameter :: initBcast_intSize = 8
+	integer(kint), parameter :: initBcast_realSize = 3
 	integer(kint), dimension(initBcast_intSize) :: bcastIntegers
 	real(kreal), dimension(initBcast_realSize) :: bcastReals
 	integer(kint) :: mpiErrCode, readStat
@@ -428,9 +425,15 @@ subroutine ReadNamelistFile( rank )
 		else
 			bcastIntegers(7) = 0
 		endif
+		if (useFtleRemesh) then
+		  bcastIntegers(8) = 1
+		else
+		  bcastIntegers(8) = 0
+		endif
 
 		bcastReals(1) = dt
 		bcastReals(2) = tfinal
+		bcastReals(3) = ftle_tol
 	endif
 
 	call MPI_BCAST(bcastIntegers, initBCAST_intSize, MPI_INTEGER, 0, MPI_COMM_WORLD, mpiErrCode)
@@ -454,9 +457,15 @@ subroutine ReadNamelistFile( rank )
 	else
 		useDirectRemesh = .FALSE.
 	endif
+	if (bcastIntegers(8) > 0) then
+	  useFtleRemesh = .TRUE.
+	else
+	  useFtleRemesh = .FALSE.
+	endif
 
 	dt = bcastReals(1)
 	tfinal = bcastReals(2)
+	ftle_tol = bcastReals(3)
 end subroutine
 
 !> @brief Initializes a @ref Logger for this executable program.

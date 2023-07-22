@@ -148,6 +148,7 @@ subroutine AddTracers(self, nTracers, tracerDims )
 	self%isPanelTracer = .FALSE.
 	do i = 1, nTracers
 		call New(self%tracers(i), tracerDims(i), self%mesh%particles%N_Max )
+		self%tracers(i)%N = self%mesh%particles%N
 	enddo
 end subroutine
 
