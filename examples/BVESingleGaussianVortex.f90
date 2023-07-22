@@ -236,7 +236,7 @@ Sphere%mesh%particles%yrm = Sphere%mesh%particles%y0
 Sphere%mesh%particles%zrm = Sphere%mesh%particles%z0
 maxftle_val=0.0_kreal
 do timeJ = 0, nTimesteps - 1
-    doRemesh = (.NOT. useFtleRemesh .AND. mod(timeJ+1, remeshInterval) == 0) .OR. (maxftle_val > ftle_tol)
+    doRemesh = (.NOT. useFtleRemesh .AND. mod(timeJ+1, remeshInterval) == 0) .OR. (useFtleRemesh .AND. maxftle_val > ftle_tol)
 	  if ( doRemesh ) then
       call New(remesh, sphere)
 
@@ -253,10 +253,10 @@ do timeJ = 0, nTimesteps - 1
       tempSphere%isPanelTracer(4)=.TRUE.
       tempSphere%isPanelTracer(5)=.TRUE.
 
-      tempSphere%tracers(2)%scalar=sphere%tracers(2)%scalar
-      tempSphere%tracers(3)%scalar=sphere%tracers(3)%scalar
-      tempSphere%tracers(4)%scalar=sphere%tracers(4)%scalar
-      tempSphere%tracers(5)%scalar=sphere%tracers(5)%scalar
+!       tempSphere%tracers(2)%scalar=sphere%tracers(2)%scalar
+!       tempSphere%tracers(3)%scalar=sphere%tracers(3)%scalar
+!       tempSphere%tracers(4)%scalar=sphere%tracers(4)%scalar
+!       tempSphere%tracers(5)%scalar=sphere%tracers(5)%scalar
       tempSphere%tracers(2)%N = tempSphere%mesh%particles%N
       tempSphere%tracers(3)%N = tempSphere%mesh%particles%N
       tempSphere%tracers(4)%N = tempSphere%mesh%particles%N
